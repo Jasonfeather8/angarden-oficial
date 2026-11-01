@@ -117,12 +117,14 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
           { nome: computed.suporte.armamento.arma_suporte?.nome },
           { nome: computed.suporte.armamento.arco_ld?.nome },
         ];
-        try {
-          await carregarLookupDeItens(refsLookup);
-        } catch (error) {
-          console.warn('Não foi possível aquecer a busca de itens da ficha:', error);
-        }
         set({ ficha: computed, isLoading: false, hasUnsavedChanges: false, loadError: null });
+        void (async () => {
+          try {
+            await carregarLookupDeItens(refsLookup);
+          } catch (error) {
+            console.warn('Não foi possível aquecer a busca de itens da ficha:', error);
+          }
+        })();
       } catch (e) {
         console.error('Falha ao carregar ficha:', e);
         set({

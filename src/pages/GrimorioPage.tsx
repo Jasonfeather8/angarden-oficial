@@ -48,7 +48,6 @@ import {
 } from '../services/grimorioService';
 import { fichaService } from '../services/fichaService';
 import { withTimeout } from '../utils/withTimeout';
-import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
@@ -501,16 +500,16 @@ export const GrimorioPage: React.FC = () => {
               </GothicButton>
             </div>
           )}
-          {isLoadingPersonagens || isLoadingGrimorio ? (
+          {isLoadingGrimorio ? (
             <LoadingState
               variant="text"
               label="Consultando os arquivos arcanos…"
               className="rounded-xs border border-[#3a2c1d] bg-[#0c0806]/80 px-4 py-6"
             />
-          ) : erroPersonagens ?? erroGrimorio ? (
+          ) : erroGrimorio ? (
             <ErrorState
-              title={erroPersonagens ? "Falha ao carregar os personagens" : "Falha ao carregar o grimório"}
-              description={erroPersonagens ?? erroGrimorio ?? ''}
+              title="Falha ao carregar o grimório"
+              description={erroGrimorio}
               className="py-6"
               onRetry={() => {
                 setRecarregarPersonagensToken((token) => token + 1);
@@ -518,12 +517,20 @@ export const GrimorioPage: React.FC = () => {
                 void grimorioQuery.refetch();
               }}
             />
-          ) : tenantId && listaPersonagens.length === 0 && !erroGrimorio ? (
-            <EmptyState
-              title="Nenhum personagem encontrado"
-              description="Crie um personagem na aba Personagens para vincular as magias aprendidas."
-            />
           ) : null}
+          {!isLoadingGrimorio && !erroGrimorio && tenantId && !isLoadingPersonagens && erroPersonagens && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#c4b9a3]" role="status">
+              <span>Não foi possível carregar a lista de personagens: {erroPersonagens}</span>
+              <button type="button" onClick={() => setRecarregarPersonagensToken((token) => token + 1)} className="text-[#d6b56a] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          {!isLoadingGrimorio && !erroGrimorio && tenantId && !isLoadingPersonagens && !erroPersonagens && listaPersonagens.length === 0 && (
+            <p className="text-xs text-[#8c6b41]" role="status">
+              Nenhum personagem encontrado. Crie um personagem na aba Personagens para vincular as magias aprendidas.
+            </p>
+          )}
 
           {view !== 'schools' && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3a2c1d] pb-4">

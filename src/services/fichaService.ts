@@ -36,6 +36,9 @@ interface AcervoCharacterRow {
 
 interface AcervoFichaRow {
   character_id: string;
+  tenant_id: string;
+  edicao_liberada: boolean;
+  acesso_mercado_epico: boolean;
   dados: FichaCompleta | null;
 }
 
@@ -62,7 +65,7 @@ async function carregarAcervoBase(tenantId: string): Promise<AcervoBase> {
       .order('ordem', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true }),
-    supabase.from('fichas').select('character_id, dados').eq('tenant_id', tenantId),
+    supabase.from('fichas').select('character_id, tenant_id, edicao_liberada, acesso_mercado_epico, dados').eq('tenant_id', tenantId),
   ]);
   if (charactersResult.error) throw new Error('Não foi possível carregar o acervo: ' + charactersResult.error.message);
   if (fichasResult.error) throw new Error('Não foi possível carregar as fichas: ' + fichasResult.error.message);
@@ -70,6 +73,15 @@ async function carregarAcervoBase(tenantId: string): Promise<AcervoBase> {
     characters: (charactersResult.data ?? []) as AcervoCharacterRow[],
     fichas: (fichasResult.data ?? []) as AcervoFichaRow[],
   };
+}
+
+function montarFichaDoAcervo(row: AcervoFichaRow): FichaCompleta | null {
+  if (!row.dados) return null;
+  const ficha = row.dados;
+  ficha.identidade.edicao_liberada = row.edicao_liberada;
+  ficha.identidade.acesso_mercado_epico = row.acesso_mercado_epico;
+  ficha.identidade.tenant_id = row.tenant_id;
+  return ficha;
 }
 
 async function acervoDoCliente(tenantId: string): Promise<AcervoBase> {
@@ -86,11 +98,20 @@ export const fichaService = {
 
   getFicha: async (characterId: string): Promise<FichaCompleta> => {
     const session = useSessionStore.getState().session;
+    const tenantId = session?.user.tenant_id;
+    if (tenantId && cacheAcervo?.tenantId === tenantId && Date.now() - cacheAcervo.at < ACERVO_TTL_MS) {
+      const row = cacheAcervo.base.fichas.find((ficha) => ficha.character_id === characterId);
+      if (row && row.tenant_id === tenantId) {
+        const ficha = montarFichaDoAcervo(row);
+        if (ficha) return ficha;
+      }
+    }
+
     let fichaQuery = supabase
       .from('fichas')
       .select('tenant_id, edicao_liberada, acesso_mercado_epico, dados')
       .eq('character_id', characterId);
-    if (session?.user.tenant_id) fichaQuery = fichaQuery.eq('tenant_id', session.user.tenant_id);
+    if (tenantId) fichaQuery = fichaQuery.eq('tenant_id', tenantId);
     const { data, error } = await fichaQuery.maybeSingle();
     if (error) throw new Error('Não foi possível carregar a ficha: ' + error.message);
 

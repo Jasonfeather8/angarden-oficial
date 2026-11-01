@@ -14,15 +14,31 @@ async function resolveTenantId(characterId: string): Promise<string> {
   return data.tenant_id;
 }
 
+const LEARNED_SPELL_IDS_TTL_MS = 60_000;
+const learnedSpellIdsCache = new Map<string, { at: number; ids: string[] }>();
+
+export function invalidarCacheMagiasAprendidas(characterId?: string): void {
+  if (characterId) {
+    learnedSpellIdsCache.delete(characterId);
+    return;
+  }
+  learnedSpellIdsCache.clear();
+}
+
 export const getLearnedSpellIds = async (characterId: string): Promise<string[]> => {
   if (!characterId) return [];
+  const cached = learnedSpellIdsCache.get(characterId);
+  if (cached && Date.now() - cached.at < LEARNED_SPELL_IDS_TTL_MS) return [...cached.ids];
+  if (cached) learnedSpellIdsCache.delete(characterId);
 
   try {
     const { data, error } = await withTimeout(Promise.resolve(
       supabase.from('spell_progress').select('spell_id').eq('character_id', characterId).eq('learned', true)
     ));
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row) => row.spell_id);
+    const ids = (data ?? []).map((row) => row.spell_id);
+    learnedSpellIdsCache.set(characterId, { at: Date.now(), ids });
+    return [...ids];
   } catch (error) {
     throw new Error('Não foi possível carregar as magias aprendidas: ' + (error instanceof Error ? error.message : String(error)));
   }
@@ -40,6 +56,7 @@ export const setLearnedSpell = async (characterId: string, spellId: string, lear
         supabase.from('spell_progress').delete().eq('character_id', characterId).eq('spell_id', spellId)
       ));
     if (error) throw new Error(error.message);
+    invalidarCacheMagiasAprendidas(characterId);
   } catch (error) {
     throw new Error('Não foi possível atualizar a magia aprendida: ' + (error instanceof Error ? error.message : String(error)));
   }
