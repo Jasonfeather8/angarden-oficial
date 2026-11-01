@@ -113,6 +113,17 @@ function obterCaminhoStorage(pasta: PastaMidia, extensao: string, opcoes?: Opcoe
   return `${segmento}/${pasta}/${crypto.randomUUID()}.${extensao}`;
 }
 
+/** O Storage devolve status/código em propriedades do erro; sem eles a falha fica sem diagnóstico. */
+function descreverErro(causa: unknown): string {
+  if (!(causa instanceof Error)) return String(causa);
+  const { status, statusCode } = causa as { status?: unknown; statusCode?: unknown };
+  const codigos = [
+    status !== undefined ? `status ${String(status)}` : null,
+    statusCode !== undefined ? `código ${String(statusCode)}` : null,
+  ].filter(Boolean);
+  return codigos.length ? `${causa.message} (${codigos.join(', ')})` : causa.message;
+}
+
 async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia, opcoes?: OpcoesImagem): Promise<string> {
   const extensao = EXTENSOES_POR_MIME[mime];
   if (!extensao) {
@@ -122,14 +133,17 @@ async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia
 
   try {
     const blob = typeof source === 'string' ? await (await fetch(source)).blob() : source;
-    const { error } = await supabase.storage.from('midia').upload(caminho, blob, {
+    // Bytes crus, não um Blob: um Blob vira multipart sem nome de arquivo, e o Storage
+    // valida o tipo pela requisição — é o content-type explícito que ele aceita.
+    const bytes = await blob.arrayBuffer();
+    const { error } = await supabase.storage.from('midia').upload(caminho, bytes, {
       contentType: mime,
       cacheControl: '31536000',
     });
     if (error) throw error;
     return supabase.storage.from('midia').getPublicUrl(caminho).data.publicUrl;
   } catch (causa) {
-    const detalhe = causa instanceof Error ? causa.message : String(causa);
+    const detalhe = descreverErro(causa);
     console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
     throw new Error(`Não foi possível enviar a imagem: ${detalhe}`);
   }
