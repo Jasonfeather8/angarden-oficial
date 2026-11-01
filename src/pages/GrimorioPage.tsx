@@ -53,7 +53,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useOtimizarImagensGrimorio } from '../hooks/useOtimizarImagensGrimorio';
-import { compressImage } from '../utils/imageCompressor';
+import { enviarImagem } from '../services/mediaService';
 import { useFichaStore } from '../store/useFichaStore';
 import { Field, MagicVisual, SpellCard, SpellDetailsModal as SharedSpellDetailsModal } from '../components/GrimorioSpellComponents';
 
@@ -124,6 +124,8 @@ export const GrimorioPage: React.FC = () => {
   const [editingSpell, setEditingSpell] = useState<GrimorioSpell | null>(null);
   const [folioPage, setFolioPage] = useState(1);
   const [erroMutacaoGrimorio, setErroMutacaoGrimorio] = useState<string | null>(null);
+  const [enviandoImagem, setEnviandoImagem] = useState(false);
+  const [erroUploadImagem, setErroUploadImagem] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -337,17 +339,27 @@ export const GrimorioPage: React.FC = () => {
 
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) {
-      if (!isEditing) setNewSpellForm((current) => ({ ...current, image: '' }));
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErroUploadImagem('Selecione um arquivo de imagem válido.');
       return;
     }
 
-    const compressed = await compressImage(file, 600, 600, 0.82);
-    if (compressed) setNewSpellForm((current) => ({ ...current, image: compressed }));
+    setErroUploadImagem(null);
+    setEnviandoImagem(true);
+    try {
+      const url = await enviarImagem(file, 'grimorio', { maxWidth: 600, maxHeight: 600, quality: 0.82 });
+      setNewSpellForm((current) => ({ ...current, image: url }));
+    } catch (error) {
+      setErroUploadImagem(error instanceof Error ? error.message : 'Não foi possível enviar a imagem.');
+    } finally {
+      setEnviandoImagem(false);
+    }
   };
 
   const handleSpellSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (enviandoImagem) return;
     const destinationSchool = resolveDestinationSchool(newSpellForm.schoolId, newSpellForm.subcategory) ?? formSchool ?? school;
     const destinationVolumes = getSchoolVolumes(destinationSchool.id);
     const destinationVolume = newSpellForm.bookVolume
@@ -585,9 +597,10 @@ export const GrimorioPage: React.FC = () => {
             <label htmlFor="new-spell-school" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Escola<select id="new-spell-school" value={newSpellForm.schoolId} onChange={(event) => setNewSpellForm((current) => ({ ...current, schoolId: event.target.value, subcategory: '' }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]"><option value="">-</option>{grimorioFormSchools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             {(formSchool?.id === 'elementar' || formSchool?.id === 'mentalizacao') && <label htmlFor="new-spell-subcategory" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Subcategoria<input id="new-spell-subcategory" list="new-spell-subcategory-options" type="text" value={newSpellForm.subcategory} onChange={(event) => setNewSpellForm((current) => ({ ...current, subcategory: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /><datalist id="new-spell-subcategory-options">{formSubcategoryCatalog.map((item) => <option key={item.id} value={item.name}>{item.subtitle}</option>)}</datalist></label>}
             <label htmlFor="new-spell-book-volume" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Livro Vol<select id="new-spell-book-volume" value={newSpellForm.bookVolume} onChange={(event) => { const value = event.target.value; const bookVolume: BookVolume | '' = value === '1' ? 1 : value === '2' ? 2 : value === '3' ? 3 : ''; setNewSpellForm((current) => ({ ...current, bookVolume })); }} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]"><option value="">-</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
-            <label htmlFor="new-spell-image" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Imagem<input id="new-spell-image" type="file" accept="image/*" onChange={handleImageChange} className="mt-1 block h-10 w-full border border-[#5a4225] bg-[#120d09] px-2 py-2 text-xs normal-case tracking-normal text-[#e6ddc5] file:mr-2 file:border-0 file:bg-[#5a4225] file:px-2 file:py-1 file:text-xs file:text-[#f1d994]" /></label>
+            <label htmlFor="new-spell-image" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Imagem<input id="new-spell-image" type="file" accept="image/*" disabled={enviandoImagem} onChange={handleImageChange} className="mt-1 block h-10 w-full border border-[#5a4225] bg-[#120d09] px-2 py-2 text-xs normal-case tracking-normal text-[#e6ddc5] file:mr-2 file:border-0 file:bg-[#5a4225] file:px-2 file:py-1 file:text-xs file:text-[#f1d994] disabled:opacity-60" />{enviandoImagem && <span className="mt-1 block normal-case tracking-normal text-[#d4af37]" role="status">Enviando imagem…</span>}</label>
           </div>
-          <div className="flex justify-end gap-2 border-t border-[#3a2c1d] pt-4"><button type="button" onClick={() => { setIsCreateOpen(false); setEditingSpell(null); setNewSpellForm(initialNewSpellForm); }} className="flex items-center gap-1.5 border border-[#4a351f] px-4 py-2 text-xs uppercase tracking-widest text-[#a88d61] hover:text-[#e6ddc5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"><X size={14} /> Cancelar</button><button type="submit" className="flex items-center gap-1.5 border border-[#a88d61] bg-[#5a4225]/40 px-4 py-2 text-xs uppercase tracking-widest text-[#f1d994] hover:bg-[#765b36] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"><WandSparkles size={14} /> {isEditing ? 'Salvar alterações' : 'Inscrever magia'}</button></div>
+          {erroUploadImagem && <p className="border-l-2 border-[#b56a55] bg-[#2a120d] px-3 py-2 text-xs text-[#f0b09b]" role="alert">{erroUploadImagem}</p>}
+          <div className="flex justify-end gap-2 border-t border-[#3a2c1d] pt-4"><button type="button" onClick={() => { setIsCreateOpen(false); setEditingSpell(null); setNewSpellForm(initialNewSpellForm); }} className="flex items-center gap-1.5 border border-[#4a351f] px-4 py-2 text-xs uppercase tracking-widest text-[#a88d61] hover:text-[#e6ddc5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"><X size={14} /> Cancelar</button><button type="submit" disabled={enviandoImagem} className="flex items-center gap-1.5 border border-[#a88d61] bg-[#5a4225]/40 px-4 py-2 text-xs uppercase tracking-widest text-[#f1d994] hover:bg-[#765b36] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] disabled:cursor-not-allowed disabled:opacity-60"><WandSparkles size={14} /> {enviandoImagem ? 'Enviando imagem…' : isEditing ? 'Salvar alterações' : 'Inscrever magia'}</button></div>
         </form>
       </Modal>
 

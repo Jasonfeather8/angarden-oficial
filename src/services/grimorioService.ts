@@ -45,7 +45,7 @@ export const setLearnedSpell = async (characterId: string, spellId: string, lear
   }
 };
 
-const fromRow = (row: { id: string; dados: unknown }) => ({
+export const mapearMagiaDoRow = (row: { id: string; dados: unknown }): GrimorioSpell => ({
   ...Object.fromEntries(Object.entries((row.dados ?? {}) as Record<string, unknown>).filter(([, value]) => value !== null)),
   id: row.id,
 }) as GrimorioSpell;
@@ -65,7 +65,7 @@ export const listarMagiasDoVolume = async (
   if (error) throw new Error(error.message);
   const rows = data ?? [];
   return {
-    magias: rows.map(fromRow),
+    magias: rows.map(mapearMagiaDoRow),
     ocultas: rows.filter((row) => row.oculta).map((row) => row.id),
     total: count ?? 0,
   };
@@ -85,7 +85,7 @@ export const listarMagiasPorIds = async (
     ));
     if (error) throw new Error(error.message);
     const rows = data ?? [];
-    magias.push(...rows.map(fromRow));
+    magias.push(...rows.map(mapearMagiaDoRow));
     ocultas.push(...rows.filter((row) => row.oculta).map((row) => row.id));
   }
   return { magias, ocultas };

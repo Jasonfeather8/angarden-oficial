@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Archive, HardDrive, Image, Package, UserRound, WandSparkles } from 'lucide-react';
+import { Archive, BookOpen, HardDrive, Image, Package, UserRound, WandSparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GothicButton } from '@/components/GothicButton';
 import { MedievalFrame } from '@/components/MedievalFrame';
@@ -61,7 +61,7 @@ export const AdminMediaPage: React.FC = () => {
               description="Todas as imagens identificadas já estão no armazenamento ou não há imagens legadas para migrar."
             />
           ) : (
-            <section aria-label="Inventário de imagens legadas" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <section aria-label="Inventário de imagens legadas" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <article className="border border-[#5a4225] bg-[#0c0806]/80 p-4">
                 <div className="flex items-center gap-2 text-[#a88d61]"><Image className="h-4 w-4" aria-hidden="true" /><h2 className="font-cinzel text-xs uppercase tracking-wider">Fichas</h2></div>
                 <p className="mt-2 font-cinzel text-2xl text-[#e6ddc5]">{data?.fichas ?? 0}</p>
@@ -75,6 +75,11 @@ export const AdminMediaPage: React.FC = () => {
               <article className="border border-[#5a4225] bg-[#0c0806]/80 p-4">
                 <div className="flex items-center gap-2 text-[#a88d61]"><Package className="h-4 w-4" aria-hidden="true" /><h2 className="font-cinzel text-xs uppercase tracking-wider">Mercadorias</h2></div>
                 <p className="mt-2 font-cinzel text-2xl text-[#e6ddc5]">{data?.mercado ?? 0}</p>
+                <p className="font-serif text-xs text-[#8c6b41]">com imagem embutida</p>
+              </article>
+              <article className="border border-[#5a4225] bg-[#0c0806]/80 p-4">
+                <div className="flex items-center gap-2 text-[#a88d61]"><BookOpen className="h-4 w-4" aria-hidden="true" /><h2 className="font-cinzel text-xs uppercase tracking-wider">Grimório</h2></div>
+                <p className="mt-2 font-cinzel text-2xl text-[#e6ddc5]">{data?.grimorio ?? 0}</p>
                 <p className="font-serif text-xs text-[#8c6b41]">com imagem embutida</p>
               </article>
               <article className="border border-[#5a4225] bg-[#0c0806]/80 p-4">

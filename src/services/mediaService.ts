@@ -3,14 +3,16 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { compressImage } from '@/utils/imageCompressor';
 import { fichaService } from './fichaService';
 import { mercadoService } from './mercadoService';
+import { atualizarMagia, mapearMagiaDoRow } from './grimorioService';
 
-export type PastaMidia = 'fichas' | 'personagens' | 'mercado' | 'perfis';
+export type PastaMidia = 'fichas' | 'personagens' | 'mercado' | 'perfis' | 'grimorio';
 export interface OpcoesImagem { maxWidth?: number; maxHeight?: number; quality?: number; escopo?: string; }
 
 export interface InventarioMidiaLegada {
   fichas: number;
   personagens: number;
   mercado: number;
+  grimorio: number;
   totalBytes: number;
 }
 
@@ -48,6 +50,7 @@ type CharacterImagemRow = {
   large_image_url: string | null;
 };
 type MarketImagemRow = { id: string; imagem_url: string };
+type GrimorioImagemRow = { id: string; dados: unknown };
 
 function ehBase64(value: unknown): value is string {
   return typeof value === 'string' && value.startsWith('data:image');
@@ -92,6 +95,54 @@ function totalImagemFicha(dados: DadosImagem | null): number {
   }, 0);
 }
 
+function obterCaminhoStorage(pasta: PastaMidia, extensao: string, opcoes?: OpcoesImagem): string {
+  if (pasta === 'mercado' || pasta === 'grimorio') {
+    return `${pasta}/${crypto.randomUUID()}.${extensao}`;
+  }
+
+  const usuario = useSessionStore.getState().session?.user;
+  let segmento = opcoes?.escopo;
+  if (segmento === undefined && (pasta === 'fichas' || pasta === 'personagens')) {
+    if (!usuario?.tenant_id) throw new Error('Não foi possível identificar sua organização para enviar a imagem.');
+    segmento = usuario.tenant_id;
+  } else if (segmento === undefined && pasta === 'perfis') {
+    if (!usuario?.id) throw new Error('Não foi possível identificar sua conta para enviar a foto de perfil.');
+    segmento = usuario.id;
+  }
+
+  return `${segmento}/${pasta}/${crypto.randomUUID()}.${extensao}`;
+}
+
+async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia, opcoes?: OpcoesImagem): Promise<string> {
+  const extensao = EXTENSOES_POR_MIME[mime];
+  if (!extensao) {
+    throw new Error('Não foi possível enviar esta imagem. Use JPEG, PNG, WebP, GIF ou SVG.');
+  }
+  const caminho = obterCaminhoStorage(pasta, extensao, opcoes);
+
+  try {
+    const blob = typeof source === 'string' ? await (await fetch(source)).blob() : source;
+    const { error } = await supabase.storage.from('midia').upload(caminho, blob, {
+      contentType: mime,
+      cacheControl: '31536000',
+    });
+    if (error) throw error;
+    return supabase.storage.from('midia').getPublicUrl(caminho).data.publicUrl;
+  } catch (causa) {
+    const detalhe = causa instanceof Error ? causa.message : String(causa);
+    console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
+    throw new Error(`Não foi possível enviar a imagem: ${detalhe}`);
+  }
+}
+
+function mimeDeDataUrl(dataUrl: string): string {
+  const mime = dataUrl.match(/^data:(image\/[^;,]+)(?:;[^,]*)?,/i)?.[1]?.toLowerCase();
+  if (!mime || !EXTENSOES_POR_MIME[mime]) {
+    throw new Error('Não foi possível enviar esta imagem. Use JPEG, PNG, WebP, GIF ou SVG.');
+  }
+  return mime;
+}
+
 export async function enviarImagem(
   source: File | string,
   pasta: PastaMidia,
@@ -107,57 +158,26 @@ export async function enviarImagem(
   );
   if (!imagemComprimida.startsWith('data:')) return imagemComprimida;
 
-  const correspondencia = imagemComprimida.match(/^data:(image\/[^;,]+)(?:;[^,]*)?,/i);
-  const mime = correspondencia?.[1]?.toLowerCase();
-  const extensao = mime ? EXTENSOES_POR_MIME[mime] : undefined;
-  if (!mime || !extensao) {
-    throw new Error('Não foi possível enviar esta imagem. Use JPEG, PNG, WebP, GIF ou SVG.');
-  }
+  const mime = mimeDeDataUrl(imagemComprimida);
+  return enviarBlob(imagemComprimida, mime, pasta, opcoes);
+}
 
-  const usuario = useSessionStore.getState().session?.user;
-  let segmento: string;
-  const escopo = opcoes?.escopo;
-  if (escopo !== undefined) {
-    segmento = escopo;
-  } else if (pasta === 'fichas' || pasta === 'personagens') {
-    if (!usuario?.tenant_id) throw new Error('Não foi possível identificar sua organização para enviar a imagem.');
-    segmento = usuario.tenant_id;
-  } else if (pasta === 'perfis') {
-    if (!usuario?.id) throw new Error('Não foi possível identificar sua conta para enviar a foto de perfil.');
-    segmento = usuario.id;
-  } else {
-    segmento = 'mercado';
-  }
-
-  const caminho = pasta === 'mercado'
-    ? `mercado/${crypto.randomUUID()}.${extensao}`
-    : `${segmento}/${pasta}/${crypto.randomUUID()}.${extensao}`;
-
-  try {
-    const blob = await (await fetch(imagemComprimida)).blob();
-    const { error } = await supabase.storage.from('midia').upload(caminho, blob, {
-      contentType: mime,
-      cacheControl: '31536000',
-    });
-    if (error) throw error;
-    return supabase.storage.from('midia').getPublicUrl(caminho).data.publicUrl;
-  } catch (causa) {
-    // O motivo real do Storage é preservado: sem ele não há como diagnosticar falhas de envio.
-    const detalhe = causa instanceof Error ? causa.message : String(causa);
-    console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
-    throw new Error(`Não foi possível enviar a imagem: ${detalhe}`);
-  }
+export async function moverImagemParaArmazenamento(dataUrl: string, pasta: PastaMidia): Promise<string> {
+  const mime = mimeDeDataUrl(dataUrl);
+  return enviarBlob(dataUrl, mime, pasta);
 }
 
 async function carregarLinhasMigracao() {
-  const [mercadoResult, fichasResult, personagensResult] = await Promise.all([
+  const [mercadoResult, fichasResult, personagensResult, grimorioResult] = await Promise.all([
     supabase.from('market_items').select('id, imagem_url').like('imagem_url', 'data:%'),
     supabase.from('fichas').select('character_id, tenant_id, dados'),
     supabase.from('characters').select('id, tenant_id, imagem_url, large_image_url'),
+    supabase.from('grimorio_spells').select('id, dados').gt('imagem_bytes', 0),
   ]);
   if (mercadoResult.error) throw new Error('Não foi possível inventariar as imagens do mercado: ' + mercadoResult.error.message);
   if (fichasResult.error) throw new Error('Não foi possível inventariar as imagens das fichas: ' + fichasResult.error.message);
   if (personagensResult.error) throw new Error('Não foi possível inventariar as imagens dos personagens: ' + personagensResult.error.message);
+  if (grimorioResult.error) throw new Error('Não foi possível inventariar as imagens do grimório: ' + grimorioResult.error.message);
 
   return {
     mercado: ((mercadoResult.data ?? []) as MarketImagemRow[]).filter((row) => ehBase64(row.imagem_url)),
@@ -165,6 +185,9 @@ async function carregarLinhasMigracao() {
     personagens: ((personagensResult.data ?? []) as CharacterImagemRow[]).filter(
       (row) => ehBase64(row.imagem_url) || ehBase64(row.large_image_url),
     ),
+    grimorio: ((grimorioResult.data ?? []) as GrimorioImagemRow[])
+      .map(mapearMagiaDoRow)
+      .filter((magia) => ehBase64(magia.image)),
   };
 }
 
@@ -176,11 +199,15 @@ export async function inventariarMidiaLegada(): Promise<InventarioMidiaLegada> {
     return total + (ehBase64(row.imagem_url) ? tamanhoEmBytes(row.imagem_url) : 0)
       + (ehBase64(row.large_image_url) ? tamanhoEmBytes(row.large_image_url) : 0);
   }, 0);
+  const totalBytesGrimorio = linhas.grimorio.reduce((total, magia) => {
+    return total + (ehBase64(magia.image) ? tamanhoEmBytes(magia.image) : 0);
+  }, 0);
   return {
     fichas: linhas.fichas.length,
     personagens: linhas.personagens.length,
     mercado: linhas.mercado.length,
-    totalBytes: totalBytesMercado + totalBytesFichas + totalBytesPersonagens,
+    grimorio: linhas.grimorio.length,
+    totalBytes: totalBytesMercado + totalBytesFichas + totalBytesPersonagens + totalBytesGrimorio,
   };
 }
 
@@ -188,7 +215,7 @@ export async function migrarMidiaLegada(
   aoProgredir?: (concluidos: number, total: number) => void,
 ): Promise<RelatorioMigracao> {
   const linhas = await carregarLinhasMigracao();
-  const total = linhas.mercado.length + linhas.fichas.length + linhas.personagens.length;
+  const total = linhas.mercado.length + linhas.fichas.length + linhas.personagens.length + linhas.grimorio.length;
   const relatorio: RelatorioMigracao = { convertidas: 0, ignoradas: 0, falhas: [], bytesLiberados: 0 };
   let concluidos = 0;
   aoProgredir?.(0, total);
@@ -286,6 +313,22 @@ export async function migrarMidiaLegada(
       }
     }
     concluirItem();
+  }
+
+  for (const magia of linhas.grimorio) {
+    const imagemOriginal = magia.image;
+    try {
+      if (ehBase64(imagemOriginal)) {
+        const url = await moverImagemParaArmazenamento(imagemOriginal, 'grimorio');
+        await atualizarMagia({ ...magia, image: url });
+        relatorio.convertidas += 1;
+        relatorio.bytesLiberados += tamanhoEmBytes(imagemOriginal) - tamanhoEmBytes(url);
+      }
+    } catch (error) {
+      relatorio.falhas.push(`Magia ${magia.id}: ${error instanceof Error ? error.message : 'falha desconhecida'}`);
+    } finally {
+      concluirItem();
+    }
   }
 
   fichaService.invalidarCacheAcervo();
