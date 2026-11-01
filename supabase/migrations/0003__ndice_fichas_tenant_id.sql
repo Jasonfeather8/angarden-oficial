@@ -1,0 +1,1 @@
+create index if not exists fichas_tenant_id_idx on public.fichas (tenant_id)

@@ -1,0 +1,1 @@
+create index if not exists characters_tenant_ordem_idx on public.characters (tenant_id, ordem, created_at, id)

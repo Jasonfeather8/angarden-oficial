@@ -6,7 +6,7 @@ import { MedievalFrame } from '../components/MedievalFrame';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
-import { useAsyncData } from '../hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useSessionStore } from '../store/useSessionStore';
 import { campaignService } from '../services/campaignService';
@@ -48,7 +48,7 @@ export const CampanhasPage: React.FC = () => {
       };
     },
     [session?.user.id],
-    { enabled: Boolean(session) }
+    { enabled: Boolean(session), cacheKey: `campanhas:${session?.user.id ?? ''}` }
   );
 
   const [nome, setNome] = useState('');
@@ -83,6 +83,7 @@ export const CampanhasPage: React.FC = () => {
       setNome('');
       setDescricao('');
       setStatusMessage('Campanha criada. Gere um link de convite para chamar os jogadores.');
+      invalidateAsyncDataCache('campanhas');
       reload();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Não foi possível criar a campanha.');
@@ -130,6 +131,7 @@ export const CampanhasPage: React.FC = () => {
       await campaignService.acceptInvite(token, session);
       setJoinToken('');
       setStatusMessage('Você entrou na campanha.');
+      invalidateAsyncDataCache('campanhas');
       reload();
     } catch (err) {
       setStatusMessage(err instanceof Error ? err.message : 'Convite inválido.');
@@ -141,6 +143,7 @@ export const CampanhasPage: React.FC = () => {
   const handleLeave = async (campaignId: string) => {
     if (!session) return;
     await campaignService.removeMember(campaignId, session.user.id);
+    invalidateAsyncDataCache('campanhas');
     reload();
   };
 

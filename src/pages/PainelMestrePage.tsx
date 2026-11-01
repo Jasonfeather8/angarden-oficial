@@ -67,20 +67,19 @@ export const PainelMestrePage: React.FC = () => {
     setLoadError('');
     try {
       const list = await fichaService.getListaPersonagens();
-      const loadedRows = await Promise.all(
-        list.map(async (character) => {
-          try {
-            const ficha = fichaService.calcularEngine(await fichaService.getFicha(character.id));
-            return {
-              id: character.id,
-              nome: ficha.identidade.nome_personagem?.trim() || character.nome || 'Aventureiro',
-              ficha,
-            } satisfies CharacterRow;
-          } catch {
-            return null;
-          }
-        }),
-      );
+      const fichasPorPersonagem = await fichaService.getFichasDoAcervo();
+      const loadedRows = list.map((character) => {
+        try {
+          const ficha = fichasPorPersonagem.get(character.id) ?? fichaService.createBlankFicha(character.id, character.nome);
+          return {
+            id: character.id,
+            nome: ficha.identidade.nome_personagem?.trim() || character.nome || 'Aventureiro',
+            ficha: fichaService.calcularEngine(ficha),
+          } satisfies CharacterRow;
+        } catch {
+          return null;
+        }
+      });
       const charactersWithFicha = loadedRows.filter((row): row is CharacterRow => row !== null);
       setCharacters(charactersWithFicha);
       setPermissions(Object.fromEntries(charactersWithFicha.map((row) => [row.id, {
@@ -182,10 +181,8 @@ export const PainelMestrePage: React.FC = () => {
     setIsSavingXp(true);
     setFormError('');
     try {
-      await Promise.all(targetIds.map(async (characterId) => {
-        await fichaService.ensureFicha(characterId);
-        await fichaService.grantXp(characterId, amount, reason);
-      }));
+      await Promise.all(targetIds.map((characterId) => fichaService.ensureFicha(characterId)));
+      await Promise.all(targetIds.map((characterId) => fichaService.grantXp(characterId, amount, reason)));
 
       await loadCharacters();
       setIsXpModalOpen(false);

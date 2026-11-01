@@ -44,15 +44,10 @@ export const AdminOverviewPage: React.FC = () => {
       campaignService.listCampaigns(),
     ]);
 
-    const fichaCounts: Record<string, number> = {};
-    await Promise.all(
-      tenants.map(async (tenant) => {
-        fichaCounts[tenant.id] = await fichaService.countFichas(tenant.id);
-      })
-    );
+    const fichaCounts = await fichaService.contarFichasPorCliente();
 
     return { tenants, profiles, campaigns, fichaCounts };
-  }, []);
+  }, [], { cacheKey: 'admin-overview' });
 
   if (isLoading) {
     return (

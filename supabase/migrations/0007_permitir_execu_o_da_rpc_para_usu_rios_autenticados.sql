@@ -1,0 +1,1 @@
+grant execute on function public.contar_fichas_por_cliente() to authenticated

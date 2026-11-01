@@ -1,0 +1,1 @@
+create or replace function public.contar_fichas_por_cliente() returns table (tenant_id uuid, total bigint) language sql stable set search_path to '' as $function$ select f.tenant_id, count(*)::bigint from public.fichas f where f.tenant_id is not null group by f.tenant_id $function$

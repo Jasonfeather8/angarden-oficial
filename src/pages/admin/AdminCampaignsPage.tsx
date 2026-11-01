@@ -25,7 +25,7 @@ export const AdminCampaignsPage: React.FC = () => {
       profileService.listProfiles(),
     ]);
     return { campaigns, members, tenants, users };
-  }, []);
+  }, [], { cacheKey: 'admin-campanhas' });
 
   if (isLoading) {
     return (

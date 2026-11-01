@@ -65,25 +65,23 @@ export const FichaTecnicaPage: React.FC = () => {
   const [itemParaDetalhesFicha, setItemParaDetalhesFicha] = useState<MercadoItem | null>(null);
   const [inventoryModalCategory, setInventoryModalCategory] = useState<string>('all');
   const [equipTargetSlot, setEquipTargetSlot] = useState<'arma_primaria' | 'segunda_arma' | 'arma_suporte' | 'arco_ld' | 'armadura' | null>(null);
-  const {
-    characterId,
-    ficha,
-    isLoading,
-    loadError,
-    isSaving,
-    hasUnsavedChanges,
-    saveSuccessMessage,
-    loadFicha,
-    reloadFicha,
-    updateFicha,
-    saveCurrentFicha,
-    isAuraModalOpen,
-    setAuraModalOpen,
-    isInventoryModalOpen,
-    setInventoryModalOpen,
-    isPdfModalOpen,
-    setPdfModalOpen
-  } = useFichaStore();
+  const characterId = useFichaStore((state) => state.characterId);
+  const ficha = useFichaStore((state) => state.ficha);
+  const isLoading = useFichaStore((state) => state.isLoading);
+  const loadError = useFichaStore((state) => state.loadError);
+  const isSaving = useFichaStore((state) => state.isSaving);
+  const hasUnsavedChanges = useFichaStore((state) => state.hasUnsavedChanges);
+  const saveSuccessMessage = useFichaStore((state) => state.saveSuccessMessage);
+  const loadFicha = useFichaStore((state) => state.loadFicha);
+  const reloadFicha = useFichaStore((state) => state.reloadFicha);
+  const updateFicha = useFichaStore((state) => state.updateFicha);
+  const saveCurrentFicha = useFichaStore((state) => state.saveCurrentFicha);
+  const isAuraModalOpen = useFichaStore((state) => state.isAuraModalOpen);
+  const setAuraModalOpen = useFichaStore((state) => state.setAuraModalOpen);
+  const isInventoryModalOpen = useFichaStore((state) => state.isInventoryModalOpen);
+  const setInventoryModalOpen = useFichaStore((state) => state.setInventoryModalOpen);
+  const isPdfModalOpen = useFichaStore((state) => state.isPdfModalOpen);
+  const setPdfModalOpen = useFichaStore((state) => state.setPdfModalOpen);
   const { can } = useAuthorization();
   const [learnedSpellIds, setFichaLearnedSpellIds] = useState<string[]>([]);
   const [selectedSpell, setSelectedSpell] = useState<import('../mocks/grimorio').GrimorioSpell | null>(null);
@@ -167,6 +165,10 @@ export const FichaTecnicaPage: React.FC = () => {
       setCatalogoArmadurasExibicao([]);
     });
   }, [isInventoryModalOpen]);
+
+  useEffect(() => () => {
+    void useFichaStore.getState().salvarPendente();
+  }, []);
 
   // Itens consumíveis e gerais exibidos na tabela rápida da folha (Hook incondicional chamado no topo)
   const itensConsumiveisEOutros = useMemo(() => {

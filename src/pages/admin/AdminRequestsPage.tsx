@@ -5,7 +5,7 @@ import { GothicButton } from '../../components/GothicButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { LoadingState } from '../../components/ui/Skeleton';
-import { useAsyncData } from '../../hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '../../hooks/useAsyncData';
 import { tenantService } from '../../services/tenantService';
 import { profileService } from '../../services/profileService';
 import { ROLE_LABELS } from '../../auth/policies';
@@ -39,7 +39,7 @@ export const AdminRequestsPage: React.FC = () => {
       tenantService.listTenants(),
     ]);
     return { requests, tenants };
-  }, []);
+  }, [], { cacheKey: 'admin-solicitacoes' });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tipo, setTipo] = useState<TenantType>('individual');
@@ -86,6 +86,7 @@ export const AdminRequestsPage: React.FC = () => {
       const tenant = profile.tenant_id ? await tenantService.getTenant(profile.tenant_id) : null;
       setFeedback(`Conta de ${profile.nome_completo} aprovada no cliente "${tenant?.nome ?? ''}".`);
       setSelectedId(null);
+      invalidateAsyncDataCache('admin-');
       reload();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Não foi possível aprovar a solicitação.');
@@ -102,6 +103,7 @@ export const AdminRequestsPage: React.FC = () => {
       await profileService.rejectAccount(selectedId, motivo);
       setFeedback('Solicitação recusada.');
       setSelectedId(null);
+      invalidateAsyncDataCache('admin-');
       reload();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Não foi possível recusar a solicitação.');

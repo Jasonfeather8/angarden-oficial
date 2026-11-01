@@ -26,12 +26,7 @@ export const AdminClientsPage: React.FC = () => {
       campaignService.listCampaigns(),
     ]);
 
-    const fichaCounts: Record<string, number> = {};
-    await Promise.all(
-      tenants.map(async (tenant) => {
-        fichaCounts[tenant.id] = await fichaService.countFichas(tenant.id);
-      })
-    );
+    const fichaCounts = await fichaService.contarFichasPorCliente();
 
     const campaignCounts: Record<string, number> = {};
     campaigns.forEach((campaign) => {
@@ -39,7 +34,7 @@ export const AdminClientsPage: React.FC = () => {
     });
 
     return { tenants, users, fichaCounts, campaignCounts };
-  }, []);
+  }, [], { cacheKey: 'admin-clientes' });
 
   if (isLoading) {
     return (

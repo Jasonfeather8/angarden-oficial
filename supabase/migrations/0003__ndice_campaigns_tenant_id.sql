@@ -1,0 +1,1 @@
+create index if not exists campaigns_tenant_idx on public.campaigns (tenant_id)

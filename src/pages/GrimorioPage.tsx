@@ -105,7 +105,8 @@ export const GrimorioPage: React.FC = () => {
   const canManageCatalog = can.manageCatalog;
   const canManageVisibility = can.manageSpellVisibility;
   const { imagensPesadas, bytesPesados, processando, processadas, erroOtimizacao, otimizarImagens } = useOtimizarImagensGrimorio(canManageCatalog);
-  const { characterId: storeCharacterId, setCharacterId: setStoreCharacterId } = useFichaStore();
+  const storeCharacterId = useFichaStore((state) => state.characterId);
+  const setStoreCharacterId = useFichaStore((state) => state.setCharacterId);
   const [view, setView] = useState<View>('schools');
   const [schoolId, setSchoolId] = useState('elementar');
   const [branch, setBranch] = useState('');

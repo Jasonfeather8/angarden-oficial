@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -118,15 +118,46 @@ const CountdownUnit: React.FC<{ value: number; label: string }> = ({ value, labe
   </div>
 );
 
+const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const countdown = formatCountdown(Date.parse(dataHora) - now);
+  const hasSessionStarted = Date.parse(dataHora) <= now;
+
+  return (
+    <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]" aria-live="polite" aria-label="Contagem regressiva para a próxima sessão">
+      <p className="mb-2 flex items-center justify-center gap-1.5 font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#b89558]">
+        <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+        {hasSessionStarted ? 'Sessão em andamento' : 'A mesa começa em'}
+      </p>
+      {hasSessionStarted ? (
+        <p className="text-center font-serif text-sm italic text-[#e0bd71]">Confira os registros da campanha após a aventura.</p>
+      ) : (
+        <div className="flex justify-center gap-1.5 sm:gap-2">
+          <CountdownUnit value={countdown.days} label="dias" />
+          <CountdownUnit value={countdown.hours} label="horas" />
+          <CountdownUnit value={countdown.minutes} label="min" />
+          <CountdownUnit value={countdown.seconds} label="seg" />
+        </div>
+      )}
+    </div>
+  );
+});
+
 export const DashboardPage: React.FC = () => {
   const user = useSessionStore((state) => state.session?.user ?? null);
   const { role, isMestre } = useAuthorization();
   const navigate = useNavigate();
   const { data: session, isLoading: isLoadingSessao, error: erroSessao, reload: reloadSessao } = useAsyncData(
     () => scheduleService.getProximaSessao(),
-    []
+    [],
+    { cacheKey: `proxima-sessao:${user?.tenant_id ?? ''}` }
   );
-  const [now, setNow] = useState(() => Date.now());
   const [isScheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isSavingSessao, setIsSavingSessao] = useState(false);
   const [selectedChronicle, setSelectedChronicle] = useState<Chronicle | null>(null);
@@ -137,17 +168,6 @@ export const DashboardPage: React.FC = () => {
     linkVtt: '',
   });
   const [formError, setFormError] = useState('');
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  const countdown = useMemo(
-    () => (session ? formatCountdown(Date.parse(session.dataHora) - now) : null),
-    [now, session]
-  );
-  const hasSessionStarted = session ? Date.parse(session.dataHora) <= now : false;
 
   const openScheduleModal = () => {
     setSessionForm({ dataHora: '', titulo: '', pauta: '', linkVtt: '' });
@@ -309,24 +329,7 @@ export const DashboardPage: React.FC = () => {
                     </a>
                   )}
                 </div>
-                <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]" aria-live="polite" aria-label="Contagem regressiva para a próxima sessão">
-                  <p className="mb-2 flex items-center justify-center gap-1.5 font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#b89558]">
-                    <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-                    {hasSessionStarted ? 'Sessão em andamento' : 'A mesa começa em'}
-                  </p>
-                  {hasSessionStarted ? (
-                    <p className="text-center font-serif text-sm italic text-[#e0bd71]">Confira os registros da campanha após a aventura.</p>
-                  ) : (
-                    countdown && (
-                      <div className="flex justify-center gap-1.5 sm:gap-2">
-                        <CountdownUnit value={countdown.days} label="dias" />
-                        <CountdownUnit value={countdown.hours} label="horas" />
-                        <CountdownUnit value={countdown.minutes} label="min" />
-                        <CountdownUnit value={countdown.seconds} label="seg" />
-                      </div>
-                    )
-                  )}
-                </div>
+                <SessionCountdown dataHora={session.dataHora} />
               </div>
             ) : (
               <EmptyState
@@ -394,7 +397,7 @@ export const DashboardPage: React.FC = () => {
                   required
                   type="datetime-local"
                   value={sessionForm.dataHora}
-                  min={toDatetimeLocal(new Date(now + 60000))}
+                  min={toDatetimeLocal(new Date(Date.now() + 60000))}
                   onChange={(event) => updateSessionForm('dataHora', event.target.value)}
                   className={fieldClassName}
                   aria-describedby="schedule-form-error"

@@ -8,7 +8,7 @@ import { GothicButton } from '../components/GothicButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
-import { useAsyncData } from '../hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { fichaPath } from '../routes/paths';
 
@@ -16,13 +16,14 @@ const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export const PersonagensPage: React.FC = () => {
   const navigate = useNavigate();
-  const { setCharacterId } = useFichaStore();
+  const setCharacterId = useFichaStore((state) => state.setCharacterId);
   const { tenantId } = useAuthorization();
 
   // O acervo é sempre o do cliente (tenant) autenticado.
   const { data, isLoading, error, reload } = useAsyncData<TenantCharacter[]>(
     () => fichaService.getTenantCharacters(),
-    []
+    [],
+    { cacheKey: `acervo-personagens:${tenantId ?? ''}` }
   );
   const characters = data ?? [];
 
@@ -51,6 +52,7 @@ export const PersonagensPage: React.FC = () => {
     const blankFicha = fichaService.createBlankFicha(newId, '');
     await fichaService.saveFicha(newId, blankFicha);
 
+    invalidateAsyncDataCache('acervo-personagens');
     reload();
     setActiveCharacterId(newId);
     handleOpenFicha(newId);
@@ -154,6 +156,7 @@ export const PersonagensPage: React.FC = () => {
 
   const handleDeleteCharacter = async (idToDelete: string) => {
     await fichaService.removeTenantCharacter(idToDelete);
+    invalidateAsyncDataCache('acervo-personagens');
 
     const updated = characters.filter((c) => c.id !== idToDelete);
     reload();

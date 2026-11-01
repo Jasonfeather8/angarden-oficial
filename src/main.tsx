@@ -7,7 +7,16 @@ import './index.css';
 import {ensureDataVersion} from './services/dataReset';
 import {useSessionStore} from './store/useSessionStore';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 async function bootstrap() {
   // 1. Garante o layout de dados atual (zera dados de versões anteriores).

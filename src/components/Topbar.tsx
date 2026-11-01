@@ -21,7 +21,7 @@ export const Topbar: React.FC = () => {
   const { data } = useAsyncData(
     () => campaignService.listAccessible(),
     [session?.user.id],
-    { enabled: Boolean(session) }
+    { enabled: Boolean(session), cacheKey: `campanhas-acessiveis:${session?.user.id ?? ''}` }
   );
   const campaigns = data?.campaigns ?? [];
   const activeCampaign = campaigns.find((campaign) => campaign.id === activeCampaignId) ?? null;

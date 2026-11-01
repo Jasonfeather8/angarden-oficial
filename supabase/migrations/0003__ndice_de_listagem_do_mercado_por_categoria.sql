@@ -1,0 +1,1 @@
+create index if not exists market_items_categoria_ordem_idx on public.market_items (categoria, ordem, created_at desc, id)

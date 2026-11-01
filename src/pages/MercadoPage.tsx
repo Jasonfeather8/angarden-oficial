@@ -196,7 +196,8 @@ export const MercadoPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Ficha ativa no store global
-  const { characterId: storeCharacterId, setCharacterId: setStoreCharacterId } = useFichaStore();
+  const storeCharacterId = useFichaStore((state) => state.characterId);
+  const setStoreCharacterId = useFichaStore((state) => state.setCharacterId);
   const [personagemId, setPersonagemId] = useState<string>(() => storeCharacterId);
   const [listaPersonagens, setListaPersonagens] = useState<Array<{ id: string; nome: string; raca?: string; nivel?: number; imagem_url?: string; dinheiro: number }>>([]);
   const [isModalCompradorOpen, setIsModalCompradorOpen] = useState<boolean>(false);

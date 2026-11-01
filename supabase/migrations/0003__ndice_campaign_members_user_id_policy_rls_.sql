@@ -1,0 +1,1 @@
+create index if not exists campaign_members_user_idx on public.campaign_members (user_id)

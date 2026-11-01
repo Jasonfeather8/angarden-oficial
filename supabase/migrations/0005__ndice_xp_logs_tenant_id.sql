@@ -1,0 +1,1 @@
+create index if not exists xp_logs_tenant_idx on public.xp_logs (tenant_id)

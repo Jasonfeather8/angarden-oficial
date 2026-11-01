@@ -22,6 +22,65 @@ async function findCharacterTenant(characterId: string): Promise<string | null> 
   return data?.tenant_id ?? null;
 }
 
+interface AcervoCharacterRow {
+  id: string;
+  nome: string;
+  imagem_url: string | null;
+  large_image_url: string | null;
+  letter: string | null;
+  is_known: boolean;
+  quote: string | null;
+  quote_source: string | null;
+  descricao: string[] | null;
+}
+
+interface AcervoFichaRow {
+  character_id: string;
+  dados: FichaCompleta | null;
+}
+
+interface AcervoBase {
+  characters: AcervoCharacterRow[];
+  fichas: AcervoFichaRow[];
+}
+
+const ACERVO_TTL_MS = 60_000;
+
+let cacheAcervo: { tenantId: string; at: number; base: AcervoBase } | null = null;
+
+/** Descarta o acervo em memória depois de qualquer escrita que o altere. */
+export function invalidarCacheAcervo(): void {
+  cacheAcervo = null;
+}
+
+async function carregarAcervoBase(tenantId: string): Promise<AcervoBase> {
+  const [charactersResult, fichasResult] = await Promise.all([
+    supabase
+      .from('characters')
+      .select('id, nome, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao')
+      .eq('tenant_id', tenantId)
+      .order('ordem', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
+    supabase.from('fichas').select('character_id, dados').eq('tenant_id', tenantId),
+  ]);
+  if (charactersResult.error) throw new Error('Não foi possível carregar o acervo: ' + charactersResult.error.message);
+  if (fichasResult.error) throw new Error('Não foi possível carregar as fichas: ' + fichasResult.error.message);
+  return {
+    characters: (charactersResult.data ?? []) as AcervoCharacterRow[],
+    fichas: (fichasResult.data ?? []) as AcervoFichaRow[],
+  };
+}
+
+async function acervoDoCliente(tenantId: string): Promise<AcervoBase> {
+  if (cacheAcervo && cacheAcervo.tenantId === tenantId && Date.now() - cacheAcervo.at < ACERVO_TTL_MS) {
+    return cacheAcervo.base;
+  }
+  const base = await carregarAcervoBase(tenantId);
+  cacheAcervo = { tenantId, at: Date.now(), base };
+  return base;
+}
+
 export const fichaService = {
   getFicha: async (characterId: string): Promise<FichaCompleta> => {
     const session = useSessionStore.getState().session;
@@ -78,11 +137,13 @@ export const fichaService = {
   grantXp: async (characterId: string, amount: number, reason: string): Promise<void> => {
     const { error } = await supabase.rpc('grant_xp', { p_character_id: characterId, p_amount: amount, p_reason: reason });
     if (error) throw new Error('Não foi possível conceder XP: ' + error.message);
+    invalidarCacheAcervo();
   },
 
   adjustTreasure: async (characterId: string, delta: number): Promise<void> => {
     const { error } = await supabase.rpc('adjust_treasure', { p_character_id: characterId, p_delta: delta });
     if (error) throw new Error('Não foi possível ajustar o tesouro: ' + error.message);
+    invalidarCacheAcervo();
   },
 
   /**
@@ -93,18 +154,12 @@ export const fichaService = {
     const scope = currentScope();
     if (!scope) return [];
 
-    const { tenantId } = scope;
-    const [{ data: characters, error: charactersError }, { data: fichas, error: fichasError }] = await Promise.all([
-      supabase.from('characters').select('id, nome, imagem_url').eq('tenant_id', tenantId).order('ordem', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true }),
-      supabase.from('fichas').select('character_id, dados').eq('tenant_id', tenantId),
-    ]);
-    if (charactersError) throw new Error('Não foi possível listar os personagens: ' + charactersError.message);
-    if (fichasError) throw new Error('Não foi possível listar as fichas: ' + fichasError.message);
+    const base = await acervoDoCliente(scope.tenantId);
 
     const fichasPorPersonagem = new Map<string, FichaCompleta>();
-    (fichas ?? []).forEach((row) => fichasPorPersonagem.set(row.character_id, row.dados as FichaCompleta));
+    base.fichas.forEach((row) => fichasPorPersonagem.set(row.character_id, row.dados as FichaCompleta));
 
-    return (characters ?? []).map((character) => {
+    return base.characters.map((character) => {
       const ficha = fichasPorPersonagem.get(character.id);
       const identidade = ficha?.identidade;
       const nomePersonagem = identidade?.nome_personagem?.trim();
@@ -119,14 +174,27 @@ export const fichaService = {
     });
   },
 
-  /** Contagem de fichas de um cliente específico (usado pelo painel administrativo). */
-  countFichas: async (tenantId: string): Promise<number> => {
-    const { count, error } = await supabase
-      .from('fichas')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId);
+  /** Fichas completas do cliente reaproveitando o acervo já carregado. */
+  getFichasDoAcervo: async (): Promise<Map<string, FichaCompleta>> => {
+    const scope = currentScope();
+    if (!scope) return new Map();
+    const base = await acervoDoCliente(scope.tenantId);
+    const fichas = new Map<string, FichaCompleta>();
+    base.fichas.forEach((row) => {
+      if (row.dados) fichas.set(row.character_id, row.dados);
+    });
+    return fichas;
+  },
+
+  /** Contagem de fichas por cliente em uma única consulta (evita uma requisição por cliente). */
+  contarFichasPorCliente: async (): Promise<Record<string, number>> => {
+    const { data, error } = await supabase.rpc('contar_fichas_por_cliente');
     if (error) throw new Error(`Não foi possível contar as fichas: ${error.message}`);
-    return count ?? 0;
+    const contagens: Record<string, number> = {};
+    ((data ?? []) as Array<{ tenant_id: string; total: number }>).forEach((row) => {
+      contagens[row.tenant_id] = Number(row.total) || 0;
+    });
+    return contagens;
   },
 
   createBlankFicha: (
@@ -277,6 +345,7 @@ export const fichaService = {
       console.error('Erro ao salvar ficha:', error);
       return false;
     }
+    invalidarCacheAcervo();
     return true;
   },
 
@@ -285,18 +354,12 @@ export const fichaService = {
     const scope = currentScope();
     if (!scope) return [];
 
-    const { tenantId } = scope;
-    const [{ data: characters, error: charactersError }, { data: fichas, error: fichasError }] = await Promise.all([
-      supabase.from('characters').select('id, nome, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao').eq('tenant_id', tenantId).order('ordem', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true }),
-      supabase.from('fichas').select('character_id, dados').eq('tenant_id', tenantId),
-    ]);
-    if (charactersError) throw new Error('Não foi possível carregar o acervo: ' + charactersError.message);
-    if (fichasError) throw new Error('Não foi possível carregar as fichas: ' + fichasError.message);
+    const base = await acervoDoCliente(scope.tenantId);
 
     const fichasPorPersonagem = new Map<string, FichaCompleta>();
-    (fichas ?? []).forEach((row) => fichasPorPersonagem.set(row.character_id, row.dados as FichaCompleta));
+    base.fichas.forEach((row) => fichasPorPersonagem.set(row.character_id, row.dados as FichaCompleta));
 
-    return (characters ?? []).map((row) => {
+    return base.characters.map((row) => {
       const character: TenantCharacter = {
         id: row.id,
         name: row.nome,
@@ -351,6 +414,7 @@ export const fichaService = {
       ordem,
     });
     if (error) throw new Error('Não foi possível criar o personagem: ' + error.message);
+    invalidarCacheAcervo();
     return character;
   },
 
@@ -359,6 +423,7 @@ export const fichaService = {
     if (!tenantId) return;
     const { error } = await supabase.from('characters').delete().eq('id', characterId).eq('tenant_id', tenantId);
     if (error) throw new Error('Não foi possível remover o personagem: ' + error.message);
+    invalidarCacheAcervo();
   },
 
   // Motor de Automação Angarden (Engine de Cálculos)

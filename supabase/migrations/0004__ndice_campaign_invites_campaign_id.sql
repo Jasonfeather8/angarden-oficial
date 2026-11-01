@@ -1,0 +1,1 @@
+create index if not exists campaign_invites_campaign_idx on public.campaign_invites (campaign_id)

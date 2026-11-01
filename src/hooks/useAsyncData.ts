@@ -8,6 +8,10 @@ export interface UseAsyncDataOptions<T> {
   isEmpty?: (data: T) => boolean;
   /** Quando false, a busca não é executada. */
   enabled?: boolean;
+  /** Chave de cache em memória. Sem ela a busca continua sem cache, como antes. */
+  cacheKey?: string;
+  /** Validade do valor em cache, em ms. */
+  cacheTtlMs?: number;
 }
 
 export interface UseAsyncDataResult<T> {
@@ -16,6 +20,29 @@ export interface UseAsyncDataResult<T> {
   error: string | null;
   isEmpty: boolean;
   reload: () => void;
+}
+
+const CACHE_TTL_PADRAO_MS = 60_000;
+
+interface CacheEntry {
+  data: unknown;
+  at: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+/**
+ * Descarta valores em cache. Use depois de criar, editar ou excluir algo para que
+ * as telas não voltem a exibir a versão antiga. Sem prefixo, limpa tudo.
+ */
+export function invalidateAsyncDataCache(prefix?: string): void {
+  if (!prefix) {
+    cache.clear();
+    return;
+  }
+  for (const key of [...cache.keys()]) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
 }
 
 function defaultIsEmpty<T>(data: T): boolean {
@@ -33,7 +60,13 @@ export function useAsyncData<T>(
   deps: unknown[] = [],
   options: UseAsyncDataOptions<T> = {}
 ): UseAsyncDataResult<T> {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, isEmpty: isEmptyCheck, enabled = true } = options;
+  const {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    isEmpty: isEmptyCheck,
+    enabled = true,
+    cacheKey,
+    cacheTtlMs = CACHE_TTL_PADRAO_MS,
+  } = options;
 
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(enabled);
@@ -43,6 +76,7 @@ export function useAsyncData<T>(
   const loaderRef = useRef(loader);
   const isEmptyRef = useRef(isEmptyCheck);
   const requestIdRef = useRef(0);
+  const forcarAtualizacaoRef = useRef(false);
 
   useEffect(() => {
     loaderRef.current = loader;
@@ -55,6 +89,20 @@ export function useAsyncData<T>(
       return;
     }
 
+    // `reload()` ignora o cache uma vez; as demais trocas de dependência o reaproveitam.
+    const forcar = forcarAtualizacaoRef.current;
+    forcarAtualizacaoRef.current = false;
+
+    if (cacheKey && !forcar) {
+      const entrada = cache.get(cacheKey);
+      if (entrada && Date.now() - entrada.at < cacheTtlMs) {
+        setData(entrada.data as T);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
@@ -64,6 +112,7 @@ export function useAsyncData<T>(
     withTimeout(loaderRef.current(), timeoutMs)
       .then((result) => {
         if (requestId !== requestIdRef.current) return;
+        if (cacheKey) cache.set(cacheKey, { data: result, at: Date.now() });
         setData(result);
       })
       .catch((err: unknown) => {
@@ -83,9 +132,12 @@ export function useAsyncData<T>(
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, timeoutMs, reloadToken, ...deps]);
+  }, [enabled, timeoutMs, reloadToken, cacheKey, cacheTtlMs, ...deps]);
 
-  const reload = useCallback(() => setReloadToken((token) => token + 1), []);
+  const reload = useCallback(() => {
+    forcarAtualizacaoRef.current = true;
+    setReloadToken((token) => token + 1);
+  }, []);
 
   const isEmpty =
     data !== null && (isEmptyRef.current ? isEmptyRef.current(data) : defaultIsEmpty(data));
