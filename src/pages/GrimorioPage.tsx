@@ -52,6 +52,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
+import { useOtimizarImagensGrimorio } from '../hooks/useOtimizarImagensGrimorio';
+import { compressImage } from '../utils/imageCompressor';
 import { useFichaStore } from '../store/useFichaStore';
 import { Field, MagicVisual, SpellCard, SpellDetailsModal as SharedSpellDetailsModal } from '../components/GrimorioSpellComponents';
 
@@ -102,6 +104,7 @@ export const GrimorioPage: React.FC = () => {
   const { can, tenantId } = useAuthorization();
   const canManageCatalog = can.manageCatalog;
   const canManageVisibility = can.manageSpellVisibility;
+  const { imagensPesadas, bytesPesados, processando, processadas, erroOtimizacao, otimizarImagens } = useOtimizarImagensGrimorio(canManageCatalog);
   const { characterId: storeCharacterId, setCharacterId: setStoreCharacterId } = useFichaStore();
   const [view, setView] = useState<View>('schools');
   const [schoolId, setSchoolId] = useState('elementar');
@@ -331,21 +334,15 @@ export const GrimorioPage: React.FC = () => {
     setSelectedSpell((current) => current?.id === spell.id ? null : current);
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) {
       if (!isEditing) setNewSpellForm((current) => ({ ...current, image: '' }));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        setNewSpellForm((current) => ({ ...current, image: result }));
-      }
-    };
-    reader.readAsDataURL(file);
+    const compressed = await compressImage(file, 600, 600, 0.82);
+    if (compressed) setNewSpellForm((current) => ({ ...current, image: compressed }));
   };
 
   const handleSpellSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -479,6 +476,18 @@ export const GrimorioPage: React.FC = () => {
         headerRight={headerAction}
       >
         <div className="space-y-6">
+          {canManageCatalog && imagensPesadas.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-[#5a4225] bg-[#1c140d] px-4 py-3">
+              <p className="text-xs text-[#c4b9a3]">
+                {imagensPesadas.length} imagens do grimório ainda estão no tamanho original ({(bytesPesados / 1048576).toFixed(1)} MB) e deixam a leitura do livro lenta.
+                {processando && <span className="ml-2 uppercase tracking-widest text-[#c6a15b]">Otimizando… {processadas}/{imagensPesadas.length}</span>}
+                {erroOtimizacao && <span className="ml-2 text-[#d98f6a]">{erroOtimizacao}</span>}
+              </p>
+              <GothicButton type="button" variant="secondary" size="xs" width={170} disabled={processando} onClick={() => void otimizarImagens()}>
+                {processando ? 'Otimizando…' : 'Otimizar imagens'}
+              </GothicButton>
+            </div>
+          )}
           {isLoadingPersonagens || isLoadingGrimorio ? (
             <LoadingState
               variant="text"

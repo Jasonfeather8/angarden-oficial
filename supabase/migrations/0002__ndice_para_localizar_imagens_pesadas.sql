@@ -1,0 +1,1 @@
+create index if not exists grimorio_spells_imagem_bytes_idx on public.grimorio_spells (imagem_bytes)

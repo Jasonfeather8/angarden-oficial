@@ -1,0 +1,1 @@
+alter table public.grimorio_spells add column if not exists imagem_bytes integer generated always as (length(coalesce(dados->>'image', ''))) stored

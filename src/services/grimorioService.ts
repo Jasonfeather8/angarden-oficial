@@ -91,6 +91,28 @@ export const listarMagiasPorIds = async (
   return { magias, ocultas };
 };
 
+/** Limite (em caracteres do base64) acima do qual a imagem é considerada pesada. */
+export const LIMITE_IMAGEM_PESADA_BYTES = 300000;
+
+export interface ImagemPesada {
+  id: string;
+  bytes: number;
+}
+
+/** Magias cujo texto de imagem em base64 ainda está grande e deixa a leitura do livro lenta. */
+export const listarImagensPesadas = async (
+  limiteBytes: number = LIMITE_IMAGEM_PESADA_BYTES,
+): Promise<ImagemPesada[]> => {
+  const { data, error } = await withTimeout(Promise.resolve(
+    supabase.from('grimorio_spells')
+      .select('id, imagem_bytes')
+      .gt('imagem_bytes', limiteBytes)
+      .order('imagem_bytes', { ascending: false })
+  ));
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({ id: row.id, bytes: row.imagem_bytes ?? 0 }));
+};
+
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 export const criarMagia = async (spell: GrimorioSpell): Promise<void> => {

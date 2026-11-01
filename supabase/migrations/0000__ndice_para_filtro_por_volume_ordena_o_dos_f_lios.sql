@@ -1,0 +1,1 @@
+create index if not exists grimorio_spells_volume_ordem_idx on public.grimorio_spells ((dados->>'volumeId'), created_at, id)
