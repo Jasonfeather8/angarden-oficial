@@ -1,0 +1,1 @@
+grant execute on function public.pode_escrever_midia(text) to authenticated

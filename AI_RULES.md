@@ -53,6 +53,7 @@
 
 ## Dados no Supabase
 
+- Imagens vivem no bucket público `midia`, em `{tenant_id}/...`, `{user_id}/...` ou `mercado/...`; todo envio passa por `src/services/mediaService.ts`. **Políticas de `storage.objects` não podem usar `is_admin()`, `is_mestre()` nem `current_tenant_id()`**: o serviço de Storage não entrega os claims do token para `auth.jwt()`, e essas funções dependem dele — a política passa a negar todos, inclusive o administrador. Em políticas de Storage, resolva papel e cliente por `auth.uid()` (é o que `public.pode_escrever_midia(pasta)` faz).
 - Tabelas de cliente (`tenant_id` + RLS): `characters`, `fichas` (o `dados` jsonb guarda a ficha inteira), `spell_progress`, `xp_logs`, `campaigns`, `scheduled_sessions` (uma linha por cliente — a próxima sessão da mesa, lida por todos e escrita só pelo Mestre).
 - Tabelas globais da plataforma: `tenants`, `profiles` (conta, `role` e `status`), `character_templates`, `grimorio_spells` (catálogo de magias, com flag `oculta`), `market_items` (mercado compartilhado entre clientes), `campaign_members`, `campaign_invites`.
 - Acesso aos dados passa pelos serviços de `src/services/` (`fichaService`, `mercadoService`, `inventarioService`, `grimorioService`, `campaignService`, `scheduleService`, `profileService`, `tenantService`, `sessionService`). Páginas, layouts e componentes nunca chamam `supabase` diretamente.

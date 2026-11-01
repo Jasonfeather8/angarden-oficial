@@ -141,8 +141,11 @@ export async function enviarImagem(
     });
     if (error) throw error;
     return supabase.storage.from('midia').getPublicUrl(caminho).data.publicUrl;
-  } catch {
-    throw new Error('Não foi possível enviar a imagem. Tente novamente.');
+  } catch (causa) {
+    // O motivo real do Storage é preservado: sem ele não há como diagnosticar falhas de envio.
+    const detalhe = causa instanceof Error ? causa.message : String(causa);
+    console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
+    throw new Error(`Não foi possível enviar a imagem: ${detalhe}`);
   }
 }
 

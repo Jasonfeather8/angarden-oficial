@@ -1,0 +1,1 @@
+drop policy "midia_envio" on storage.objects
