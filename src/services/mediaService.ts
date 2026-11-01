@@ -124,6 +124,20 @@ function descreverErro(causa: unknown): string {
   return codigos.length ? `${causa.message} (${codigos.join(', ')})` : causa.message;
 }
 
+function codificarBase64(bytes: Uint8Array): string {
+  let binario = '';
+  for (let inicio = 0; inicio < bytes.length; inicio += 0x8000) {
+    binario += String.fromCharCode(...bytes.subarray(inicio, inicio + 0x8000));
+  }
+  return btoa(binario);
+}
+
+interface RespostaUploadMidia {
+  ok: boolean;
+  url?: string;
+  detalhe?: string;
+}
+
 async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia, opcoes?: OpcoesImagem): Promise<string> {
   const extensao = EXTENSOES_POR_MIME[mime];
   if (!extensao) {
@@ -133,15 +147,18 @@ async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia
 
   try {
     const blob = typeof source === 'string' ? await (await fetch(source)).blob() : source;
-    // Bytes crus, não um Blob: um Blob vira multipart sem nome de arquivo, e o Storage
-    // valida o tipo pela requisição — é o content-type explícito que ele aceita.
-    const bytes = await blob.arrayBuffer();
-    const { error } = await supabase.storage.from('midia').upload(caminho, bytes, {
-      contentType: mime,
-      cacheControl: '31536000',
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const { data, error } = await supabase.functions.invoke<RespostaUploadMidia>('midia-upload', {
+      body: { caminho, mime, conteudoBase64: codificarBase64(bytes) },
     });
-    if (error) throw error;
-    return supabase.storage.from('midia').getPublicUrl(caminho).data.publicUrl;
+    if (error) {
+      const contexto = (error as Error & { context?: unknown }).context;
+      const corpo = contexto instanceof Response ? await contexto.text() : '';
+      throw new Error(`${descreverErro(error)}${corpo ? `: ${corpo}` : ''}`);
+    }
+    if (data?.ok && typeof data.url === 'string') return data.url;
+    if (data && !data.ok && typeof data.detalhe === 'string') throw new Error(data.detalhe);
+    throw new Error('Resposta inválida da função de upload.');
   } catch (causa) {
     const detalhe = descreverErro(causa);
     console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
