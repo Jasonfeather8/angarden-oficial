@@ -8,7 +8,7 @@ import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { ROLE_LABELS } from '../auth/policies';
 import { ROUTES } from '../routes/paths';
-import { compressImage } from '../utils/imageCompressor';
+import { enviarImagem } from '../services/mediaService';
 
 export const PerfilPage: React.FC = () => {
   const user = useSessionStore((state) => state.session?.user ?? null);
@@ -60,14 +60,18 @@ export const PerfilPage: React.FC = () => {
       return;
     }
 
-    const compressed = await compressImage(file, 420, 420, 0.8);
-    if (!compressed) {
-      setError('Não foi possível carregar a foto.');
-      return;
+    try {
+      const imageUrl = await enviarImagem(file, 'perfis', { maxWidth: 420, maxHeight: 420, quality: 0.8 });
+      if (!imageUrl) {
+        setError('Não foi possível carregar a foto.');
+        return;
+      }
+      setError('');
+      setMessage('Foto selecionada. Salve o perfil para confirmar.');
+      setAvatarUrl(imageUrl);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Não foi possível carregar a foto.');
     }
-    setError('');
-    setMessage('Foto selecionada. Salve o perfil para confirmar.');
-    setAvatarUrl(compressed);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

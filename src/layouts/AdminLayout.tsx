@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Coins, Crown, LayoutDashboard, LogOut, ScrollText, Shield, Users } from 'lucide-react';
+import { Coins, Crown, HardDrive, LayoutDashboard, LogOut, ScrollText, Shield, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ROUTES } from '../routes/paths';
 import { useSessionStore } from '../store/useSessionStore';
@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { to: ROUTES.admin.solicitacoes, label: 'Solicitações', icon: ScrollText, end: false },
   { to: ROUTES.admin.clientes, label: 'Clientes', icon: Users, end: false },
   { to: ROUTES.admin.campanhas, label: 'Campanhas', icon: Coins, end: false },
+  { to: ROUTES.admin.midia, label: 'Mídia', icon: HardDrive, end: false },
 ];
 
 /**

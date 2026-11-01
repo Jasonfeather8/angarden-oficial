@@ -84,6 +84,13 @@ export interface MercadoLookupRef {
 
 const COLUNAS_LISTAGEM = 'id, nome, categoria, material, peso, dano, rd_base, preco, is_epico, efeito, descricao, icone_tipo, imagem_url, dados';
 const lookupItens = new Map<string, MercadoItem>();
+const CATALOGO_TTL_MS = 60_000;
+const catalogoPorCategoria = new Map<CategoriaMercado, { itens: MercadoItem[]; carregadoEm: number }>();
+
+function limparCaches(): void {
+  lookupItens.clear();
+  catalogoPorCategoria.clear();
+}
 
 function valorPostgrest(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -231,6 +238,9 @@ async function listarPaginaDeCategoria(categoria: CategoriaMercado, inicio: numb
 }
 
 async function getItensPorCategoria(categoria: CategoriaMercado): Promise<MercadoItem[]> {
+  const cache = catalogoPorCategoria.get(categoria);
+  if (cache && Date.now() - cache.carregadoEm < CATALOGO_TTL_MS) return cache.itens;
+
   const itens: MercadoItem[] = [];
   let total = 0;
   do {
@@ -238,6 +248,7 @@ async function getItensPorCategoria(categoria: CategoriaMercado): Promise<Mercad
     itens.push(...pagina.itens);
     total = pagina.total;
   } while (itens.length < total);
+  catalogoPorCategoria.set(categoria, { itens, carregadoEm: Date.now() });
   return itens;
 }
 
@@ -249,13 +260,14 @@ async function upsertMercadoria(item: MercadoItem, operation: 'criar' | 'atualiz
 
   if (error) throw new Error(`Não foi possível ${operation} mercadoria: ` + error.message);
   // O item mudou: o lookup da ficha não pode continuar servindo a cópia antiga.
-  lookupItens.clear();
+  limparCaches();
   return item;
 }
 
 export const mercadoService = {
   listarItens,
   getItensPorCategoria,
+  limparCaches,
 
   efetuarCompra: async ({
     fichaId,
@@ -363,7 +375,7 @@ export const mercadoService = {
     const { error } = await supabase.from('market_items').delete().eq('id', id);
     if (error) throw new Error('Não foi possível excluir mercadoria: ' + error.message);
     // O item deixou de existir: o lookup da ficha não pode continuar servindo-o.
-    lookupItens.clear();
+    limparCaches();
     return true;
   },
 };

@@ -22,6 +22,7 @@ export const ROUTES = {
     solicitacoes: '/admin/solicitacoes',
     clientes: '/admin/clientes',
     campanhas: '/admin/campanhas',
+    midia: '/admin/midia',
   },
 } as const;
 

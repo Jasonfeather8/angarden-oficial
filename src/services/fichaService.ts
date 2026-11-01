@@ -82,6 +82,8 @@ async function acervoDoCliente(tenantId: string): Promise<AcervoBase> {
 }
 
 export const fichaService = {
+  invalidarCacheAcervo,
+
   getFicha: async (characterId: string): Promise<FichaCompleta> => {
     const session = useSessionStore.getState().session;
     let fichaQuery = supabase

@@ -33,13 +33,13 @@ import { getFichaTheme, FICHA_THEMES } from '../config/fichaThemes';
 import { RPGInventoryModal } from '../components/RPGInventoryModal';
 import { ModalDetalhesCompra } from '../components/ModalDetalhesCompra';
 import { MercadoItem, ArmaduraCatalogItem, ArmamentoCatalogItem, MontariaCatalogItem } from '../types';
-import { 
+import {
   converterInventarioParaMercadoItem,
   equiparItemNaFicha,
   descartarItemDoInventario,
   isItemArmaOuArmadura
 } from '../services/inventarioService';
-import { compressImage } from '../utils/imageCompressor';
+import { enviarImagem } from '../services/mediaService';
 import { getLearnedSpellIds, setLearnedSpell, listarMagiasPorIds } from '../services/grimorioService';
 import { withTimeout } from '../utils/withTimeout';
 import { SpellCard, SpellDetailsModal } from '../components/GrimorioSpellComponents';
@@ -55,6 +55,8 @@ export const FichaTecnicaPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [isArmorDetailsOpen, setIsArmorDetailsOpen] = useState(false);
   const [isMountDetailsOpen, setIsMountDetailsOpen] = useState(false);
   const [isWeaponDetailsOpen, setIsWeaponDetailsOpen] = useState(false);
@@ -164,7 +166,7 @@ export const FichaTecnicaPage: React.FC = () => {
     }).catch(() => {
       setCatalogoArmadurasExibicao([]);
     });
-  }, [isInventoryModalOpen]);
+  }, []);
 
   useEffect(() => () => {
     void useFichaStore.getState().salvarPendente();
@@ -240,19 +242,20 @@ export const FichaTecnicaPage: React.FC = () => {
   // Somente leitura: o dono da ficha pode ter a edição congelada pelo Mestre da mesa.
   const readOnly = !can.editFicha(ficha);
 
-  // Processa arquivo de imagem para Base64 DataURL comprimido
   const processImageFile = async (file: File) => {
+    setImageUploadError(null);
     if (!file.type.startsWith('image/')) {
-      alert('Por favor selecione um arquivo de imagem válido (JPG, PNG, WebP, etc.).');
+      setImageUploadError('Por favor selecione um arquivo de imagem válido (JPG, PNG, WebP, etc.).');
       return;
     }
+    setIsUploadingImage(true);
     try {
-      const compressedDataUrl = await compressImage(file, 600, 600, 0.82);
-      if (compressedDataUrl) {
-        handleIdentidadeChange('imagem_url', compressedDataUrl);
-      }
+      const imageUrl = await enviarImagem(file, 'fichas', { maxWidth: 600, maxHeight: 600, quality: 0.82 });
+      if (imageUrl) handleIdentidadeChange('imagem_url', imageUrl);
     } catch (err) {
-      console.error('Erro ao processar imagem:', err);
+      setImageUploadError(err instanceof Error ? err.message : 'Não foi possível enviar a imagem. Tente novamente.');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -1811,6 +1814,8 @@ export const FichaTecnicaPage: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  {isUploadingImage && <p role="status" className="mt-2 text-center text-xs text-[#d4af37]">Enviando imagem...</p>}
+                  {imageUploadError && <p role="alert" className="mt-2 text-center text-xs text-red-300">{imageUploadError}</p>}
                 </div>
 
                 {/* Dados da Direita da Foto */}

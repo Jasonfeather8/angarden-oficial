@@ -4,7 +4,7 @@ import { GothicButton } from './GothicButton';
 import { MercadoItem, CategoriaMercado } from '../types';
 import { ItemIconVisual } from './ItemIconVisual';
 import { GradeRdPecasArmadura, calcularRdPorPeca } from './GradeRdPecasArmadura';
-import { compressImage } from '../utils/imageCompressor';
+import { enviarImagem } from '@/services/mediaService';
 import {
   Swords,
   Shield,
@@ -303,9 +303,9 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
     }
 
     try {
-      const compressed = await compressImage(file, 500, 500, 0.82);
-      if (compressed) {
-        setImagemUrl(compressed);
+      const imageUrl = await enviarImagem(file, 'mercado', { maxWidth: 500, maxHeight: 500, quality: 0.82 });
+      if (imageUrl) {
+        setImagemUrl(imageUrl);
       }
     } catch {
       setUploadError('Erro ao carregar a imagem selecionada.');

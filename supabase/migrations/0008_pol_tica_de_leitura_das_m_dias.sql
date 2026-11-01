@@ -1,0 +1,1 @@
+create policy "midia_leitura" on storage.objects for select to anon, authenticated using (bucket_id = 'midia')
