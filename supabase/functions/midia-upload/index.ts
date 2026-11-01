@@ -12,9 +12,19 @@ const ALLOWED_MIMES = new Set([
   'image/svg+xml',
 ]);
 
+/**
+ * O navegador só envia o POST depois que o preflight (OPTIONS) é aceito, e a
+ * resposta precisa declarar o método e todos os cabeçalhos que o cliente manda.
+ * Faltava `Access-Control-Allow-Methods`, então o preflight era recusado, o POST
+ * nunca saía do navegador e a falha chegava apenas como "Failed to send a request
+ * to the Edge Function". A lista de cabeçalhos é a canônica do SDK
+ * (@supabase/supabase-js/cors), que acompanha o que o cliente envia.
+ */
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 function jsonResponse(status: number, body: Record<string, unknown>): Response {
@@ -52,7 +62,15 @@ function decodificarBase64(conteudoBase64: unknown): Uint8Array | null {
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
+  if (request.method === 'OPTIONS') {
+    const solicitados = request.headers.get('Access-Control-Request-Headers');
+    return new Response(null, {
+      status: 204,
+      headers: solicitados
+        ? { ...corsHeaders, 'Access-Control-Allow-Headers': solicitados }
+        : corsHeaders,
+    });
+  }
   if (request.method !== 'POST') return jsonResponse(405, { motivo: 'Método não permitido.' });
 
   try {

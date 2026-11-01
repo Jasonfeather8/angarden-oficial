@@ -138,6 +138,25 @@ interface RespostaUploadMidia {
   detalhe?: string;
 }
 
+/** `FunctionsFetchError` significa que a requisição não completou (preflight bloqueado); um erro HTTP traz resposta. */
+function falhouSemResposta(causa: unknown): boolean {
+  return causa instanceof Error && causa.name === 'FunctionsFetchError';
+}
+
+/**
+ * Envia os bytes direto ao bucket. Um corpo que não é Blob/FormData segue como
+ * binário cru e exige `contentType` explícito — sem ele o storage-js envia
+ * `text/plain;charset=UTF-8` e o bucket, que limita os MIME types, recusa com 400.
+ */
+async function enviarViaStorage(caminho: string, bytes: Uint8Array, mime: string): Promise<string> {
+  const bucket = supabase.storage.from('midia');
+  const { error } = await bucket.upload(caminho, bytes, { contentType: mime, upsert: false });
+  // 409 = o objeto já existe (envio anterior sem resposta): a imagem está lá, a URL é a mesma.
+  const codigo = String((error as { statusCode?: unknown } | null)?.statusCode ?? '');
+  if (error && codigo !== '409') throw error;
+  return bucket.getPublicUrl(caminho).data.publicUrl;
+}
+
 async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia, opcoes?: OpcoesImagem): Promise<string> {
   const extensao = EXTENSOES_POR_MIME[mime];
   if (!extensao) {
@@ -151,14 +170,18 @@ async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia
     const { data, error } = await supabase.functions.invoke<RespostaUploadMidia>('midia-upload', {
       body: { caminho, mime, conteudoBase64: codificarBase64(bytes) },
     });
-    if (error) {
+    if (!error) {
+      if (data?.ok && typeof data.url === 'string') return data.url;
+      if (data && !data.ok && typeof data.detalhe === 'string') throw new Error(data.detalhe);
+      throw new Error('Resposta inválida da função de upload.');
+    }
+    if (!falhouSemResposta(error)) {
       const contexto = (error as Error & { context?: unknown }).context;
       const corpo = contexto instanceof Response ? await contexto.text() : '';
       throw new Error(`${descreverErro(error)}${corpo ? `: ${corpo}` : ''}`);
     }
-    if (data?.ok && typeof data.url === 'string') return data.url;
-    if (data && !data.ok && typeof data.detalhe === 'string') throw new Error(data.detalhe);
-    throw new Error('Resposta inválida da função de upload.');
+    console.warn('[mediaService] Função de upload inacessível pelo navegador; enviando direto ao Storage.', { caminho });
+    return await enviarViaStorage(caminho, bytes, mime);
   } catch (causa) {
     const detalhe = descreverErro(causa);
     console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
