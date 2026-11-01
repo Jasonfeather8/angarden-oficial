@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-cinzel: 'Cinzel', serif;
+    --font-garamond: 'EB Garamond', serif;
+  }
+
+  body {
+    font-family: var(--font-garamond);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-cinzel);
+  }
+
+  /* Disable number input spin buttons / steppers */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+/* Medieval Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #100c09;
+  border: 1px solid #3a2c1d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5a4225;
+  border-radius: 2px;
+  border: 1px solid #8c6b41;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8c6b41;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(10, 8, 6, 0.6);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #5a4225;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8c6b41;
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-garamond {
+  font-family: 'EB Garamond', serif;
+}

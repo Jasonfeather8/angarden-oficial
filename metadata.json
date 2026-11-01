@@ -1,0 +1,6 @@
+{
+  "name": "Angarden",
+  "description": "Sistema de gestão e fichas para RPG de mesa com estética medieval imersiva.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
