@@ -23,6 +23,10 @@ export interface RelatorioMigracao {
   bytesLiberados: number;
 }
 
+export interface RelatorioMigracaoLote extends RelatorioMigracao {
+  motivo?: string;
+}
+
 const EXTENSOES_POR_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -51,6 +55,15 @@ type CharacterImagemRow = {
 };
 type MarketImagemRow = { id: string; imagem_url: string };
 type GrimorioImagemRow = { id: string; dados: unknown };
+
+type RespostaLoteGrimorio = {
+  ok: boolean;
+  processados?: number;
+  convertidas?: number;
+  restantes?: number;
+  falhas?: string[];
+  motivo?: string;
+};
 
 function ehBase64(value: unknown): value is string {
   return typeof value === 'string' && value.startsWith('data:image');
@@ -219,6 +232,48 @@ export async function enviarImagem(
 export async function moverImagemParaArmazenamento(dataUrl: string, pasta: PastaMidia): Promise<string> {
   const mime = mimeDeDataUrl(dataUrl);
   return enviarBlob(dataUrl, mime, pasta);
+}
+
+export async function migrarGrimorioEmLotes(
+  aoProgredir?: (convertidas: number, total: number) => void,
+): Promise<RelatorioMigracaoLote> {
+  const relatorio: RelatorioMigracaoLote = { convertidas: 0, ignoradas: 0, falhas: [], bytesLiberados: 0 };
+  let total = 0;
+  let restantes = 0;
+  const tetoDeLotes = 100;
+  aoProgredir?.(0, 0);
+
+  for (let lote = 0; lote < tetoDeLotes; lote += 1) {
+    const { data, error } = await supabase.functions.invoke<RespostaLoteGrimorio>('midia-upload', {
+      body: { modo: 'lote-grimorio' },
+    });
+    if (error) {
+      const contexto = (error as Error & { context?: unknown }).context;
+      const corpo = contexto instanceof Response ? await contexto.text() : '';
+      throw new Error(`${descreverErro(error)}${corpo ? `: ${corpo}` : ''}`);
+    }
+    if (!data) throw new Error('Resposta vazia da migração em lote do Grimório.');
+    const convertidasNoLote = data.convertidas ?? 0;
+    if (lote === 0) total = (data.processados ?? 0) + (data.restantes ?? 0);
+    relatorio.convertidas += convertidasNoLote;
+    restantes = data.restantes ?? 0;
+    relatorio.falhas.push(...(data.falhas ?? []));
+    aoProgredir?.(relatorio.convertidas, total);
+    if (!data.ok) {
+      relatorio.motivo = data.motivo ?? 'A migração em lote foi interrompida pelo servidor.';
+      return { ...relatorio, falhas: [...new Set(relatorio.falhas)] };
+    }
+    if (restantes === 0) return { ...relatorio, falhas: [...new Set(relatorio.falhas)] };
+    // Sem progresso: as magias que sobraram falharam de novo. Sem esta guarda o
+    // laço repetiria tentativas inúteis até o teto de lotes.
+    if (convertidasNoLote === 0) {
+      relatorio.motivo = 'As magias restantes não puderam ser convertidas. Veja as falhas listadas abaixo.';
+      return { ...relatorio, falhas: [...new Set(relatorio.falhas)] };
+    }
+  }
+
+  relatorio.motivo = 'A migração foi interrompida ao atingir o limite de segurança de lotes.';
+  return { ...relatorio, falhas: [...new Set(relatorio.falhas)] };
 }
 
 async function carregarLinhasMigracao() {

@@ -11,6 +11,13 @@ const ALLOWED_MIMES = new Set([
   'image/gif',
   'image/svg+xml',
 ]);
+const EXTENSOES_POR_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+};
 
 /**
  * O navegador só envia o POST depois que o preflight (OPTIONS) é aceito, e a
@@ -61,6 +68,112 @@ function decodificarBase64(conteudoBase64: unknown): Uint8Array | null {
   }
 }
 
+async function subirBytes(segmentos: string[], mime: string, bytes: Uint8Array) {
+  const caminhoCodificado = segmentos.map(encodeURIComponent).join('/');
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/midia/${caminhoCodificado}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      'content-type': mime,
+      'cache-control': 'max-age=31536000',
+      'x-upsert': 'false',
+    },
+    body: bytes,
+  });
+  const detalhe = response.ok ? null : await response.text();
+  return {
+    response,
+    detalhe,
+    url: `${SUPABASE_URL}/storage/v1/object/public/midia/${caminhoCodificado}`,
+  };
+}
+
+async function caminhoDeterministicoDaMagia(id: string, mime: string): Promise<string> {
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${id}:${mime}`)));
+  const hex = Array.from(hash.slice(0, 16), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16)}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  return `grimorio/${uuid}.${EXTENSOES_POR_MIME[mime]}`;
+}
+
+async function migrarLoteGrimorio(serviceClient: ReturnType<typeof createClient>, limite: number) {
+  try {
+    const { data: rows, error: selectError } = await serviceClient
+      .from('grimorio_spells')
+      .select('id, dados')
+      .gt('imagem_bytes', 2000)
+      .like('dados->>image', 'data:image%')
+      .limit(limite);
+    if (selectError) return { ok: false, motivo: `Não foi possível buscar magias pendentes: ${selectError.message}` };
+
+    let processados = 0;
+    let convertidas = 0;
+    const falhas: string[] = [];
+
+    for (const row of rows ?? []) {
+      const dados = row.dados;
+      const image = dados && typeof dados === 'object' && !Array.isArray(dados)
+        ? (dados as Record<string, unknown>).image
+        : undefined;
+      if (typeof image !== 'string' || !image.startsWith('data:image')) continue;
+
+      processados += 1;
+      const correspondencia = image.match(/^data:(image\/[^;,]+)(?:;[^,]*)?;base64,([\s\S]*)$/i);
+      if (!correspondencia) {
+        falhas.push(`Magia ${row.id}: data URL inválida ou não codificada em base64.`);
+        continue;
+      }
+
+      const mime = correspondencia[1].toLowerCase();
+      if (!ALLOWED_MIMES.has(mime)) {
+        falhas.push(`Magia ${row.id}: tipo de imagem não permitido (${mime}).`);
+        continue;
+      }
+      const bytes = decodificarBase64(correspondencia[2]);
+      if (!bytes) {
+        falhas.push(`Magia ${row.id}: conteúdo base64 inválido ou imagem maior que 5 MB.`);
+        continue;
+      }
+
+      try {
+        const caminho = await caminhoDeterministicoDaMagia(String(row.id), mime);
+        const upload = await subirBytes(caminho.split('/'), mime, bytes);
+        if (!upload.response.ok && upload.response.status !== 409) {
+          falhas.push(`Magia ${row.id}: Storage recusou o upload (${upload.response.status} ${upload.detalhe ?? ''}).`.trim());
+          continue;
+        }
+
+        const { error: updateError } = await serviceClient
+          .from('grimorio_spells')
+          .update({ dados: { ...(dados as Record<string, unknown>), image: upload.url } })
+          .eq('id', row.id);
+        if (updateError) {
+          falhas.push(`Magia ${row.id}: não foi possível gravar a URL no Grimório: ${updateError.message}`);
+          continue;
+        }
+        convertidas += 1;
+      } catch (error) {
+        falhas.push(`Magia ${row.id}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    const { count, error: countError } = await serviceClient
+      .from('grimorio_spells')
+      .select('id', { count: 'exact', head: true })
+      .gt('imagem_bytes', 2000)
+      .like('dados->>image', 'data:image%');
+    if (countError) return { ok: false, motivo: `Não foi possível contar magias pendentes: ${countError.message}` };
+
+    // Falha de uma magia isolada não invalida o lote: o cliente continua
+    // convertendo as demais e exibe as falhas no fim. `ok: false` fica reservado
+    // para falhas estruturais (busca, contagem ou exceção inesperada).
+    const restantes = count ?? 0;
+    return { ok: true, processados, convertidas, restantes, falhas };
+  } catch (error) {
+    return { ok: false, motivo: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') {
     const solicitados = request.headers.get('Access-Control-Request-Headers');
@@ -108,13 +221,14 @@ Deno.serve(async (request: Request) => {
     if (!body || typeof body !== 'object') return jsonResponse(400, { motivo: 'Corpo da requisição inválido.' });
 
     const entrada = body as Record<string, unknown>;
-    const segmentos = validarCaminho(entrada.caminho);
-    if (!segmentos) return jsonResponse(400, { motivo: 'Caminho de arquivo inválido.' });
-    if (typeof entrada.mime !== 'string' || !ALLOWED_MIMES.has(entrada.mime)) {
-      return jsonResponse(400, { motivo: 'Tipo de imagem não permitido.' });
+    const modoLote = entrada.modo === 'lote-grimorio';
+    let limite = 8;
+    if (modoLote && entrada.limite !== undefined) {
+      if (typeof entrada.limite !== 'number' || !Number.isFinite(entrada.limite) || !Number.isInteger(entrada.limite) || entrada.limite < 1) {
+        return jsonResponse(400, { ok: false, motivo: 'O limite do lote deve ser um número inteiro maior que zero.' });
+      }
+      limite = Math.min(entrada.limite, 20);
     }
-    const bytes = decodificarBase64(entrada.conteudoBase64);
-    if (!bytes) return jsonResponse(400, { motivo: 'Conteúdo base64 inválido ou imagem maior que 5 MB.' });
 
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -128,33 +242,34 @@ Deno.serve(async (request: Request) => {
       return jsonResponse(403, { motivo: 'Conta sem autorização para enviar imagens.' });
     }
 
+    if (modoLote) {
+      if (profile.role !== 'admin') {
+        return jsonResponse(403, { ok: false, motivo: 'A migração em lote do Grimório é exclusiva do Administrador da plataforma.' });
+      }
+      return jsonResponse(200, await migrarLoteGrimorio(serviceClient, limite));
+    }
+
+    const segmentos = validarCaminho(entrada.caminho);
+    if (!segmentos) return jsonResponse(400, { motivo: 'Caminho de arquivo inválido.' });
+    if (typeof entrada.mime !== 'string' || !ALLOWED_MIMES.has(entrada.mime)) {
+      return jsonResponse(400, { motivo: 'Tipo de imagem não permitido.' });
+    }
+    const bytes = decodificarBase64(entrada.conteudoBase64);
+    if (!bytes) return jsonResponse(400, { motivo: 'Conteúdo base64 inválido ou imagem maior que 5 MB.' });
+
     const pasta = segmentos[0];
     const autorizado = (pasta === 'grimorio' || pasta === 'mercado')
       ? profile.role === 'admin'
       : pasta === profile.id || (typeof profile.tenant_id === 'string' && pasta === profile.tenant_id);
     if (!autorizado) return jsonResponse(403, { motivo: 'Você não tem autorização para enviar imagens nesta pasta.' });
 
-    const storageUrl = `${SUPABASE_URL}/storage/v1/object/midia/${segmentos.map(encodeURIComponent).join('/')}`;
-    const storageResponse = await fetch(storageUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        'content-type': entrada.mime,
-        'cache-control': 'max-age=31536000',
-        'x-upsert': 'false',
-      },
-      body: bytes,
-    });
-
-    if (!storageResponse.ok) {
-      const corpo = await storageResponse.text();
-      console.error('[midia-upload] Storage rejeitou o upload.', storageResponse.status, corpo);
-      return jsonResponse(200, { ok: false, detalhe: `${storageResponse.status} ${corpo}` });
+    const upload = await subirBytes(segmentos, entrada.mime, bytes);
+    if (!upload.response.ok) {
+      console.error('[midia-upload] Storage rejeitou o upload.', upload.response.status, upload.detalhe);
+      return jsonResponse(200, { ok: false, detalhe: `${upload.response.status} ${upload.detalhe ?? ''}`.trim() });
     }
 
-    const url = `${SUPABASE_URL}/storage/v1/object/public/midia/${segmentos.map(encodeURIComponent).join('/')}`;
-    return jsonResponse(200, { ok: true, url });
+    return jsonResponse(200, { ok: true, url: upload.url });
   } catch (error) {
     console.error('[midia-upload] Falha inesperada ao processar o upload.', error);
     return jsonResponse(500, { motivo: 'Falha inesperada ao enviar a imagem.' });
