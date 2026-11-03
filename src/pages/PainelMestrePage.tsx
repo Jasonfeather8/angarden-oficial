@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Award,
   Check,
@@ -21,6 +21,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { fichaService } from '../services/fichaService';
 import { useAuthorization } from '../hooks/useAuthorization';
+import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import type { FichaCompleta } from '../types';
 
 type PermissionField = 'edicaoLiberada' | 'acessoMercadoEpico';
@@ -39,11 +40,8 @@ type CharacterRow = {
 };
 
 export const PainelMestrePage: React.FC = () => {
-  const { isMestre: isMaster } = useAuthorization();
-  const [characters, setCharacters] = useState<CharacterRow[]>([]);
+  const { isMestre: isMaster, tenantId } = useAuthorization();
   const [permissions, setPermissions] = useState<PermissionMap>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [isXpModalOpen, setIsXpModalOpen] = useState(false);
   const [isMoneyModalOpen, setIsMoneyModalOpen] = useState(false);
@@ -59,45 +57,50 @@ export const PainelMestrePage: React.FC = () => {
   const [isSavingMoney, setIsSavingMoney] = useState(false);
   const [savingPermissionId, setSavingPermissionId] = useState<string | null>(null);
 
-  const loadCharacters = useCallback(async () => {
-    if (!isMaster) return;
-
-    setIsLoading(true);
-    setStatusMessage('');
-    setLoadError('');
-    try {
-      const list = await fichaService.getListaPersonagens();
-      const fichasPorPersonagem = await fichaService.getFichasDoAcervo();
-      const loadedRows = list.map((character) => {
-        try {
-          const ficha = fichasPorPersonagem.get(character.id) ?? fichaService.createBlankFicha(character.id, character.nome);
-          return {
-            id: character.id,
-            nome: ficha.identidade.nome_personagem?.trim() || character.nome || 'Aventureiro',
-            ficha: fichaService.calcularEngine(ficha),
-          } satisfies CharacterRow;
-        } catch {
-          return null;
-        }
-      });
-      const charactersWithFicha = loadedRows.filter((row): row is CharacterRow => row !== null);
-      setCharacters(charactersWithFicha);
-      setPermissions(Object.fromEntries(charactersWithFicha.map((row) => [row.id, {
-        edicaoLiberada: row.ficha.identidade.edicao_liberada ?? true,
-        acessoMercadoEpico: row.ficha.identidade.acesso_mercado_epico ?? false,
-      }])));
-    } catch {
-      setCharacters([]);
-      setLoadError('Não foi possível carregar as fichas da mesa. Verifique sua conexão e tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isMaster]);
+  const charactersQuery = useAsyncData(async () => {
+    if (!tenantId) return [];
+    const list = await fichaService.getListaPersonagens();
+    const fichasPorPersonagem = await fichaService.getFichasDoAcervo();
+    const loadedRows = list.map((character) => {
+      try {
+        const ficha = fichasPorPersonagem.get(character.id) ?? fichaService.createBlankFicha(character.id, character.nome);
+        return {
+          id: character.id,
+          nome: ficha.identidade.nome_personagem?.trim() || character.nome || 'Aventureiro',
+          ficha: fichaService.calcularEngine(ficha),
+        } satisfies CharacterRow;
+      } catch {
+        return null;
+      }
+    });
+    return loadedRows.filter((row): row is CharacterRow => row !== null);
+  }, [tenantId], {
+    cacheKey: `mestre-fichas:${tenantId ?? ''}`,
+    enabled: isMaster && Boolean(tenantId),
+  });
+  const characters = charactersQuery.data ?? [];
+  const isLoading = charactersQuery.isLoading;
+  const loadError = charactersQuery.error
+    ? 'Não foi possível carregar as fichas da mesa. Verifique sua conexão e tente novamente.'
+    : '';
 
   useEffect(() => {
-    if (!isMaster) return;
-    loadCharacters();
-  }, [isMaster, loadCharacters]);
+    if (!charactersQuery.data) return;
+    setPermissions(Object.fromEntries(charactersQuery.data.map((row) => [row.id, {
+      edicaoLiberada: row.ficha.identidade.edicao_liberada ?? true,
+      acessoMercadoEpico: row.ficha.identidade.acesso_mercado_epico ?? false,
+    }])));
+  }, [charactersQuery.data]);
+
+  const refreshCharacters = () => {
+    setStatusMessage('');
+    charactersQuery.reload();
+  };
+
+  const invalidateCharacterCaches = () => {
+    invalidateAsyncDataCache(`mestre-fichas:${tenantId ?? ''}`);
+    invalidateAsyncDataCache(`personagens-resumo:${tenantId ?? ''}`);
+  };
 
   const getPermissions = (character: CharacterRow): CharacterPermissions => ({
     edicaoLiberada: permissions[character.id]?.edicaoLiberada ?? character.ficha.identidade.edicao_liberada ?? true,
@@ -134,7 +137,8 @@ export const PainelMestrePage: React.FC = () => {
         if (!saved) throw new Error('Falha ao salvar permissões');
       }));
 
-      await loadCharacters();
+      invalidateCharacterCaches();
+      refreshCharacters();
       setStatusMessage('Permissões salvas com sucesso.');
     } catch {
       setStatusMessage('Não foi possível salvar as permissões.');
@@ -184,7 +188,8 @@ export const PainelMestrePage: React.FC = () => {
       await Promise.all(targetIds.map((characterId) => fichaService.ensureFicha(characterId)));
       await Promise.all(targetIds.map((characterId) => fichaService.grantXp(characterId, amount, reason)));
 
-      await loadCharacters();
+      invalidateCharacterCaches();
+      refreshCharacters();
       setIsXpModalOpen(false);
       setStatusMessage(`XP concedido com sucesso. Motivo: ${reason}`);
       setXpAmount('');
@@ -222,7 +227,8 @@ export const PainelMestrePage: React.FC = () => {
 
       await fichaService.adjustTreasure(character.id, moneyOperation === 'add' ? amount : -amount);
 
-      await loadCharacters();
+      invalidateCharacterCaches();
+      refreshCharacters();
       setIsMoneyModalOpen(false);
       setStatusMessage(`Tesouro de ${character.nome} atualizado.`);
       setMoneyAmount('');
@@ -326,9 +332,7 @@ export const PainelMestrePage: React.FC = () => {
                         <ErrorState
                           title="Não foi possível carregar a mesa"
                           description={loadError}
-                          onRetry={() => {
-                            void loadCharacters();
-                          }}
+                          onRetry={refreshCharacters}
                         />
                       ) : (
                         <EmptyState
@@ -377,7 +381,7 @@ export const PainelMestrePage: React.FC = () => {
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#917b60]">
             <span>{characters.length} {characters.length === 1 ? 'ficha disponível' : 'fichas disponíveis'} · dados locais da campanha</span>
-            <button type="button" onClick={loadCharacters} className="inline-flex items-center gap-1.5 rounded-xs border border-transparent px-2 py-1 font-cinzel uppercase tracking-wider transition-colors hover:border-[#5a4225] hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"><RefreshCw className="h-3.5 w-3.5" /> Atualizar tabela</button>
+            <button type="button" onClick={refreshCharacters} className="inline-flex items-center gap-1.5 rounded-xs border border-transparent px-2 py-1 font-cinzel uppercase tracking-wider transition-colors hover:border-[#5a4225] hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"><RefreshCw className="h-3.5 w-3.5" /> Atualizar tabela</button>
           </div>
         </div>
       </MedievalFrame>

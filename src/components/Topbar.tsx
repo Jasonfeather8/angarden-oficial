@@ -7,6 +7,7 @@ import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { campaignService } from '../services/campaignService';
 import { ROLE_LABELS } from '../auth/policies';
+import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
 
 export const Topbar: React.FC = () => {
@@ -104,6 +105,8 @@ export const Topbar: React.FC = () => {
         <button
           id="btn-topbar-current-user"
           type="button"
+          onMouseEnter={() => void preloadRoute(ROUTES.perfil)}
+          onFocus={() => void preloadRoute(ROUTES.perfil)}
           onClick={() => navigate(ROUTES.perfil)}
           className="flex items-center gap-2 rounded-sm border border-transparent px-1.5 py-1 text-left transition-colors hover:border-[#5a4225] hover:bg-[#1a140e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37]"
           title="Abrir meu perfil"

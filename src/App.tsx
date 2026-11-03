@@ -5,31 +5,32 @@ import { LoadingState } from './components/ui/Skeleton';
 import { AppLayout } from './layouts/AppLayout';
 import { AdminLayout } from './layouts/AdminLayout';
 import { ROUTES } from './routes/paths';
-
-const DashboardPage = React.lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
-const PersonagensPage = React.lazy(() => import('./pages/PersonagensPage').then((m) => ({ default: m.PersonagensPage })));
-const FichaTecnicaPage = React.lazy(() => import('./pages/FichaTecnicaPage').then((m) => ({ default: m.FichaTecnicaPage })));
-const MercadoPage = React.lazy(() => import('./pages/MercadoPage').then((m) => ({ default: m.MercadoPage })));
-const GrimorioPage = React.lazy(() => import('./pages/GrimorioPage').then((m) => ({ default: m.GrimorioPage })));
-const BibliotecaPage = React.lazy(() => import('./pages/BibliotecaPage').then((m) => ({ default: m.BibliotecaPage })));
-const CronicasPage = React.lazy(() => import('./pages/CronicasPage').then((m) => ({ default: m.CronicasPage })));
-const CampanhasPage = React.lazy(() => import('./pages/CampanhasPage').then((m) => ({ default: m.CampanhasPage })));
-const ConvitePage = React.lazy(() => import('./pages/ConvitePage').then((m) => ({ default: m.ConvitePage })));
-const PainelMestrePage = React.lazy(() => import('./pages/PainelMestrePage').then((m) => ({ default: m.PainelMestrePage })));
-const PerfilPage = React.lazy(() => import('./pages/PerfilPage').then((m) => ({ default: m.PerfilPage })));
-const LoginPage = React.lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
-const CadastroPage = React.lazy(() => import('./pages/CadastroPage').then((m) => ({ default: m.CadastroPage })));
-const RecuperarSenhaPage = React.lazy(() => import('./pages/RecuperarSenhaPage').then((m) => ({ default: m.RecuperarSenhaPage })));
-const RedefinirSenhaPage = React.lazy(() => import('./pages/RedefinirSenhaPage').then((m) => ({ default: m.RedefinirSenhaPage })));
-const AuthCallbackPage = React.lazy(() => import('./pages/AuthCallbackPage').then((m) => ({ default: m.AuthCallbackPage })));
-const AcessoNegadoPage = React.lazy(() => import('./pages/AcessoNegadoPage').then((m) => ({ default: m.AcessoNegadoPage })));
-const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
-const AdminOverviewPage = React.lazy(() => import('./pages/admin/AdminOverviewPage').then((m) => ({ default: m.AdminOverviewPage })));
-const AdminRequestsPage = React.lazy(() => import('./pages/admin/AdminRequestsPage').then((m) => ({ default: m.AdminRequestsPage })));
-const AdminClientsPage = React.lazy(() => import('./pages/admin/AdminClientsPage').then((m) => ({ default: m.AdminClientsPage })));
-const AdminCampaignsPage = React.lazy(() => import('./pages/admin/AdminCampaignsPage').then((m) => ({ default: m.AdminCampaignsPage })));
-const AdminMediaPage = React.lazy(() => import('./pages/admin/AdminMediaPage').then((m) => ({ default: m.AdminMediaPage })));
-const AdminImportarMagiasPage = React.lazy(() => import('./pages/admin/AdminImportarMagiasPage').then((m) => ({ default: m.AdminImportarMagiasPage })));
+import {
+  AcessoNegadoPage,
+  AdminCampaignsPage,
+  AdminClientsPage,
+  AdminImportarMagiasPage,
+  AdminMediaPage,
+  AdminOverviewPage,
+  AdminRequestsPage,
+  AuthCallbackPage,
+  BibliotecaPage,
+  CadastroPage,
+  CampanhasPage,
+  ConvitePage,
+  CronicasPage,
+  DashboardPage,
+  FichaTecnicaPage,
+  GrimorioPage,
+  LoginPage,
+  MercadoPage,
+  NotFoundPage,
+  PainelMestrePage,
+  PerfilPage,
+  PersonagensPage,
+  RecuperarSenhaPage,
+  RedefinirSenhaPage,
+} from './routes/lazyPages';
 
 /**
  * App.tsx contém apenas o mapa de rotas e os guardas de acesso.

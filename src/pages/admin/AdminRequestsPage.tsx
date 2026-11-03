@@ -83,11 +83,11 @@ export const AdminRequestsPage: React.FC = () => {
         nome_tenant: linkMode === 'novo' ? nomeTenant : undefined,
         tenant_id: linkMode === 'existente' ? tenantId : undefined,
       });
+      invalidateAsyncDataCache('admin-');
+      reload();
       const tenant = profile.tenant_id ? await tenantService.getTenant(profile.tenant_id) : null;
       setFeedback(`Conta de ${profile.nome_completo} aprovada no cliente "${tenant?.nome ?? ''}".`);
       setSelectedId(null);
-      invalidateAsyncDataCache('admin-');
-      reload();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'Não foi possível aprovar a solicitação.');
     } finally {

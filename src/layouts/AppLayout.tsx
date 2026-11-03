@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
+import { LoadingState } from '../components/ui/Skeleton';
+import { scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { useAppStore } from '../store/useAppStore';
 
 /**
@@ -21,6 +23,8 @@ export const AppLayout: React.FC = () => {
     }
   }, [pathname, setMobileOpen]);
 
+  useEffect(() => scheduleSiblingRoutePreload(pathname), [pathname]);
+
   return (
     <div className="h-screen w-screen bg-[#0a0a0a] text-[#dcd1ba] flex flex-col overflow-hidden selection:bg-[#5a4225] selection:text-[#f3ebd3]">
       {/* Barra de Topo Global */}
@@ -35,7 +39,9 @@ export const AppLayout: React.FC = () => {
           id="main-content-area"
           className="flex-1 h-full p-3 sm:p-5 lg:p-7 flex items-start justify-center overflow-y-auto custom-scrollbar min-w-0"
         >
-          <Outlet />
+          <Suspense fallback={<div className="mx-auto w-full max-w-xl px-4 py-10"><LoadingState label="Preparando esta página…" /></div>}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

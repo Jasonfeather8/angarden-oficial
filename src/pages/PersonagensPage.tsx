@@ -49,6 +49,7 @@ export const PersonagensPage: React.FC = () => {
 
     // Inicializa ficha completamente vazia para ser preenchida
     await fichaService.createTenantCharacter(newChar);
+    invalidateAsyncDataCache('acervo-personagens');
     const blankFicha = fichaService.createBlankFicha(newId, '');
     await fichaService.saveFicha(newId, blankFicha);
 

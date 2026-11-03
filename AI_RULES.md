@@ -33,6 +33,8 @@
 - Keep data fetching and persistence in `src/services/`; pages and presentational components should call service functions rather than embedding storage or API logic.
 - Import shared modules with the `@/` alias (`@` maps to `./src` in both `vite.config.ts` and `tsconfig.json`); keep `resolve.dedupe: ['react', 'react-dom']` in `vite.config.ts`.
 - Every data-dependent screen must handle loading, error/timeout and empty states before rendering success. Reuse `src/components/ui/Skeleton.tsx`, `EmptyState.tsx`, `ErrorState.tsx` and `src/hooks/useAsyncData.ts` (which applies `withTimeout`) instead of ad-hoc spinners and `console.error`-only failures.
+- Telas pintam do cache e revalidam em segundo plano: use `useAsyncData` sempre com `cacheKey` e invalide a chave/prefixo após toda escrita que afete os dados.
+- Suspense fica dentro dos layouts e as rotas são pré-carregadas; assim a casca do app não desmonta durante a navegação.
 - Telas com paginação e filtro no servidor usam React Query (`useQuery`): os filtros e a página fazem parte do `queryKey` e `placeholderData: keepPreviousData` evita piscar a tela ao trocar de página. Envolva o `queryFn` em `withTimeout`. As demais telas continuam com `useAsyncData`.
 - Persist client data in Supabase, never in the browser. `localStorage` is reserved for UI shell state; validate data at external boundaries before putting it into application state.
 - Keep Google GenAI calls, Express handlers, dotenv usage, and any other secret-dependent logic on the server side. Never commit credentials or expose private environment variables through client bundles.

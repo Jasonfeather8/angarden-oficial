@@ -1,7 +1,9 @@
-import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { Suspense, useEffect } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, Coins, Crown, HardDrive, LayoutDashboard, LogOut, ScrollText, Shield, Users } from 'lucide-react';
 import { clsx } from 'clsx';
+import { LoadingState } from '../components/ui/Skeleton';
+import { preloadRoute, scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
 import { useSessionStore } from '../store/useSessionStore';
 
@@ -21,12 +23,15 @@ const ADMIN_NAV = [
 export const AdminLayout: React.FC = () => {
   const user = useSessionStore((state) => state.session?.user ?? null);
   const signOut = useSessionStore((state) => state.signOut);
+  const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
     navigate(ROUTES.login, { replace: true });
   };
+
+  useEffect(() => scheduleSiblingRoutePreload(pathname), [pathname]);
 
   return (
     <div className="min-h-screen w-full bg-[#0a0a0a] text-[#dcd1ba] selection:bg-[#5a4225] selection:text-[#f3ebd3]">
@@ -55,6 +60,8 @@ export const AdminLayout: React.FC = () => {
                     key={item.to}
                     to={item.to}
                     end={item.end}
+                    onMouseEnter={() => void preloadRoute(item.to)}
+                    onFocus={() => void preloadRoute(item.to)}
                     className={({ isActive }) =>
                       clsx(
                         'flex items-center gap-1.5 rounded-xs border px-3 py-2 text-[10px] font-cinzel font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37]',
@@ -77,6 +84,8 @@ export const AdminLayout: React.FC = () => {
 
             <button
               type="button"
+              onMouseEnter={() => void preloadRoute(ROUTES.dashboard)}
+              onFocus={() => void preloadRoute(ROUTES.dashboard)}
               onClick={() => navigate(ROUTES.dashboard)}
               className="flex items-center gap-1.5 rounded-xs border border-[#5a4225] px-3 py-2 text-[10px] font-cinzel uppercase tracking-wider text-[#a88d61] transition-colors hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37]"
             >
@@ -97,7 +106,9 @@ export const AdminLayout: React.FC = () => {
       </header>
 
       <main className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6">
-        <Outlet />
+        <Suspense fallback={<div className="mx-auto w-full max-w-xl px-4 py-10"><LoadingState label="Preparando esta página…" /></div>}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

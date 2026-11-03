@@ -6,7 +6,7 @@ import { GothicButton } from '../components/GothicButton';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
-import { useAsyncData } from '../hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import { useSessionStore } from '../store/useSessionStore';
 import { campaignService } from '../services/campaignService';
 import { ROUTES } from '../routes/paths';
@@ -19,7 +19,7 @@ export const ConvitePage: React.FC = () => {
   const { data, isLoading, error, reload } = useAsyncData<CampaignInvitePreview>(
     () => campaignService.getInvitePreview(token),
     [token, session?.user.id],
-    { enabled: Boolean(session && token) }
+    { enabled: Boolean(session && token), cacheKey: `convite:${token}:${session?.user.id ?? ''}` }
   );
 
   const [isJoining, setIsJoining] = useState(false);
@@ -31,6 +31,8 @@ export const ConvitePage: React.FC = () => {
     setJoinError('');
     try {
       await campaignService.acceptInvite(token, session);
+      invalidateAsyncDataCache(`convite:${token}:${session.user.id}`);
+      invalidateAsyncDataCache('campanhas');
       navigate(ROUTES.campanhas, { replace: true });
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : 'Não foi possível aceitar o convite.');

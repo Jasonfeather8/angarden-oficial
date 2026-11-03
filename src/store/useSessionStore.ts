@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import type { Session, Usuario } from '../types';
 import { sessionFromSupabaseUser, sessionService } from '../services/sessionService';
+import { queryClient } from '../services/queryClient';
+import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 
 export type SessionStatus = 'loading' | 'authenticated' | 'anonymous' | 'recovery';
 
@@ -32,6 +34,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         }
 
         if (!authSession) {
+          queryClient.clear();
+          invalidateAsyncDataCache();
           set((state) => ({
             session: null,
             status: state.status === 'recovery' ? 'recovery' : 'anonymous',
@@ -63,6 +67,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   signOut: async () => {
     await sessionService.signOut();
+    queryClient.clear();
+    invalidateAsyncDataCache();
     set({ session: null, status: 'anonymous', accountNotice: null });
   },
 

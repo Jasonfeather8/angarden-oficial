@@ -14,7 +14,9 @@ const formatarMegabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toLocale
 
 export const AdminMediaPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { data, isLoading, error, reload } = useAsyncData(inventariarMidiaLegada, []);
+  const { data, isLoading, error, reload } = useAsyncData(inventariarMidiaLegada, [], {
+    cacheKey: 'admin-midia-legada',
+  });
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState({ concluidos: 0, total: 0 });
   const [relatorio, setRelatorio] = useState<RelatorioMigracao | null>(null);
@@ -32,12 +34,12 @@ export const AdminMediaPage: React.FC = () => {
     try {
       const resultado = await migrarMidiaLegada((concluidos, total) => setProgresso({ concluidos, total }));
       setRelatorio(resultado);
-      invalidateAsyncDataCache();
       await queryClient.invalidateQueries({ queryKey: ['mercado'] });
-      reload();
     } catch (cause) {
       setErroMigracao(cause instanceof Error ? cause.message : 'Não foi possível concluir a migração.');
     } finally {
+      invalidateAsyncDataCache();
+      reload();
       setProcessando(false);
     }
   };

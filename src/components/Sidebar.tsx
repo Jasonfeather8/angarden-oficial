@@ -20,6 +20,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { ROLE_LABELS } from '../auth/policies';
+import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES, isFichaRoute } from '../routes/paths';
 
 interface MenuItem {
@@ -216,6 +217,8 @@ export const Sidebar: React.FC = () => {
                     <button
                       key={item.id}
                       id={`menu-item-${item.id}`}
+                      onMouseEnter={() => void preloadRoute(item.to)}
+                      onFocus={() => void preloadRoute(item.to)}
                       onClick={() => {
                         navigate(item.to);
                         setMobileOpen(false);

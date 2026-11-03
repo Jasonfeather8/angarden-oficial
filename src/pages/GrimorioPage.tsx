@@ -55,6 +55,7 @@ import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca'
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { useOtimizarImagensGrimorio } from '../hooks/useOtimizarImagensGrimorio';
 import { enviarImagem } from '../services/mediaService';
 import { useFichaStore } from '../store/useFichaStore';
@@ -115,10 +116,19 @@ export const GrimorioPage: React.FC = () => {
   const [volumeId, setVolumeId] = useState('');
   const [selectedSpell, setSelectedSpell] = useState<GrimorioSpell | null>(null);
   const [personagemId, setPersonagemId] = useState<string>(() => storeCharacterId);
-  const [listaPersonagens, setListaPersonagens] = useState<PersonagemResumo[]>([]);
-  const [isLoadingPersonagens, setIsLoadingPersonagens] = useState(true);
-  const [erroPersonagens, setErroPersonagens] = useState<string | null>(null);
-  const [recarregarPersonagensToken, setRecarregarPersonagensToken] = useState(0);
+  const {
+    data: listaPersonagensData,
+    isLoading: isLoadingPersonagens,
+    error: erroPersonagensHook,
+    reload: reloadPersonagens,
+  } = useAsyncData(() => fichaService.getListaPersonagens(), [tenantId], {
+    cacheKey: `personagens-resumo:${tenantId ?? ''}`,
+    enabled: Boolean(tenantId),
+  });
+  const listaPersonagens: PersonagemResumo[] = listaPersonagensData ?? [];
+  const erroPersonagens = erroPersonagensHook === 'Não foi possível carregar os dados.'
+    ? 'Não foi possível carregar a lista de personagens do grimório.'
+    : erroPersonagensHook;
   const [isModalCompradorOpen, setIsModalCompradorOpen] = useState(false);
   const [learnedIds, setLearnedIds] = useState<string[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -132,39 +142,12 @@ export const GrimorioPage: React.FC = () => {
   const [erroUploadImagem, setErroUploadImagem] = useState<string | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-    const carregarListaPersonagens = async () => {
-      setIsLoadingPersonagens(true);
-      setErroPersonagens(null);
-      try {
-        const lista = await withTimeout(fichaService.getListaPersonagens());
-        if (!isMounted) return;
-        setListaPersonagens(lista);
-        if (lista.length > 0 && !lista.some((personagem) => personagem.id === personagemId)) {
-          const personagemFallback = lista[0];
-          setPersonagemId(personagemFallback.id);
-          setStoreCharacterId(personagemFallback.id);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar lista de personagens do Grimório', error);
-        if (isMounted) {
-          setListaPersonagens([]);
-          setErroPersonagens(
-            error instanceof Error
-              ? error.message
-              : 'Não foi possível carregar a lista de personagens do grimório.'
-          );
-        }
-      } finally {
-        if (isMounted) setIsLoadingPersonagens(false);
-      }
-    };
-
-    carregarListaPersonagens();
-    return () => {
-      isMounted = false;
-    };
-  }, [setStoreCharacterId, recarregarPersonagensToken]);
+    if (listaPersonagens.length > 0 && !listaPersonagens.some((personagem) => personagem.id === personagemId)) {
+      const personagemFallback = listaPersonagens[0];
+      setPersonagemId(personagemFallback.id);
+      setStoreCharacterId(personagemFallback.id);
+    }
+  }, [listaPersonagens, personagemId, setStoreCharacterId]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -563,7 +546,7 @@ export const GrimorioPage: React.FC = () => {
               description={erroGrimorio}
               className="py-6"
               onRetry={() => {
-                setRecarregarPersonagensToken((token) => token + 1);
+                reloadPersonagens();
                 setErroMutacaoGrimorio(null);
                 void grimorioQuery.refetch();
               }}
@@ -572,7 +555,7 @@ export const GrimorioPage: React.FC = () => {
           {!isLoadingGrimorio && !erroGrimorio && tenantId && !isLoadingPersonagens && erroPersonagens && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#c4b9a3]" role="status">
               <span>Não foi possível carregar a lista de personagens: {erroPersonagens}</span>
-              <button type="button" onClick={() => setRecarregarPersonagensToken((token) => token + 1)} className="text-[#d6b56a] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">
+              <button type="button" onClick={reloadPersonagens} className="text-[#d6b56a] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">
                 Tentar novamente
               </button>
             </div>

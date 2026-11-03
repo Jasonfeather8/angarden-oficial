@@ -10,7 +10,7 @@ export interface UseAsyncDataOptions<T> {
   enabled?: boolean;
   /** Chave de cache em memória. Sem ela a busca continua sem cache, como antes. */
   cacheKey?: string;
-  /** Validade do valor em cache, em ms. */
+  /** Idade a partir da qual o valor em cache será revalidado em segundo plano. */
   cacheTtlMs?: number;
 }
 
@@ -27,6 +27,12 @@ const CACHE_TTL_PADRAO_MS = 60_000;
 interface CacheEntry {
   data: unknown;
   at: number;
+}
+
+interface RequestState {
+  key: string | undefined;
+  loading: boolean;
+  error: string | null;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -49,6 +55,11 @@ function defaultIsEmpty<T>(data: T): boolean {
   return Array.isArray(data) && data.length === 0;
 }
 
+function getCachedData<T>(key?: string): T | null {
+  if (!key) return null;
+  return (cache.get(key)?.data as T | undefined) ?? null;
+}
+
 /**
  * Centraliza o ciclo de vida de uma busca assíncrona expondo os estados de
  * interface (loading, error, empty, success) de forma padronizada.
@@ -68,65 +79,67 @@ export function useAsyncData<T>(
     cacheTtlMs = CACHE_TTL_PADRAO_MS,
   } = options;
 
-  const [data, setData] = useState<T | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(enabled);
-  const [error, setError] = useState<string | null>(null);
+  const [dataState, setDataState] = useState(() => ({ key: cacheKey, data: getCachedData<T>(cacheKey) }));
+  const [requestState, setRequestState] = useState<RequestState>(() => ({
+    key: cacheKey,
+    loading: enabled && getCachedData<T>(cacheKey) === null,
+    error: null,
+  }));
   const [reloadToken, setReloadToken] = useState(0);
 
   const loaderRef = useRef(loader);
   const isEmptyRef = useRef(isEmptyCheck);
   const requestIdRef = useRef(0);
-  const forcarAtualizacaoRef = useRef(false);
+  const forceRefreshRef = useRef(false);
 
   useEffect(() => {
     loaderRef.current = loader;
     isEmptyRef.current = isEmptyCheck;
   });
 
+  const data = dataState.key === cacheKey ? dataState.data : getCachedData<T>(cacheKey);
+
   useEffect(() => {
     if (!enabled) {
-      setIsLoading(false);
+      setRequestState({ key: cacheKey, loading: false, error: null });
       return;
     }
 
-    // `reload()` ignora o cache uma vez; as demais trocas de dependência o reaproveitam.
-    const forcar = forcarAtualizacaoRef.current;
-    forcarAtualizacaoRef.current = false;
+    const forceRefresh = forceRefreshRef.current;
+    forceRefreshRef.current = false;
+    const entry = cacheKey ? cache.get(cacheKey) : undefined;
+    const hasVisibleData = dataState.key === cacheKey ? dataState.data !== null : entry !== undefined;
 
-    if (cacheKey && !forcar) {
-      const entrada = cache.get(cacheKey);
-      if (entrada && Date.now() - entrada.at < cacheTtlMs) {
-        setData(entrada.data as T);
-        setError(null);
-        setIsLoading(false);
-        return;
-      }
+    if (entry && !forceRefresh && Date.now() - entry.at < cacheTtlMs) {
+      setDataState({ key: cacheKey, data: entry.data as T });
+      setRequestState({ key: cacheKey, loading: false, error: null });
+      return;
     }
 
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
-
-    setIsLoading(true);
-    setError(null);
+    setRequestState({ key: cacheKey, loading: !hasVisibleData, error: null });
 
     withTimeout(loaderRef.current(), timeoutMs)
       .then((result) => {
         if (requestId !== requestIdRef.current) return;
         if (cacheKey) cache.set(cacheKey, { data: result, at: Date.now() });
-        setData(result);
+        setDataState({ key: cacheKey, data: result });
       })
       .catch((err: unknown) => {
         if (requestId !== requestIdRef.current) return;
-        setData(null);
-        setError(err instanceof Error ? err.message : 'Não foi possível carregar os dados.');
+        setRequestState({
+          key: cacheKey,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Não foi possível carregar os dados.',
+        });
       })
       .finally(() => {
         if (requestId !== requestIdRef.current) return;
-        setIsLoading(false);
+        setRequestState((current) => current.key === cacheKey ? { ...current, loading: false } : current);
       });
 
     return () => {
-      // Invalida a requisição pendente quando as dependências mudam ou o componente desmonta.
       if (requestId === requestIdRef.current) {
         requestIdRef.current = requestId + 1;
       }
@@ -135,12 +148,13 @@ export function useAsyncData<T>(
   }, [enabled, timeoutMs, reloadToken, cacheKey, cacheTtlMs, ...deps]);
 
   const reload = useCallback(() => {
-    forcarAtualizacaoRef.current = true;
+    forceRefreshRef.current = true;
     setReloadToken((token) => token + 1);
   }, []);
 
-  const isEmpty =
-    data !== null && (isEmptyRef.current ? isEmptyRef.current(data) : defaultIsEmpty(data));
+  const isLoading = enabled && data === null && (requestState.key !== cacheKey || requestState.loading);
+  const error = data === null && requestState.key === cacheKey ? requestState.error : null;
+  const isEmpty = data !== null && (isEmptyRef.current ? isEmptyRef.current(data) : defaultIsEmpty(data));
 
   return { data, isLoading, error, isEmpty, reload };
 }
