@@ -27,6 +27,7 @@ import {
   getSchoolVolumes,
   grimorioAdditionalSchools,
   grimorioCosmicoSchools,
+  grimorioAllSchools,
   grimorioElementos,
   grimorioExotericoSchools,
   grimorioMaiorSchools,
@@ -62,7 +63,6 @@ import { Field, MagicVisual, SpellCard, SpellDetailsModal as SharedSpellDetailsM
 type View = 'schools' | 'element-tree' | 'mental-tree' | 'tree' | 'book';
 type BookVolume = 1 | 2 | 3;
 
-const grimorioAllSchools = [...grimorioSchools, ...grimorioElementos, ...grimorioMentalizacao, ...grimorioAdditionalSchools];
 const grimorioFormSchools = [...grimorioSchools, ...grimorioAdditionalSchools];
 
 const resolveDestinationSchool = (selectedSchoolId: string, subcategory: string) => {

@@ -29,6 +29,7 @@ const AdminRequestsPage = React.lazy(() => import('./pages/admin/AdminRequestsPa
 const AdminClientsPage = React.lazy(() => import('./pages/admin/AdminClientsPage').then((m) => ({ default: m.AdminClientsPage })));
 const AdminCampaignsPage = React.lazy(() => import('./pages/admin/AdminCampaignsPage').then((m) => ({ default: m.AdminCampaignsPage })));
 const AdminMediaPage = React.lazy(() => import('./pages/admin/AdminMediaPage').then((m) => ({ default: m.AdminMediaPage })));
+const AdminImportarMagiasPage = React.lazy(() => import('./pages/admin/AdminImportarMagiasPage').then((m) => ({ default: m.AdminImportarMagiasPage })));
 
 /**
  * App.tsx contém apenas o mapa de rotas e os guardas de acesso.
@@ -80,6 +81,7 @@ export default function App() {
           <Route path={ROUTES.admin.clientes} element={<AdminClientsPage />} />
           <Route path={ROUTES.admin.campanhas} element={<AdminCampaignsPage />} />
           <Route path={ROUTES.admin.midia} element={<AdminMediaPage />} />
+          <Route path={ROUTES.admin.importarMagias} element={<AdminImportarMagiasPage />} />
         </Route>
 
         {/* Área do cliente */}

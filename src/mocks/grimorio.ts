@@ -192,4 +192,11 @@ export const grimorioVolumes: GrimorioVolume[] = [
   ]),
 ];
 
+export const grimorioAllSchools: GrimorioSchool[] = [
+  ...grimorioSchools,
+  ...grimorioElementos,
+  ...grimorioMentalizacao,
+  ...grimorioAdditionalSchools,
+];
+
 export const getSchoolVolumes = (schoolId: string) => grimorioVolumes.filter((volume) => volume.schoolId === schoolId);

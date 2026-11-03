@@ -23,6 +23,7 @@ export const ROUTES = {
     clientes: '/admin/clientes',
     campanhas: '/admin/campanhas',
     midia: '/admin/midia',
+    importarMagias: '/admin/importar-magias',
   },
 } as const;
 

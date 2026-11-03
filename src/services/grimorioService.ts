@@ -168,6 +168,98 @@ export const criarMagia = async (spell: GrimorioSpell): Promise<void> => {
   }
 };
 
+export const listarIdsExistentes = async (ids: string[]): Promise<Set<string>> => {
+  const encontrados = new Set<string>();
+  for (let index = 0; index < ids.length; index += 200) {
+    const { data, error } = await withTimeout(Promise.resolve(
+      supabase.from('grimorio_spells').select('id').in('id', ids.slice(index, index + 200))
+    ));
+    if (error) throw new Error(`Não foi possível verificar IDs existentes: ${error.message}`);
+    for (const row of data ?? []) encontrados.add(row.id);
+  }
+  return encontrados;
+};
+
+export const importarMagias = async (
+  linhas: GrimorioSpell[],
+  aoProgredir?: (concluidas: number, total: number) => void,
+): Promise<{ importadas: number; falhas: string[] }> => {
+  const existentes = await listarIdsExistentes(linhas.map((linha) => linha.id));
+  const usuarioId = useSessionStore.getState().session?.user.id ?? null;
+  const falhas: string[] = [];
+  let importadas = 0;
+  let concluidas = 0;
+  let lote: Array<{ id: string; dados: GrimorioSpell; created_by: string | null }> = [];
+  let bytesLote = 2;
+  const limiteLote = 600 * 1024;
+
+  const reportarProgresso = () => {
+    concluidas += 1;
+    aoProgredir?.(concluidas, linhas.length);
+  };
+
+  const inserirLote = async () => {
+    if (!lote.length) return;
+    const atual = lote;
+    lote = [];
+    bytesLote = 2;
+    let motivoLote: string | null = null;
+    try {
+      const { error } = await withTimeout(Promise.resolve(
+        supabase.from('grimorio_spells').insert(atual)
+      ));
+      motivoLote = error?.message ?? null;
+    } catch (error) {
+      motivoLote = errorMessage(error);
+    }
+    if (!motivoLote) {
+      importadas += atual.length;
+      for (const _linha of atual) reportarProgresso();
+      return;
+    }
+
+    for (const linha of atual) {
+      try {
+        const { error } = await withTimeout(Promise.resolve(
+          supabase.from('grimorio_spells').insert(linha)
+        ));
+        if (error) falhas.push(`${linha.id}: ${error.message}`);
+        else importadas += 1;
+      } catch (error) {
+        falhas.push(`${linha.id}: ${errorMessage(error)}`);
+      }
+      reportarProgresso();
+    }
+  };
+
+  for (const linha of linhas) {
+    if (existentes.has(linha.id)) {
+      reportarProgresso();
+      continue;
+    }
+
+    try {
+      const dados: GrimorioSpell = { ...linha };
+      if (typeof dados.image === 'string' && dados.image.startsWith('data:image')) {
+        const { enviarImagem } = await import('./mediaService');
+        dados.image = await withTimeout(enviarImagem(dados.image, 'grimorio'));
+      }
+      const registro = { id: dados.id, dados, created_by: usuarioId };
+      const bytesRegistro = new TextEncoder().encode(JSON.stringify(registro)).byteLength;
+      const incremento = bytesRegistro + (lote.length ? 1 : 0);
+      if (lote.length && bytesLote + incremento > limiteLote) await inserirLote();
+      lote.push(registro);
+      bytesLote += bytesRegistro + (lote.length > 1 ? 1 : 0);
+    } catch (error) {
+      falhas.push(`${linha.id}: ${errorMessage(error)}`);
+      reportarProgresso();
+    }
+  }
+
+  await inserirLote();
+  return { importadas, falhas };
+};
+
 export const atualizarMagia = async (spell: GrimorioSpell): Promise<void> => {
   try {
     const { error } = await withTimeout(Promise.resolve(
