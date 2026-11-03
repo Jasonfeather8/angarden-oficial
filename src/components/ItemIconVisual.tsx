@@ -1,16 +1,18 @@
 import React from 'react';
+import { urlMiniatura } from '../services/mediaService';
 
 export interface ItemIconVisualProps {
   type: string;
   imageUrl?: string;
   className?: string;
+  ladoMiniatura?: number;
 }
 
 /**
  * ItemIconVisual
  * Gera o ícone visual correspondente a cada categoria e item com estilo medieval de alto contraste
  */
-export const ItemIconVisual: React.FC<ItemIconVisualProps> = ({ type, imageUrl, className = 'w-full h-full' }) => {
+export const ItemIconVisual: React.FC<ItemIconVisualProps> = ({ type, imageUrl, className = 'w-full h-full', ladoMiniatura }) => {
   const [imgError, setImgError] = React.useState(false);
 
   // Sanitização de imagens fora de contexto (ex: Grogu / Baby Yoda ou fotos genéricas do Unsplash)
@@ -39,11 +41,13 @@ export const ItemIconVisual: React.FC<ItemIconVisualProps> = ({ type, imageUrl, 
     const hasObjectFit = className.includes('object-');
     return (
       <img
-        src={effectiveImageUrl}
+        src={ladoMiniatura !== undefined ? urlMiniatura(effectiveImageUrl, ladoMiniatura) : effectiveImageUrl}
         alt=""
         className={`${className} ${hasObjectFit ? '' : 'object-cover'} rounded-xs`}
         referrerPolicy="no-referrer"
         onError={() => setImgError(true)}
+        loading="lazy"
+        decoding="async"
       />
     );
   }

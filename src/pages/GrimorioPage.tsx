@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -195,6 +195,12 @@ export const GrimorioPage: React.FC = () => {
   const termoBusca = normalizarBusca(buscaDebounced);
   const buscandoMagias = termoBusca.length >= TAMANHO_MINIMO_BUSCA;
   const queryClient = useQueryClient();
+  const chaveConsultaGrimorio = useCallback((pagina: number) => ['grimorio', buscandoMagias
+    ? { busca: termoBusca, page: pagina, pageSize: 10 }
+    : { volumeId: selectedVolume?.id, page: pagina, pageSize: 10 }], [buscandoMagias, termoBusca, selectedVolume?.id]);
+  const carregarPaginaGrimorio = useCallback((pagina: number) => withTimeout(buscandoMagias
+    ? buscarMagias(termoBusca, { page: pagina, pageSize: 10 })
+    : listarMagiasDoVolume(selectedVolume!.id, { page: pagina, pageSize: 10 })), [buscandoMagias, termoBusca, selectedVolume?.id]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setBuscaDebounced(normalizarBusca(busca)), 300);
@@ -202,13 +208,10 @@ export const GrimorioPage: React.FC = () => {
   }, [busca]);
 
   const grimorioQuery = useQuery({
-    queryKey: ['grimorio', buscandoMagias
-      ? { busca: termoBusca, page: folioPage, pageSize: 10 }
-      : { volumeId: selectedVolume?.id, page: folioPage, pageSize: 10 }],
-    queryFn: () => withTimeout(buscandoMagias
-      ? buscarMagias(termoBusca, { page: folioPage, pageSize: 10 })
-      : listarMagiasDoVolume(selectedVolume!.id, { page: folioPage, pageSize: 10 })),
+    queryKey: chaveConsultaGrimorio(folioPage),
+    queryFn: () => carregarPaginaGrimorio(folioPage),
     placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
     enabled: buscandoMagias || Boolean(selectedVolume?.id),
   });
   const isLoadingGrimorio = grimorioQuery.isLoading;
@@ -220,6 +223,17 @@ export const GrimorioPage: React.FC = () => {
   const totalMagias = grimorioQuery.data?.total ?? 0;
   const bookSpells = spells.filter((spell) => canManageVisibility || !hiddenSpellIds.includes(spell.id));
   const totalFolios = Math.ceil(totalMagias / 10);
+
+  useEffect(() => {
+    if (grimorioQuery.isPlaceholderData || grimorioQuery.isFetching || grimorioQuery.isError || !grimorioQuery.data || folioPage >= totalFolios) return;
+    const proximaPagina = folioPage + 1;
+    void queryClient.prefetchQuery({
+      queryKey: chaveConsultaGrimorio(proximaPagina),
+      queryFn: () => carregarPaginaGrimorio(proximaPagina),
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [grimorioQuery.isPlaceholderData, grimorioQuery.isFetching, grimorioQuery.isError, grimorioQuery.data, folioPage, totalFolios, queryClient, chaveConsultaGrimorio, carregarPaginaGrimorio]);
+
   const isEditing = editingSpell !== null;
 
   useEffect(() => {

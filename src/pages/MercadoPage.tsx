@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ShoppingBag, Coins, Shield, Swords, Sparkles, Lock,
@@ -194,6 +194,17 @@ export const MercadoPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const queryClient = useQueryClient();
+  const chaveConsultaMercado = useCallback((pagina: number) => [
+    'mercado',
+    { categoria: activeCategory, subcategoria: subcategoriaAtiva, busca: buscaDebounced, page: pagina, pageSize },
+  ] as const, [activeCategory, subcategoriaAtiva, buscaDebounced, pageSize]);
+  const carregarPaginaMercado = useCallback((pagina: number) => withTimeout(mercadoService.listarItens({
+    categoria: activeCategory,
+    subcategoria: subcategoriaAtiva,
+    busca: buscaDebounced,
+    page: pagina,
+    pageSize,
+  })), [activeCategory, subcategoriaAtiva, buscaDebounced, pageSize]);
 
   // Ficha ativa no store global
   const storeCharacterId = useFichaStore((state) => state.characterId);
@@ -281,19 +292,24 @@ export const MercadoPage: React.FC = () => {
     refetch: recarregarItens,
     isPlaceholderData,
   } = useQuery({
-    queryKey: ['mercado', { categoria: activeCategory, subcategoria: subcategoriaAtiva, busca: buscaDebounced, page, pageSize }],
-    queryFn: () => withTimeout(mercadoService.listarItens({
-      categoria: activeCategory,
-      subcategoria: subcategoriaAtiva,
-      busca: buscaDebounced,
-      page,
-      pageSize,
-    })),
+    queryKey: chaveConsultaMercado(page),
+    queryFn: () => carregarPaginaMercado(page),
     placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
   const itens = paginaMercado?.itens ?? [];
   const totalItens = paginaMercado?.total ?? 0;
   const totalPaginas = Math.ceil(totalItens / pageSize);
+
+  useEffect(() => {
+    if (isPlaceholderData || carregandoItens || buscandoItens || !paginaMercado || page >= totalPaginas) return;
+    const proximaPagina = page + 1;
+    void queryClient.prefetchQuery({
+      queryKey: chaveConsultaMercado(proximaPagina),
+      queryFn: () => carregarPaginaMercado(proximaPagina),
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [isPlaceholderData, carregandoItens, buscandoItens, paginaMercado, page, totalPaginas, queryClient, chaveConsultaMercado, carregarPaginaMercado]);
 
   useEffect(() => {
     if (!isPlaceholderData && !carregandoItens && totalPaginas > 0 && page > totalPaginas) {
@@ -960,6 +976,7 @@ export const MercadoPage: React.FC = () => {
                                   type={item.icone_tipo}
                                   imageUrl={item.imagem_url}
                                   className="w-full h-full object-cover z-10"
+                                  ladoMiniatura={144}
                                 />
 
                                 {/* Vinheta interna suave sobre a imagem para acabamento gótico lapidado */}

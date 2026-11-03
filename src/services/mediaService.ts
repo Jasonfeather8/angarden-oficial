@@ -8,6 +8,20 @@ import { atualizarMagia, mapearMagiaDoRow } from './grimorioService';
 export type PastaMidia = 'fichas' | 'personagens' | 'mercado' | 'perfis' | 'grimorio';
 export interface OpcoesImagem { maxWidth?: number; maxHeight?: number; quality?: number; escopo?: string; }
 
+/**
+ * URL de exibição reduzida do Storage, só para caixas pequenas. O recorte é
+ * quadrado (as caixas das listas são) e isso devolve bem menos bytes que a
+ * largura sozinha: medido no acervo, 10.631 bytes contra 123.532 da original.
+ * URLs que não são do bucket (base64 legado, link externo) voltam como estão.
+ */
+export function urlMiniatura(url: string | null | undefined, lado = 240): string {
+  if (!url) return '';
+  const caminhoPublico = '/storage/v1/object/public/';
+  if (!url.includes(caminhoPublico)) return url;
+  const separador = url.includes('?') ? '&' : '?';
+  return `${url.replace(caminhoPublico, '/storage/v1/render/image/public/')}${separador}width=${lado}&height=${lado}&resize=cover&quality=70`;
+}
+
 export interface InventarioMidiaLegada {
   fichas: number;
   personagens: number;

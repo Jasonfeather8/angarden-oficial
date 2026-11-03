@@ -599,6 +599,7 @@ export const RPGInventoryModal: React.FC<RPGInventoryModalProps> = ({
                               type={item.icon || 'general'}
                               imageUrl={item.rawRef?.imagem_url}
                               className="w-full h-full object-cover rounded-xs"
+                              ladoMiniatura={144}
                             />
                           </div>
 

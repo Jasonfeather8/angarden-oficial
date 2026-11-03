@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { grimorioSchools, grimorioVolumes, GrimorioSpell } from '../mocks/grimorio';
+import { urlMiniatura } from '../services/mediaService';
 
 type VisualKind = GrimorioSpell['visual'];
 
@@ -56,7 +57,7 @@ export const MagicVisual = ({ spell, large = false }: { spell: GrimorioSpell; la
     role="img"
     aria-label={`Visual arcano de ${spell.name || '-'}`}
   >
-    {spell.image && <img src={spell.image} alt={`Imagem da magia ${spell.name || '-'}`} className="absolute inset-0 h-full w-full object-cover" />}
+    {spell.image && <img src={large ? spell.image : urlMiniatura(spell.image)} alt={`Imagem da magia ${spell.name || '-'}`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" />}
     {large && <div className="pointer-events-none absolute inset-1.5 border border-current opacity-30 sm:inset-2.5" aria-hidden="true" />}
     {!spell.image && <CircleDot className="absolute h-[78%] w-[78%] opacity-20" strokeWidth={1} />}
     {!spell.image && <div className="absolute h-[55%] w-[55%] rotate-45 border border-current opacity-30" />}
