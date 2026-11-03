@@ -187,8 +187,28 @@ Deno.serve(async (request: Request) => {
   if (request.method !== 'POST') return jsonResponse(405, { motivo: 'Método não permitido.' });
 
   try {
+    let body: unknown;
+    try {
+      const texto = await request.text();
+      body = texto ? JSON.parse(texto) : null;
+    } catch {
+      return jsonResponse(400, { motivo: 'Corpo JSON inválido.' });
+    }
+    if (!body || typeof body !== 'object') return jsonResponse(400, { motivo: 'Corpo da requisição inválido.' });
+    const entrada = body as Record<string, unknown>;
+
+    // O navegador recusa o preflight (OPTIONS) desta rota, então o cliente manda
+    // uma requisição simples — POST com `text/plain` e sem cabeçalhos
+    // customizados — levando o token no corpo. A verificação criptográfica do
+    // token abaixo é exatamente a mesma do caminho com `Authorization`.
     const authorization = request.headers.get('Authorization');
-    const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+    const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]
+      ?? (typeof entrada.token === 'string' ? entrada.token : undefined);
+    console.log('[midia-upload] requisição recebida', {
+      modo: typeof entrada.modo === 'string' ? entrada.modo : 'imagem',
+      temToken: Boolean(token),
+      origem: request.headers.get('Origin') ?? '(sem origin)',
+    });
     if (!token) return jsonResponse(401, { motivo: 'Autenticação necessária.' });
 
     const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -212,15 +232,6 @@ Deno.serve(async (request: Request) => {
     }
     if (!userId) return jsonResponse(401, { motivo: 'Token inválido ou usuário não autenticado.' });
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return jsonResponse(400, { motivo: 'Corpo JSON inválido.' });
-    }
-    if (!body || typeof body !== 'object') return jsonResponse(400, { motivo: 'Corpo da requisição inválido.' });
-
-    const entrada = body as Record<string, unknown>;
     const modoLote = entrada.modo === 'lote-grimorio';
     let limite = 8;
     if (modoLote && entrada.limite !== undefined) {
@@ -246,7 +257,13 @@ Deno.serve(async (request: Request) => {
       if (profile.role !== 'admin') {
         return jsonResponse(403, { ok: false, motivo: 'A migração em lote do Grimório é exclusiva do Administrador da plataforma.' });
       }
-      return jsonResponse(200, await migrarLoteGrimorio(serviceClient, limite));
+      const relatorio = await migrarLoteGrimorio(serviceClient, limite);
+      console.log('[midia-upload] lote do Grimório concluído', {
+        convertidas: relatorio.convertidas,
+        falhas: relatorio.falhas.length,
+        restantes: relatorio.restantes,
+      });
+      return jsonResponse(200, relatorio);
     }
 
     const segmentos = validarCaminho(entrada.caminho);

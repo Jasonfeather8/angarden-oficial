@@ -151,9 +151,66 @@ interface RespostaUploadMidia {
   detalhe?: string;
 }
 
-/** `FunctionsFetchError` significa que a requisição não completou (preflight bloqueado); um erro HTTP traz resposta. */
+/**
+ * O preflight (OPTIONS) da rota de funções é recusado pelo navegador neste
+ * projeto: a resposta do POST chega com CORS correto, mas o OPTIONS não passa e
+ * a falha aparece como "Failed to fetch". Uma requisição "simples" — POST com
+ * `Content-Type: text/plain` e sem cabeçalhos customizados — não exige preflight,
+ * então o token da sessão vai no corpo e é verificado no servidor.
+ */
+const URL_FUNCAO_MIDIA = 'https://qmwrpcyzcmmjrjzsorgx.supabase.co/functions/v1/midia-upload';
+
+/** A requisição não completou: nada foi gravado e o envio pode ser repetido. */
+class ErroSemResposta extends Error {
+  constructor(detalhe: string) {
+    super(`A função de upload não respondeu (${detalhe}).`);
+  }
+}
+
+async function chamarFuncaoMidia<T>(corpo: Record<string, unknown>): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sessão expirada. Entre novamente na plataforma.');
+
+  let resposta: Response | null = null;
+  try {
+    resposta = await fetch(URL_FUNCAO_MIDIA, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ ...corpo, token }),
+    });
+  } catch (causa) {
+    console.warn('[mediaService] Requisição simples à função de upload falhou; tentando pelo SDK.', { detalhe: descreverErro(causa) });
+  }
+
+  if (!resposta) {
+    const { data: dados, error } = await supabase.functions.invoke<T>('midia-upload', { body: corpo });
+    if (!error) {
+      if (!dados) throw new Error('Resposta vazia da função de upload.');
+      return dados;
+    }
+    if ((error as Error).name === 'FunctionsFetchError') throw new ErroSemResposta(descreverErro(error));
+    const contexto = (error as Error & { context?: unknown }).context;
+    const corpoErro = contexto instanceof Response ? await contexto.text() : '';
+    throw new Error(`${descreverErro(error)}${corpoErro ? `: ${corpoErro}` : ''}`);
+  }
+
+  const texto = await resposta.text();
+  let dados: T | null = null;
+  try {
+    dados = texto ? (JSON.parse(texto) as T) : null;
+  } catch {
+    dados = null;
+  }
+  if (!dados) throw new Error(`A função de upload respondeu ${resposta.status}: ${texto.slice(0, 200) || resposta.statusText}`);
+  const motivo = (dados as { motivo?: unknown }).motivo;
+  if (!resposta.ok && typeof motivo === 'string') throw new Error(motivo);
+  return dados;
+}
+
+/** Sem resposta = a requisição não completou; um erro HTTP traz resposta e é tratado à parte. */
 function falhouSemResposta(causa: unknown): boolean {
-  return causa instanceof Error && causa.name === 'FunctionsFetchError';
+  return causa instanceof ErroSemResposta;
 }
 
 /**
@@ -177,25 +234,19 @@ async function enviarBlob(source: Blob | string, mime: string, pasta: PastaMidia
   }
   const caminho = obterCaminhoStorage(pasta, extensao, opcoes);
 
+  let bytes: Uint8Array | null = null;
   try {
     const blob = typeof source === 'string' ? await (await fetch(source)).blob() : source;
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    const { data, error } = await supabase.functions.invoke<RespostaUploadMidia>('midia-upload', {
-      body: { caminho, mime, conteudoBase64: codificarBase64(bytes) },
-    });
-    if (!error) {
-      if (data?.ok && typeof data.url === 'string') return data.url;
-      if (data && !data.ok && typeof data.detalhe === 'string') throw new Error(data.detalhe);
-      throw new Error('Resposta inválida da função de upload.');
-    }
-    if (!falhouSemResposta(error)) {
-      const contexto = (error as Error & { context?: unknown }).context;
-      const corpo = contexto instanceof Response ? await contexto.text() : '';
-      throw new Error(`${descreverErro(error)}${corpo ? `: ${corpo}` : ''}`);
-    }
-    console.warn('[mediaService] Função de upload inacessível pelo navegador; enviando direto ao Storage.', { caminho });
-    return await enviarViaStorage(caminho, bytes, mime);
+    bytes = new Uint8Array(await blob.arrayBuffer());
+    const dados = await chamarFuncaoMidia<RespostaUploadMidia>({ caminho, mime, conteudoBase64: codificarBase64(bytes) });
+    if (dados.ok && typeof dados.url === 'string') return dados.url;
+    if (!dados.ok && typeof dados.detalhe === 'string') throw new Error(dados.detalhe);
+    throw new Error('Resposta inválida da função de upload.');
   } catch (causa) {
+    if (bytes && falhouSemResposta(causa)) {
+      console.warn('[mediaService] Função de upload inacessível pelo navegador; enviando direto ao Storage.', { caminho });
+      return await enviarViaStorage(caminho, bytes, mime);
+    }
     const detalhe = descreverErro(causa);
     console.error('[mediaService] Falha ao enviar imagem', { caminho, detalhe });
     throw new Error(`Não foi possível enviar a imagem: ${detalhe}`);
@@ -244,15 +295,7 @@ export async function migrarGrimorioEmLotes(
   aoProgredir?.(0, 0);
 
   for (let lote = 0; lote < tetoDeLotes; lote += 1) {
-    const { data, error } = await supabase.functions.invoke<RespostaLoteGrimorio>('midia-upload', {
-      body: { modo: 'lote-grimorio' },
-    });
-    if (error) {
-      const contexto = (error as Error & { context?: unknown }).context;
-      const corpo = contexto instanceof Response ? await contexto.text() : '';
-      throw new Error(`${descreverErro(error)}${corpo ? `: ${corpo}` : ''}`);
-    }
-    if (!data) throw new Error('Resposta vazia da migração em lote do Grimório.');
+    const data = await chamarFuncaoMidia<RespostaLoteGrimorio>({ modo: 'lote-grimorio' });
     const convertidasNoLote = data.convertidas ?? 0;
     if (lote === 0) total = (data.processados ?? 0) + (data.restantes ?? 0);
     relatorio.convertidas += convertidasNoLote;
