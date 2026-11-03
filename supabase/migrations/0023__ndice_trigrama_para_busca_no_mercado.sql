@@ -1,0 +1,1 @@
+create index if not exists market_items_busca_trgm_idx on public.market_items using gin (busca public.gin_trgm_ops);

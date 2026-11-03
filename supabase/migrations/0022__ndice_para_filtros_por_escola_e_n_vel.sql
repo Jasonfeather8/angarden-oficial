@@ -1,0 +1,1 @@
+create index if not exists grimorio_spells_escola_nivel_idx on public.grimorio_spells (escola, nivel);

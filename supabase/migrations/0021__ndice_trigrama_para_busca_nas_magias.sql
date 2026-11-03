@@ -1,0 +1,1 @@
+create index if not exists grimorio_spells_busca_trgm_idx on public.grimorio_spells using gin (busca public.gin_trgm_ops);

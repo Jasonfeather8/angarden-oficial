@@ -22,6 +22,7 @@ import { MedievalFrame } from '../components/MedievalFrame';
 import { Modal } from '../components/Modal';
 import { ModalSelecionarComprador, PersonagemResumo } from '../components/ModalSelecionarComprador';
 import { GothicButton } from '../components/GothicButton';
+import { EmptyState } from '../components/ui/EmptyState';
 import {
   getSchoolVolumes,
   grimorioAdditionalSchools,
@@ -41,6 +42,7 @@ import {
   getLearnedSpellIds,
   setLearnedSpell,
   listarMagiasDoVolume,
+  buscarMagias,
   criarMagia,
   atualizarMagia,
   alternarOculta,
@@ -48,6 +50,7 @@ import {
 } from '../services/grimorioService';
 import { fichaService } from '../services/fichaService';
 import { withTimeout } from '../utils/withTimeout';
+import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
@@ -122,6 +125,8 @@ export const GrimorioPage: React.FC = () => {
   const [newSpellForm, setNewSpellForm] = useState<NewSpellForm>(initialNewSpellForm);
   const [editingSpell, setEditingSpell] = useState<GrimorioSpell | null>(null);
   const [folioPage, setFolioPage] = useState(1);
+  const [busca, setBusca] = useState('');
+  const [buscaDebounced, setBuscaDebounced] = useState('');
   const [erroMutacaoGrimorio, setErroMutacaoGrimorio] = useState<string | null>(null);
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [erroUploadImagem, setErroUploadImagem] = useState<string | null>(null);
@@ -187,12 +192,24 @@ export const GrimorioPage: React.FC = () => {
   const school = grimorioAllSchools.find((item) => item.id === schoolId) ?? grimorioSchools[0];
   const volumes = getSchoolVolumes(school.id);
   const selectedVolume = volumes.find((volume) => volume.id === volumeId) ?? volumes[0];
+  const termoBusca = normalizarBusca(buscaDebounced);
+  const buscandoMagias = termoBusca.length >= TAMANHO_MINIMO_BUSCA;
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setBuscaDebounced(normalizarBusca(busca)), 300);
+    return () => window.clearTimeout(timeout);
+  }, [busca]);
+
   const grimorioQuery = useQuery({
-    queryKey: ['grimorio', { volumeId: selectedVolume?.id, page: folioPage, pageSize: 10 }],
-    queryFn: () => withTimeout(listarMagiasDoVolume(selectedVolume!.id, { page: folioPage, pageSize: 10 })),
+    queryKey: ['grimorio', buscandoMagias
+      ? { busca: termoBusca, page: folioPage, pageSize: 10 }
+      : { volumeId: selectedVolume?.id, page: folioPage, pageSize: 10 }],
+    queryFn: () => withTimeout(buscandoMagias
+      ? buscarMagias(termoBusca, { page: folioPage, pageSize: 10 })
+      : listarMagiasDoVolume(selectedVolume!.id, { page: folioPage, pageSize: 10 })),
     placeholderData: keepPreviousData,
-    enabled: Boolean(selectedVolume?.id),
+    enabled: buscandoMagias || Boolean(selectedVolume?.id),
   });
   const isLoadingGrimorio = grimorioQuery.isLoading;
   const erroGrimorio = erroMutacaoGrimorio ?? (grimorioQuery.error
@@ -488,6 +505,26 @@ export const GrimorioPage: React.FC = () => {
         headerRight={headerAction}
       >
         <div className="space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="grimorio-search" className="block text-[10px] uppercase tracking-[0.22em] text-[#8c6b41]">Buscar magia em todos os volumes</label>
+            <div className="flex items-center gap-2 border border-[#5a4225] bg-[#120d09] px-3 focus-within:border-[#c6a15b] focus-within:ring-1 focus-within:ring-[#c6a15b]">
+              <Search size={16} className="shrink-0 text-[#8c6b41]" aria-hidden="true" />
+              <input
+                id="grimorio-search"
+                type="search"
+                value={busca}
+                onChange={(event) => { setBusca(event.target.value); setFolioPage(1); }}
+                placeholder="Nome, efeito, escola…"
+                className="h-11 min-w-0 flex-1 bg-transparent text-sm text-[#e6ddc5] outline-none placeholder:text-[#74634d] focus-visible:outline-none"
+              />
+              {busca && <button
+                type="button"
+                onClick={() => { setBusca(''); setFolioPage(1); }}
+                aria-label="Limpar busca de magias"
+                className="flex h-8 w-8 shrink-0 items-center justify-center text-[#a88d61] transition hover:text-[#f1d994] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"
+              ><X size={16} /></button>}
+            </div>
+          </div>
           {canManageCatalog && imagensPesadas.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border border-[#5a4225] bg-[#1c140d] px-4 py-3">
               <p className="text-xs text-[#c4b9a3]">
@@ -539,11 +576,11 @@ export const GrimorioPage: React.FC = () => {
             </div>
           )}
 
-          {view === 'schools' && <SchoolsView onChoose={chooseSchool} onCreate={canManageCatalog ? () => setIsCreateOpen(true) : undefined} />}
-          {view === 'element-tree' && <ElementTreeView onChooseElement={chooseElement} />}
-          {view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={chooseMentalizacaoSubcategory} />}
-          {view === 'tree' && <TreeView school={school} volumes={volumes} onChooseVolume={chooseVolume} />}
-          {view === 'book' && (
+          {!buscandoMagias && view === 'schools' && <SchoolsView onChoose={chooseSchool} onCreate={canManageCatalog ? () => setIsCreateOpen(true) : undefined} />}
+          {!buscandoMagias && view === 'element-tree' && <ElementTreeView onChooseElement={chooseElement} />}
+          {!buscandoMagias && view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={chooseMentalizacaoSubcategory} />}
+          {!buscandoMagias && view === 'tree' && <TreeView school={school} volumes={volumes} onChooseVolume={chooseVolume} />}
+          {!buscandoMagias && view === 'book' && (
             <BookView
               school={school}
               volume={selectedVolume}
@@ -562,6 +599,43 @@ export const GrimorioPage: React.FC = () => {
               onToggleHidden={toggleHidden}
               onDelete={deleteSpell}
             />
+          )}
+          {buscandoMagias && (
+            <section aria-labelledby="grimorio-search-results" className="space-y-4">
+              <p id="grimorio-search-results" className="border-b border-[#3a2c1d] pb-3 text-xs text-[#a88d61]" role="status">
+                Resultados da busca em todos os volumes para <strong className="text-[#e6ddc5]">“{termoBusca}”</strong> · {totalMagias} {totalMagias === 1 ? 'magia' : 'magias'}
+              </p>
+              {totalMagias === 0 ? (
+                <EmptyState
+                  title="Nenhuma magia encontrada"
+                  description="Não há fórmulas que correspondam a esta busca."
+                  action={<button type="button" onClick={() => { setBusca(''); setFolioPage(1); }} className="text-xs uppercase tracking-widest text-[#d6b56a] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">Limpar busca</button>}
+                />
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {bookSpells.map((spell) => <SpellCard
+                      key={spell.id}
+                      spell={spell}
+                      learned={learnedIds.includes(spell.id)}
+                      hidden={hiddenSpellIds.includes(spell.id)}
+                      canManage={canManageCatalog}
+                      canToggleHidden={canManageVisibility}
+                      onOpen={() => setSelectedSpell(spell)}
+                      onToggleLearned={() => toggleLearned(spell.id)}
+                      onEdit={() => openEdit(spell)}
+                      onToggleHidden={() => toggleHidden(spell.id)}
+                      onDelete={() => deleteSpell(spell)}
+                    />)}
+                  </div>
+                  {totalFolios > 1 && <nav aria-label="Navegação entre páginas dos resultados da busca" className="flex flex-wrap items-center justify-center gap-3">
+                    <GothicButton type="button" variant="secondary" size="xs" width={150} disabled={folioPage <= 1} onClick={() => setFolioPage(folioPage - 1)}>Página anterior</GothicButton>
+                    <span className="font-cinzel text-[10px] uppercase tracking-widest text-[#c6a15b]">Página {folioPage} de {totalFolios}</span>
+                    <GothicButton type="button" variant="secondary" size="xs" width={150} disabled={folioPage >= totalFolios} onClick={() => setFolioPage(folioPage + 1)}>Próxima página</GothicButton>
+                  </nav>}
+                </>
+              )}
+            </section>
           )}
         </div>
       </MedievalFrame>

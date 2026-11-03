@@ -2,6 +2,7 @@ import { MercadoItem, CategoriaMercado } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionStore } from '@/store/useSessionStore';
 import { fichaService } from './fichaService';
+import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '@/utils/normalizarBusca';
 
 const COLUNAS_TIPADAS = ['nome', 'categoria', 'material', 'peso', 'dano', 'rd_base', 'preco', 'is_epico', 'efeito', 'descricao', 'icone_tipo', 'imagem_url'] as const;
 const CAMPOS_EXTRA = ['tipo', 'subcategoria', 'resist', 'pecas', 'rd_por_peca', 'tensao', 'prec', 'alcance', 'duracao', 'consequencia', 'ativacao', 'gasto', 'carga', 'lr', 'poder', 'recarga', 'rm', 'dependencia', 'uso', 'efeito_resumo', 'efeito_completo', 'citacao', 'requisitos', 'is_raro', 'informacoes'] as const satisfies readonly (keyof MercadoItem)[];
@@ -161,10 +162,9 @@ export async function listarItens(filtros: MercadoFiltros): Promise<MercadoPagin
   if (filtros.subcategoria && filtros.subcategoria !== 'todas') {
     query = query.or(clausulasSubcategoria(filtros.categoria, filtros.subcategoria).join(','));
   }
-  const termoBusca = (filtros.busca ?? '').trim().replace(/[,()"%*\\]/g, '');
-  if (termoBusca) {
-    const termo = valorPostgrest(`%${termoBusca}%`);
-    query = query.or(`nome.ilike.${termo},material.ilike.${termo},efeito.ilike.${termo},dados->>tipo.ilike.${termo}`);
+  const termoBusca = normalizarBusca(filtros.busca ?? '');
+  if (termoBusca.length >= TAMANHO_MINIMO_BUSCA) {
+    query = query.ilike('busca', `%${termoBusca}%`);
   }
   const inicio = (filtros.page - 1) * filtros.pageSize;
   const { data, count, error } = await query.range(inicio, inicio + filtros.pageSize - 1);

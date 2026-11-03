@@ -1,0 +1,1 @@
+create index if not exists grimorio_spells_nome_idx on public.grimorio_spells (nome);

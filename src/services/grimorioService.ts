@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { GrimorioSpell } from '../mocks/grimorio';
 import { useSessionStore } from '../store/useSessionStore';
 import { withTimeout } from '../utils/withTimeout';
+import { normalizarBusca } from '../utils/normalizarBusca';
 
 async function resolveTenantId(characterId: string): Promise<string> {
   const sessionTenantId = useSessionStore.getState().session?.user.tenant_id;
@@ -76,6 +77,28 @@ export const listarMagiasDoVolume = async (
       .select('id, dados, oculta', { count: 'exact' })
       .eq('dados->>volumeId', volumeId)
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range((page - 1) * pageSize, (page - 1) * pageSize + pageSize - 1)
+  ));
+  if (error) throw new Error(error.message);
+  const rows = data ?? [];
+  return {
+    magias: rows.map(mapearMagiaDoRow),
+    ocultas: rows.filter((row) => row.oculta).map((row) => row.id),
+    total: count ?? 0,
+  };
+};
+
+export const buscarMagias = async (
+  termo: string,
+  { page, pageSize }: { page: number; pageSize: number },
+): Promise<{ magias: GrimorioSpell[]; ocultas: string[]; total: number }> => {
+  const termoNormalizado = normalizarBusca(termo);
+  const { data, error, count } = await withTimeout(Promise.resolve(
+    supabase.from('grimorio_spells')
+      .select('id, dados, oculta', { count: 'exact' })
+      .ilike('busca', `%${termoNormalizado}%`)
+      .order('nome', { ascending: true })
       .order('id', { ascending: true })
       .range((page - 1) * pageSize, (page - 1) * pageSize + pageSize - 1)
   ));
