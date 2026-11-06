@@ -17,7 +17,6 @@ export const PageSkeleton: React.FC<PageSkeletonProps> = ({ variant = 'padrao' a
       variant={variant}
       title={<Skeleton className="h-6 w-64 max-w-full" />}
       headerRight={<Skeleton className="h-5 w-24" />}
-      contentClassName="p-3 sm:p-5 lg:p-6"
     >
       <span className="sr-only">Preparando esta página…</span>
       <div aria-hidden="true" className="space-y-6">

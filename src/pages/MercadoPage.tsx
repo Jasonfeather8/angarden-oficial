@@ -658,7 +658,7 @@ export const MercadoPage: React.FC = () => {
     <>
       <PageShell id="page-mercado" variant="padrao" className="select-none"
         title={
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <h2 className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             {themeMode === 'epico' ? (
               <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-[#fbbf24] shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
             ) : themeMode === 'arcano' ? (
@@ -673,7 +673,7 @@ export const MercadoPage: React.FC = () => {
                 ? 'Mercado Arcano & Misticismo' 
                 : 'Mercado Global & Provisões'}
             </span>
-          </div>
+          </h2>
         }
         subtitle={
           secaoMercado === 'epico'

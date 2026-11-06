@@ -243,7 +243,7 @@ export const PainelMestrePage: React.FC = () => {
   if (!isMaster) {
     return (
       <PageShell id="page-painel-mestre" variant="padrao"
-          title={<h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase"><ShieldCheck className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
+          title={<h2 className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
           subtitle="Centro de controle restrito ao mestre da campanha"
           headerRight={<div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>}
         >
@@ -258,14 +258,14 @@ export const PainelMestrePage: React.FC = () => {
   return (
     <>
       <PageShell id="page-painel-mestre" variant="padrao"
-        title={<h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase"><Crown className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
+        title={<h2 className="flex items-center gap-2"><Crown className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
         subtitle="Monitoramento consolidado da mesa e permissões da campanha"
         headerRight={<div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>}
       >
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div className="flex flex-col gap-3 border-b border-[#3a2c1d] pb-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="font-cinzel text-xs uppercase tracking-[0.18em] text-[#d4af37]">Tela 6 · Registro da mesa</p>
+              <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Tela 6 · Registro da mesa</p>
               <p className="mt-1 font-serif text-sm text-[#c4b9a3]">Acompanhe os recursos vitais e intervenha nas fichas dos jogadores.</p>
             </div>
             <div className="flex flex-wrap gap-2">

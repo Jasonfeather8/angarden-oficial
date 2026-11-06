@@ -97,7 +97,7 @@ export const BibliotecaPage: React.FC = () => {
     <>
       <PageShell id="page-biblioteca" variant="padrao"
         title={
-          <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
+          <h2 className="flex items-center gap-2">
             <Scroll className="w-5 h-5 text-[#a88d61]" />
             Biblioteca da Campanha
           </h2>
@@ -120,7 +120,7 @@ export const BibliotecaPage: React.FC = () => {
         <div className="space-y-6">
           <div className="flex flex-col gap-2 border-b border-[#3a2c1d] pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="font-cinzel text-sm uppercase tracking-[0.18em] text-[#d1a85a]">Acervo da campanha</p>
+              <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Acervo da campanha</p>
               <p className="mt-1 max-w-2xl font-serif text-sm text-[#a99c84]">
                 Escolha um tomo para consultar suas regras e referências durante a aventura.
               </p>

@@ -14,7 +14,7 @@ export const AcessoNegadoPage: React.FC = () => {
       id="page-acesso-negado"
       variant="padrao"
       title={
-        <h2 className="flex items-center gap-2 font-cinzel text-xl font-bold uppercase tracking-wider text-[#e6ddc5]">
+        <h2 className="flex items-center gap-2">
           <ShieldAlert className="h-5 w-5 text-[#e7b29e]" aria-hidden="true" />
           Acesso restrito
         </h2>

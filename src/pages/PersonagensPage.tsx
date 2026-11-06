@@ -12,7 +12,7 @@ import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import { cacheKeyPrefixes, cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { fichaPath } from '../routes/paths';
-import { larguraDaPagina } from '../components/PageShell';
+import { PageShell } from '../components/PageShell';
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -191,70 +191,50 @@ export const PersonagensPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div
-        id="page-personagens"
-        role="status"
-        aria-live="polite"
-        className={`w-full ${larguraDaPagina('amplo')} mx-auto select-none font-serif text-[#dcd1ba]`}
-      >
-        <span className="sr-only">Carregando o acervo do seu reino…</span>
-        <div
-          className="w-full min-h-[640px] lg:h-[calc(100vh-120px)] flex flex-col relative z-10 border border-[#5a4225] bg-[#0c0806]/85 shadow-[0_0_40px_rgba(0,0,0,0.9)] p-[6px] sm:p-[10px] rounded-xs"
-          style={{
-            backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }}
-        >
-          <div className="border border-[#5a4225] h-full relative bg-black/80 flex flex-col p-[2px] justify-between overflow-hidden">
-            <div className="absolute inset-0 border-[3px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]" />
-            <div className="border-b border-[#3a2c1d] pb-3 pt-3.5 px-3 sm:px-6 flex items-center justify-between gap-4 z-10 bg-black/60 shrink-0">
-              <Skeleton className="h-8 w-48 sm:w-64" />
-              <Skeleton className="h-8 w-36 sm:w-52" />
+      <PageShell id="page-personagens" variant="amplo" fill title={<h2 className="flex items-center gap-2"><Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Galeria de Personagens</h2>}>
+        <div role="status" aria-live="polite" className="flex h-full min-h-0 select-none flex-col gap-4 font-serif text-[#dcd1ba]">
+          <span className="sr-only">Carregando o acervo do seu reino…</span>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+            <div className="flex h-[180px] shrink-0 items-center gap-4 sm:h-[220px] lg:h-full lg:w-[32%]">
+              <div className="flex h-full w-6 flex-col justify-around border-r border-[#3a281d]/40 pr-2">
+                <Skeleton className="h-3 w-3" />
+                <Skeleton className="h-3 w-3" />
+                <Skeleton className="h-3 w-3" />
+                <Skeleton className="h-3 w-3" />
+              </div>
+              <div className="flex flex-1 items-center justify-center gap-3">
+                <Skeleton className="h-10 w-10 !rounded-full" />
+                <Skeleton className="h-12 w-12 !rounded-full" />
+                <Skeleton className="h-10 w-10 !rounded-full" />
+              </div>
             </div>
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 sm:p-5 relative gap-4">
-              <div className="w-full lg:w-[32%] flex items-center gap-4 h-[180px] sm:h-[220px] lg:h-full shrink-0">
-                <div className="flex h-full w-6 flex-col justify-around border-r border-[#3a281d]/40 pr-2">
-                  <Skeleton className="h-3 w-3" />
-                  <Skeleton className="h-3 w-3" />
-                  <Skeleton className="h-3 w-3" />
-                  <Skeleton className="h-3 w-3" />
-                </div>
-                <div className="flex flex-1 items-center justify-center gap-3">
-                  <Skeleton className="h-10 w-10 !rounded-full" />
-                  <Skeleton className="h-12 w-12 !rounded-full" />
-                  <Skeleton className="h-10 w-10 !rounded-full" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center justify-center py-2 lg:flex-1 shrink-0">
-                <Skeleton className="h-[200px] w-[200px] !rounded-full sm:h-[260px] sm:w-[260px] lg:h-[320px] lg:w-[320px] xl:h-[390px] xl:w-[390px]" />
-              </div>
-              <div className="w-full lg:w-[38%] flex min-h-[260px] flex-1 flex-col border border-[#a88242]/40 bg-[#0c0806]/90 p-4 sm:p-6">
-                <Skeleton className="mb-5 h-7 w-3/4" />
-                <Skeleton className="mb-3 h-24 w-full" />
-                <Skeleton className="mb-2 h-4 w-full" />
-                <Skeleton className="mb-2 h-4 w-11/12" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
+            <div className="flex shrink-0 flex-col items-center justify-center py-2 lg:flex-1">
+              <Skeleton className="h-[200px] w-[200px] !rounded-full sm:h-[260px] sm:w-[260px] lg:h-[320px] lg:w-[320px] xl:h-[390px] xl:w-[390px]" />
+            </div>
+            <div className="flex min-h-[260px] flex-1 flex-col border border-[#a88242]/40 bg-[#0c0806]/90 p-4 sm:p-6 lg:w-[38%]">
+              <Skeleton className="mb-5 h-7 w-3/4" />
+              <Skeleton className="mb-3 h-24 w-full" />
+              <Skeleton className="mb-2 h-4 w-full" />
+              <Skeleton className="mb-2 h-4 w-11/12" />
+              <Skeleton className="h-4 w-2/3" />
             </div>
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (error) {
     return (
-      <div className={`mx-auto w-full ${larguraDaPagina('amplo')} py-12`}>
+      <PageShell id="page-personagens" variant="amplo" fill title={<h2 className="flex items-center gap-2"><Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Galeria de Personagens</h2>}>
         <ErrorState description={error} onRetry={reload} />
-      </div>
+      </PageShell>
     );
   }
 
   if (characters.length === 0) {
     return (
-      <div className={`mx-auto w-full ${larguraDaPagina('amplo')} py-12`}>
+      <PageShell id="page-personagens" variant="amplo" fill title={<h2 className="flex items-center gap-2"><Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Galeria de Personagens</h2>}>
         <EmptyState
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
           title="Nenhum personagem no seu acervo"
@@ -275,133 +255,94 @@ export const PersonagensPage: React.FC = () => {
             ) : undefined
           }
         />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div id="page-personagens" className={`w-full ${larguraDaPagina('amplo')} mx-auto select-none font-serif text-[#dcd1ba]`}>
-      {/* Container Principal com Moldura e Textura */}
-      <div 
-        className="w-full min-h-[640px] lg:h-[calc(100vh-120px)] flex flex-col relative z-10 border border-[#5a4225] bg-[#0c0806]/85 shadow-[0_0_40px_rgba(0,0,0,0.9)] p-[6px] sm:p-[10px] rounded-xs"
-        style={{
-          backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        {/* Camada interna para escurecer a textura e criar a moldura */}
-        <div className="border border-[#5a4225] h-full relative bg-black/80 flex flex-col p-[2px] justify-between overflow-hidden">
-          
-          {/* Bordas duplas internas laterais e inferiores */}
-          <div className="absolute inset-0 border-[3px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]"></div>
-
-          {/* Cabeçalho do Painel de Personagens */}
-          <div className="border-b border-[#3a2c1d] pb-3 pt-3.5 px-3 sm:px-6 relative flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between z-10 bg-black/60 shrink-0">
-            {/* Decoração superior esquerda */}
-            <div className="absolute top-0 left-[-2px] w-0 h-0 border-t-[8px] border-t-[#3a2c1d] border-r-[8px] border-r-transparent"></div>
-            <div className="absolute left-[-2px] top-1/2 w-[3px] h-[70%] bg-[#8c6b41] transform -translate-y-1/2"></div>
-            
-            <div className="flex items-start sm:items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[#8c6b41] bg-[#1a140e] flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(140,107,65,0.3)] mt-0.5 sm:mt-0">
-                <Users size={15} className="text-[#a88d61]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                  <h2 className="text-[13px] sm:text-[18px] tracking-wide sm:tracking-wider text-[#e6ddc5] uppercase font-bold font-cinzel whitespace-normal" style={{ textShadow: '1px 1px 3px black' }}>
-                    Galeria de Personagens
-                  </h2>
-                  {activeCharacter && (
-                    <span className="text-[12px] sm:text-[17px] font-bold font-cinzel text-[#f2dfa8] whitespace-normal">
-                      <span className="text-[#8c6b41] mr-1">&bull;</span>
-                      {activeCharacter.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Barra de Pesquisa & Ações */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-start sm:justify-end">
-              {/* Campo de Pesquisa por Nome */}
-              <div className="relative flex items-center flex-1 sm:flex-initial min-w-[140px]">
-                <Search size={14} className="absolute left-2.5 text-[#8c6b41] pointer-events-none" />
-                <input
-                  id="search-personagens"
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Pesquisar por nome..."
-                  className="bg-[#120f0d]/90 border border-[#5a4225] focus:border-[#a88d61] text-[#e6ddc5] placeholder-[#8c6b41] text-xs font-serif pl-8 pr-7 py-1.5 rounded-xs outline-none w-full sm:w-44 md:w-52 transition-all"
-                />
-                {searchTerm && (
-                  <button 
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-2 text-[#8c6b41] hover:text-[#e6ddc5]"
-                    title="Limpar pesquisa"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              {/* Botão Novo Personagem com Moldura Gótica */}
-              <GothicButton 
-                id="btn-novo-personagem"
-                onClick={handleCreateNewCharacter}
-                size="sm"
-                variant="primary"
-                width={170}
-                height={34}
-                icon={<UserPlus size={13} />}
+    <PageShell
+      id="page-personagens"
+      variant="amplo"
+      fill
+      title={
+        <h2 className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
+          Galeria de Personagens
+          {activeCharacter && <span className="text-[#f2dfa8]">{activeCharacter.name}</span>}
+        </h2>
+      }
+      headerRight={
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-start sm:justify-end">
+          <div className="relative flex items-center flex-1 sm:flex-initial min-w-[140px]">
+            <Search size={14} className="absolute left-2.5 text-[#8c6b41] pointer-events-none" />
+            <input
+              id="search-personagens"
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Pesquisar por nome..."
+              className="bg-[#120f0d]/90 border border-[#5a4225] focus:border-[#a88d61] text-[#e6ddc5] placeholder-[#8c6b41] text-xs font-serif pl-8 pr-7 py-1.5 rounded-xs outline-none w-full sm:w-44 md:w-52 transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 text-[#8c6b41] hover:text-[#e6ddc5]"
+                title="Limpar pesquisa"
               >
-                Novo Personagem
-              </GothicButton>
-
-              {/* Botão Excluir Discreto */}
-              {activeCharacter && (
-                !showDeleteConfirm ? (
-                  <GothicButton
-                    id="btn-excluir-personagem"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    size="sm"
-                    variant="secondary"
-                    width={95}
-                    height={34}
-                    icon={<Trash2 size={13} />}
-                    title="Excluir Personagem Ativo"
-                  >
-                    Excluir
-                  </GothicButton>
-                ) : (
-                  <div className="flex items-center space-x-1.5 bg-[#1a140e] border border-[#8c6b41] px-2 py-1 rounded-xs shadow-[0_0_10px_rgba(0,0,0,0.8)] h-[34px]">
-                    <span className="text-[11px] text-[#e6ddc5] font-serif">Excluir?</span>
-                    <button
-                      id="btn-confirmar-exclusao"
-                      onClick={() => handleDeleteCharacter(activeCharacter.id)}
-                      className="px-2 py-0.5 text-[10px] bg-[#3a2818] hover:bg-[#5a4225] text-[#f2dfa8] font-bold rounded-xs font-cinzel border border-[#8c6b41]"
-                    >
-                      Sim
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className="px-1.5 py-0.5 text-[10px] bg-[#120f0d] hover:bg-[#2a1d10] text-[#a88d61] rounded-xs font-cinzel border border-[#5a4225]"
-                    >
-                      Não
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
-
-            {/* Decoração superior direita */}
-            <div className="absolute top-0 right-[-2px] w-0 h-0 border-t-[8px] border-t-[#3a2c1d] border-l-[8px] border-l-transparent"></div>
+                <X size={12} />
+              </button>
+            )}
           </div>
+          <GothicButton
+            id="btn-novo-personagem"
+            onClick={handleCreateNewCharacter}
+            size="sm"
+            variant="primary"
+            width={170}
+            height={34}
+            icon={<UserPlus size={13} />}
+          >
+            Novo Personagem
+          </GothicButton>
+          {activeCharacter && (
+            !showDeleteConfirm ? (
+              <GothicButton
+                id="btn-excluir-personagem"
+                onClick={() => setShowDeleteConfirm(true)}
+                size="sm"
+                variant="secondary"
+                width={95}
+                height={34}
+                icon={<Trash2 size={13} />}
+                title="Excluir Personagem Ativo"
+              >
+                Excluir
+              </GothicButton>
+            ) : (
+              <div className="flex items-center space-x-1.5 bg-[#1a140e] border border-[#8c6b41] px-2 py-1 rounded-xs shadow-[0_0_10px_rgba(0,0,0,0.8)] h-[34px]">
+                <span className="text-[11px] text-[#e6ddc5] font-serif">Excluir?</span>
+                <button
+                  id="btn-confirmar-exclusao"
+                  onClick={() => handleDeleteCharacter(activeCharacter.id)}
+                  className="px-2 py-0.5 text-[10px] bg-[#3a2818] hover:bg-[#5a4225] text-[#f2dfa8] font-bold rounded-xs font-cinzel border border-[#8c6b41]"
+                >
+                  Sim
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-1.5 py-0.5 text-[10px] bg-[#120f0d] hover:bg-[#2a1d10] text-[#a88d61] rounded-xs font-cinzel border border-[#5a4225]"
+                >
+                  Não
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      }
+      className="select-none font-serif text-[#dcd1ba]"
+    >
+      <div className="flex h-full min-h-0 flex-col lg:flex-row relative gap-4">
 
-          {/* Área Central: Coluna Esquerda (Índice + Roda) | Centro (Arte Circular) | Coluna Direita (Detalhes) */}
-          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-3 sm:p-5 relative gap-4 custom-scrollbar">
-            
             {/* Coluna Esquerda: Índice Alfabético & Lista com Efeito Roda */}
             <div className="w-full lg:w-[32%] flex relative z-10 h-[280px] sm:h-[320px] lg:h-full lg:min-h-0 shrink-0">
               {/* Vertical Alphabet Index */}
@@ -637,15 +578,7 @@ export const PersonagensPage: React.FC = () => {
 
           </div>
 
-          {/* Cantos Decorativos da Moldura Principal */}
-          <div className="absolute bottom-0 left-0 w-3 h-3 border-b-[2px] border-l-[2px] border-[#a88d61] opacity-60"></div>
-          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[2px] border-r-[2px] border-[#a88d61] opacity-60"></div>
-          <div className="absolute top-0 right-0 w-3 h-3 border-t-[2px] border-r-[2px] border-[#a88d61] opacity-60"></div>
-          <div className="absolute top-0 left-0 w-3 h-3 border-t-[2px] border-l-[2px] border-[#a88d61] opacity-60"></div>
-
-        </div>
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

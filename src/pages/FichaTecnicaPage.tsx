@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { larguraDaPagina } from '../components/PageShell';
+import { PageShell } from '../components/PageShell';
 import {
   ArrowLeft,
   Save, 
@@ -22,6 +22,7 @@ import {
   Package,
   Crosshair,
   Lock,
+  ScrollText,
   Users,
   UserPlus
 } from 'lucide-react';
@@ -205,19 +206,27 @@ export const FichaTecnicaPage: React.FC = () => {
 
   if (loadError) {
     return (
-      <div className={`w-full ${larguraDaPagina('amplo')} mx-auto py-16`}>
+      <PageShell
+        variant="amplo"
+        fill
+        title={<h2 className="flex items-center gap-2"><ScrollText className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Ficha Técnica{ficha?.identidade?.nome_personagem && <span className="text-[#f2dfa8]">{ficha.identidade.nome_personagem}</span>}</h2>}
+      >
         <ErrorState
           title="Não foi possível abrir a ficha"
           description={loadError}
           onRetry={() => { void reloadFicha(); }}
         />
-      </div>
+      </PageShell>
     );
   }
 
   if (!targetCharacterId) {
     return (
-      <div className={`w-full ${larguraDaPagina('amplo')} mx-auto py-16`}>
+      <PageShell
+        variant="amplo"
+        fill
+        title={<h2 className="flex items-center gap-2"><ScrollText className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Ficha Técnica</h2>}
+      >
         <EmptyState
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
           title="Nenhum personagem selecionado"
@@ -228,25 +237,31 @@ export const FichaTecnicaPage: React.FC = () => {
             </GothicButton>
           }
         />
-      </div>
+      </PageShell>
     );
   }
 
   if (isLoading || !ficha) {
     return (
-      <div role="status" aria-live="polite" className={`w-full ${larguraDaPagina('amplo')} mx-auto pb-20 space-y-6`}>
-        <span className="sr-only">Invocando os pergaminhos da ficha técnica…</span>
-        <Skeleton className="h-14 w-full" />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
+      <PageShell
+        variant="amplo"
+        fill
+        title={<h2 className="flex items-center gap-2"><ScrollText className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Ficha Técnica{ficha?.identidade?.nome_personagem && <span className="text-[#f2dfa8]">{ficha.identidade.nome_personagem}</span>}</h2>}
+      >
+        <div role="status" aria-live="polite" className="space-y-6">
+          <span className="sr-only">Invocando os pergaminhos da ficha técnica…</span>
+          <Skeleton className="h-14 w-full" />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -1078,7 +1093,18 @@ export const FichaTecnicaPage: React.FC = () => {
   };
 
   return (
-    <div className={`w-full ${larguraDaPagina('amplo')} mx-auto pb-20 space-y-6`}>
+    <PageShell
+      variant="amplo"
+      fill
+      title={
+        <h2 className="flex items-center gap-2">
+          <ScrollText className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
+          Ficha Técnica
+          {ficha.identidade.nome_personagem && <span className="text-[#f2dfa8]">{ficha.identidade.nome_personagem}</span>}
+        </h2>
+      }
+    >
+      <div className="space-y-6">
       {/* ========================================================================= */}
       {/* BARRA SUPERIOR DE CONTROLE E AÇÕES                                        */}
       {/* ========================================================================= */}
@@ -3721,6 +3747,7 @@ export const FichaTecnicaPage: React.FC = () => {
         onDescartar={handleDescartarFicha}
         onConsumir={handleConsumirFicha}
       />
-    </div>
+      </div>
+    </PageShell>
   );
 };

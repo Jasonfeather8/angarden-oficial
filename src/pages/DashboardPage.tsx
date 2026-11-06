@@ -254,14 +254,13 @@ export const DashboardPage: React.FC = () => {
   return (
       <PageShell id="page-dashboard" variant="padrao"
         title={
-          <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
+          <h2 className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
             Início / Dashboard Geral
           </h2>
         }
         subtitle="Visão panorâmica da campanha e status do reino"
         headerRight={<div className="text-xs text-[#8c6b41] italic font-serif">Reino de Angarden</div>}
-        contentClassName="p-3 sm:p-5 lg:p-6"
       >
         <div className="space-y-6">
           <section aria-labelledby="quick-status-title" className="border border-[#5a4225] bg-gradient-to-r from-[#1c130c] via-[#120c08] to-[#1c130c] p-4 sm:p-5">
@@ -275,7 +274,7 @@ export const DashboardPage: React.FC = () => {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p id="quick-status-title" className="font-cinzel text-[10px] font-bold uppercase tracking-[0.18em] text-[#b89558]">Status rápido</p>
+                  <p id="quick-status-title" className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Status rápido</p>
                   <h3 className="truncate font-cinzel text-lg font-bold text-[#f0e2c0]">{user?.nome_completo ?? 'Aventureiro'}</h3>
                   <p className="flex items-center gap-1.5 font-serif text-sm italic text-[#a89071]">
                     <Shield className="h-3.5 w-3.5 text-[#c6a35e]" aria-hidden="true" />

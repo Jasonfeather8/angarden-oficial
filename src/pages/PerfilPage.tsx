@@ -115,7 +115,7 @@ export const PerfilPage: React.FC = () => {
       id="page-perfil"
       variant="padrao"
       title={
-        <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
+        <h2 className="flex items-center gap-2">
           <UserCheck className="w-5 h-5 text-[#a88d61]" />
           Meu Perfil & Configurações
         </h2>

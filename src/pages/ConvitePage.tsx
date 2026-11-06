@@ -62,14 +62,14 @@ export const ConvitePage: React.FC = () => {
   return (
       <PageShell id="page-convite" variant="estreito"
         title={
-          <h2 className="flex items-center gap-2 font-cinzel text-xl font-bold uppercase tracking-wider text-[#e6ddc5]">
+          <h2 className="flex items-center gap-2">
             <Link2 className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
             Convite de campanha
           </h2>
         }
         subtitle="Um chamado para se juntar à mesa"
       >
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div className="border border-[#5a4225] bg-[#0c0806]/80 p-4">
             {preview ? (
               <>

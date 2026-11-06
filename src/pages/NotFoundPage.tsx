@@ -14,7 +14,7 @@ export const NotFoundPage: React.FC = () => {
       id="page-not-found"
       variant="padrao"
       title={
-        <h2 className="flex items-center gap-2 font-cinzel text-xl font-bold uppercase tracking-wider text-[#e6ddc5]">
+        <h2 className="flex items-center gap-2">
           <Compass className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
           Rota não encontrada
         </h2>

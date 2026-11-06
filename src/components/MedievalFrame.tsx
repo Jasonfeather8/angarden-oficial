@@ -9,6 +9,8 @@ export interface MedievalFrameProps {
   className?: string;
   contentClassName?: string;
   noHeader?: boolean;
+  /** Rola por dentro da moldura (telas densas de altura fixa). Sem isso, quem rola é a <main>. */
+  scrollable?: boolean;
 }
 
 export const MedievalFrame: React.FC<MedievalFrameProps> = ({
@@ -20,6 +22,7 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
   className = '',
   contentClassName = '',
   noHeader = false,
+  scrollable = false,
 }) => {
   return (
     <div
@@ -74,7 +77,7 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
         )}
 
         {/* Conteúdo */}
-        <div className={`p-2.5 sm:p-4 md:p-6 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 ${contentClassName}`}>
+        <div className={`p-2.5 sm:p-4 md:p-6 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 ${scrollable ? 'min-h-0 overflow-y-auto custom-scrollbar' : ''} ${contentClassName}`}>
           {/* Decoração lateral esquerda sutil */}
           <div className="absolute top-6 left-[-2px] w-[4px] h-[22px] bg-[#3a2c1d] rounded-r-md"></div>
           {children}
