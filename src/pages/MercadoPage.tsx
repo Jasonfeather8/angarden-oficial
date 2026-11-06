@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ShoppingBag, Coins, Shield, Swords, Sparkles, Lock,
   Weight, Search, Filter, ArrowRight, ArrowLeft, Plus, Hammer, Layers, Info,
-  User, ChevronDown, X, Crown, Flame, Wand2
+  User, ChevronDown, X, Crown, Flame, Wand2, Loader2
 } from 'lucide-react';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { InfiniteCategoryScroll } from '../components/InfiniteCategoryScroll';
 import { ItemIconVisual } from '../components/ItemIconVisual';
-import { ModalDetalhesCompra } from '../components/ModalDetalhesCompra';
 import { ModalCriarMercadoria } from '../components/ModalCriarMercadoria';
 import { ModalSelecionarComprador } from '../components/ModalSelecionarComprador';
 import { GothicButton } from '../components/GothicButton';
@@ -17,10 +16,51 @@ import { useFichaStore } from '../store/useFichaStore';
 import { CategoriaMercado, MercadoItem, FichaCompleta } from '../types';
 import { mercadoService } from '../services/mercadoService';
 import { fichaService } from '../services/fichaService';
+import {
+  carregarPaginaMercado as carregarPaginaDoCatalogo,
+  CATEGORIA_INICIAL_DO_MERCADO,
+  chavePaginaMercado,
+  SUBCATEGORIA_INICIAL_DO_MERCADO,
+  TAMANHO_PAGINA_MERCADO,
+} from '../services/mercadoQuery';
 import { withTimeout } from '../utils/withTimeout';
+import { agendarEmOciosidade } from '../utils/idleCallback';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingState } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
+
+const ModalDetalhesCompraLazy = React.lazy(() => import('../components/ModalDetalhesCompra').then((m) => ({ default: m.ModalDetalhesCompra })));
+const preloadModalDetalhesCompra = () => { void import('../components/ModalDetalhesCompra'); };
+
+const MercadoListaSkeleton: React.FC = () => (
+  <div
+    aria-hidden="true"
+    className="space-y-2 bg-[#0c0806]/85 p-1.5 sm:p-3 rounded-xs border border-[#5a4225] shadow-[0_0_20px_rgba(0,0,0,0.8)]"
+  >
+    {Array.from({ length: 6 }).map((_, index) => (
+      <div
+        key={index}
+        className="relative rounded-xs p-1.5 flex items-center gap-2"
+        style={{
+          background: 'linear-gradient(180deg, #323b44 0%, #222930 15%, #151a1e 50%, #0d1013 85%, #07090b 100%)',
+          borderTop: '1px solid #546473',
+          borderBottom: '1.5px solid #050709',
+          borderLeft: '1px solid #283038',
+          borderRight: '1px solid #283038',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12)',
+        }}
+      >
+        <Skeleton className="h-11 w-11 shrink-0 sm:h-12 sm:w-12" />
+        <div className="min-w-0 flex-1 space-y-2 px-1 sm:px-2">
+          <Skeleton className={`h-3 ${index % 2 === 0 ? 'w-2/3' : 'w-1/2'}`} />
+          <Skeleton className={`h-3 ${index % 3 === 0 ? 'w-1/3' : 'w-1/2'}`} />
+        </div>
+        <Skeleton className="hidden h-3 w-16 sm:block" />
+        <Skeleton className="h-7 w-20 shrink-0" />
+      </div>
+    ))}
+  </div>
+);
 
 // Marca d'água rúnica sutil gravada no fundo das ranhuras de item
 const RuneWatermark: React.FC = () => (
@@ -183,28 +223,29 @@ export const MercadoPage: React.FC = () => {
   const [secaoMercado, setSecaoMercado] = useState<'comum' | 'epico' | 'arcano'>('comum');
 
   // Categoria ativa no seletor
-  const [activeCategory, setActiveCategory] = useState<CategoriaMercado>('mercado_armas');
+  const [activeCategory, setActiveCategory] = useState<CategoriaMercado>(CATEGORIA_INICIAL_DO_MERCADO);
   
   // Subcategoria ativa na categoria selecionada
-  const [subcategoriaAtiva, setSubcategoriaAtiva] = useState<string>('todas');
+  const [subcategoriaAtiva, setSubcategoriaAtiva] = useState<string>(SUBCATEGORIA_INICIAL_DO_MERCADO);
 
   const [erroFicha, setErroFicha] = useState<string | null>(null);
   const [busca, setBusca] = useState<string>('');
   const [buscaDebounced, setBuscaDebounced] = useState<string>('');
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = TAMANHO_PAGINA_MERCADO;
   const queryClient = useQueryClient();
-  const chaveConsultaMercado = useCallback((pagina: number) => [
-    'mercado',
-    { categoria: activeCategory, subcategoria: subcategoriaAtiva, busca: buscaDebounced, page: pagina, pageSize },
-  ] as const, [activeCategory, subcategoriaAtiva, buscaDebounced, pageSize]);
-  const carregarPaginaMercado = useCallback((pagina: number) => withTimeout(mercadoService.listarItens({
+  const chaveConsultaMercado = useCallback((pagina: number) => chavePaginaMercado({
     categoria: activeCategory,
     subcategoria: subcategoriaAtiva,
     busca: buscaDebounced,
     page: pagina,
-    pageSize,
-  })), [activeCategory, subcategoriaAtiva, buscaDebounced, pageSize]);
+  }), [activeCategory, subcategoriaAtiva, buscaDebounced]);
+  const carregarPaginaMercado = useCallback((pagina: number) => carregarPaginaDoCatalogo({
+    categoria: activeCategory,
+    subcategoria: subcategoriaAtiva,
+    busca: buscaDebounced,
+    page: pagina,
+  }), [activeCategory, subcategoriaAtiva, buscaDebounced]);
 
   // Ficha ativa no store global
   const storeCharacterId = useFichaStore((state) => state.characterId);
@@ -215,7 +256,9 @@ export const MercadoPage: React.FC = () => {
 
   // Estado da Ficha do Personagem Selecionado
   const [ficha, setFicha] = useState<FichaCompleta | null>(null);
+  const [fichaCarregadaId, setFichaCarregadaId] = useState<string | null>(null);
   const [loadingFicha, setLoadingFicha] = useState<boolean>(true);
+  const fichaDoComprador = fichaCarregadaId !== null && fichaCarregadaId === personagemId ? ficha : null;
 
   // Modal 3.1: Detalhes e Compra
   const [selectedItem, setSelectedItem] = useState<MercadoItem | null>(null);
@@ -226,7 +269,7 @@ export const MercadoPage: React.FC = () => {
   const [itemParaEdicao, setItemParaEdicao] = useState<MercadoItem | null>(null);
 
   // Permissão para Arsenal Épico.
-  const temPermissaoEpica = can.accessEpicMarket(ficha);
+  const temPermissaoEpica = can.accessEpicMarket(fichaDoComprador);
 
   // Carregar lista de personagens disponíveis
   const carregarListaPersonagens = async () => {
@@ -246,18 +289,24 @@ export const MercadoPage: React.FC = () => {
   const carregarFicha = async (idParaCarregar = personagemId) => {
     if (!idParaCarregar) {
       setFicha(null);
+      setFichaCarregadaId(null);
       setErroFicha(null);
       setLoadingFicha(false);
       return;
     }
     try {
       setLoadingFicha(true);
+      // Troca de personagem: a ficha anterior não pode continuar aparecendo como se fosse do novo comprador.
+      // Recarregar o mesmo personagem (ex.: depois de uma compra) mantém os valores atuais na tela.
+      if (fichaCarregadaId !== idParaCarregar) setFichaCarregadaId(null);
       setErroFicha(null);
       const data = await withTimeout(fichaService.getFicha(idParaCarregar));
       setFicha(data);
+      setFichaCarregadaId(idParaCarregar);
     } catch (e) {
       console.error('Erro ao carregar ficha para o mercado', e);
       setFicha(null);
+      setFichaCarregadaId(null);
       setErroFicha(
         e instanceof Error ? e.message : 'Não foi possível carregar a bolsa do personagem.'
       );
@@ -273,6 +322,8 @@ export const MercadoPage: React.FC = () => {
   useEffect(() => {
     carregarFicha(personagemId);
   }, [personagemId]);
+
+  useEffect(() => agendarEmOciosidade(preloadModalDetalhesCompra), []);
 
   useEffect(() => {
     const temporizador = setTimeout(() => setBuscaDebounced(busca), 300);
@@ -531,8 +582,8 @@ export const MercadoPage: React.FC = () => {
     return TABS_POR_SECAO[secaoMercado] || TABS_POR_SECAO.comum;
   }, [secaoMercado]);
 
-  const saldoAtual = ficha?.recursos?.dinheiro ?? 0;
-  const cargaAtual = ficha?.recursos?.carga_total_peso ?? 0;
+  const saldoAtual = fichaDoComprador?.recursos?.dinheiro ?? 0;
+  const cargaAtual = fichaDoComprador?.recursos?.carga_total_peso ?? 0;
 
   // Abertura do Modal 3.1
   const handleAbrirDetalhes = (item: MercadoItem) => {
@@ -646,10 +697,10 @@ export const MercadoPage: React.FC = () => {
               title="Clique para selecionar o personagem comprador"
             >
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                {ficha?.identidade?.imagem_url ? (
+                {fichaDoComprador?.identidade?.imagem_url ? (
                   <img
-                    src={ficha.identidade.imagem_url}
-                    alt={ficha.identidade.nome_personagem}
+                    src={fichaDoComprador.identidade.imagem_url}
+                    alt={fichaDoComprador.identidade.nome_personagem}
                     className="w-6 h-6 sm:w-7 sm:h-7 rounded-xs object-cover border border-[#8c6b41] group-hover:border-[#c5a059] shrink-0 transition-colors"
                   />
                 ) : (
@@ -663,7 +714,9 @@ export const MercadoPage: React.FC = () => {
                     Comprador
                   </span>
                   <span className="text-[#f2dfa8] group-hover:text-[#fff] font-cinzel font-bold text-[11px] sm:text-xs truncate block leading-tight transition-colors">
-                    {loadingFicha ? 'Carregando…' : ficha?.identidade?.nome_personagem || 'Selecionar'}
+                    {loadingFicha ? (
+                      <span className="block h-3 w-20 animate-pulse rounded-xs border border-[#3a2c1d] bg-[#241a11]/80" />
+                    ) : fichaDoComprador?.identidade?.nome_personagem || 'Selecionar'}
                   </span>
                 </div>
               </div>
@@ -677,7 +730,7 @@ export const MercadoPage: React.FC = () => {
               <div className="text-left flex flex-col justify-center leading-none min-w-0">
                 <span className="text-[7.5px] sm:text-[8px] text-[#8c6b41] uppercase tracking-wider block font-cinzel mb-0.5">Bolsa</span>
                 <span className="text-[#f2dfa8] font-mono font-bold text-[11px] sm:text-sm tracking-wider truncate">
-                  {saldoAtual} <span className="text-[8.5px] sm:text-[9px] font-cinzel text-[#8c6b41]">Moedas</span>
+                  {fichaDoComprador ? saldoAtual : '—'} <span className="text-[8.5px] sm:text-[9px] font-cinzel text-[#8c6b41]">Moedas</span>
                 </span>
               </div>
             </div>}
@@ -875,7 +928,12 @@ export const MercadoPage: React.FC = () => {
                   )}
                 </span>
                 <span className="text-[#8c6b41] font-serif text-[10px] sm:text-xs italic">({totalItens} itens)</span>
-                {buscandoItens && <span className="text-[10px] text-[#a88d61] font-serif italic">Carregando…</span>}
+                {buscandoItens && (
+                  <span role="status" className="inline-flex items-center">
+                    <Loader2 className="h-3 w-3 animate-spin text-[#a88d61]" aria-hidden="true" />
+                    <span className="sr-only">Atualizando o catálogo…</span>
+                  </span>
+                )}
               </div>
 
               {/* Input de Busca */}
@@ -893,7 +951,10 @@ export const MercadoPage: React.FC = () => {
 
             {/* LISTAGEM DE ITENS DA CATEGORIA */}
             {carregandoItens ? (
-              <LoadingState variant="table" label="Consultando registros do arsenal…" className="py-10" />
+              <div role="status" aria-live="polite" className="py-10">
+                <span className="sr-only">Consultando registros do arsenal…</span>
+                <MercadoListaSkeleton />
+              </div>
             ) : erroItens ? (
               <ErrorState
                 title="Falha ao consultar o catálogo"
@@ -928,6 +989,7 @@ export const MercadoPage: React.FC = () => {
                       <div
                         key={item.id}
                         id={`card-item-${item.id}`}
+                        onMouseEnter={preloadModalDetalhesCompra}
                         className={`relative rounded-xs p-1.5 flex flex-col sm:grid sm:grid-cols-12 items-stretch sm:items-center gap-1.5 transition-all ${
                           bloqueadoEpico
                             ? 'opacity-60 cursor-not-allowed'
@@ -1224,19 +1286,23 @@ export const MercadoPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* TELA 3.1 - MODAL DE DETALHES E COMPRA DE ITEM */}
       {/* ========================================================================= */}
-      <ModalDetalhesCompra
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        item={selectedItem}
-        saldoAtual={saldoAtual}
-        cargaAtual={cargaAtual}
-        nomePersonagemComprador={ficha?.identidade?.nome_personagem}
-        temPermissaoEpica={temPermissaoEpica}
-        onConfirmarCompra={handleConfirmarCompra}
-        canManageCatalog={canManageCatalog}
-        onEditar={handleAbrirEdicao}
-        onExcluir={handleExcluirMercadoria}
-      />
+      {(isModalOpen || selectedItem) && (
+        <Suspense fallback={null}>
+          <ModalDetalhesCompraLazy
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            item={selectedItem}
+            saldoAtual={saldoAtual}
+            cargaAtual={cargaAtual}
+            nomePersonagemComprador={fichaDoComprador?.identidade?.nome_personagem}
+            temPermissaoEpica={temPermissaoEpica}
+            onConfirmarCompra={handleConfirmarCompra}
+            canManageCatalog={canManageCatalog}
+            onEditar={handleAbrirEdicao}
+            onExcluir={handleExcluirMercadoria}
+          />
+        </Suspense>
+      )}
 
       {/* ========================================================================= */}
       {/* TELA 3.2 - MODAL DE CRIAR / EDITAR MERCADORIA (ADMINISTRADOR) */}

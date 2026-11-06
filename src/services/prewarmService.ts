@@ -79,6 +79,14 @@ export async function prewarmTelasSecundarias(tenantId: string, userId: string):
       queryKey: chaveFolioGrimorio(folio),
       queryFn: () => carregarFolioGrimorio(folio),
     });
+
+    if (!isSessionCurrent()) return;
+    const { chavePaginaMercado, carregarPaginaMercado, paginaInicialDoMercado } = await import('./mercadoQuery');
+    const pagina = paginaInicialDoMercado();
+    await queryClient.prefetchQuery({
+      queryKey: chavePaginaMercado(pagina),
+      queryFn: () => carregarPaginaMercado(pagina),
+    });
   } catch {
     // Falhas de carregamento em segundo plano são silenciosas.
   }
