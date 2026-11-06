@@ -363,3 +363,12 @@ export interface Sessao {
   link_vtt?: string;
   status: 'AGENDADA' | 'EM_ANDAMENTO' | 'FINALIZADA' | 'CANCELADA';
 }
+
+export interface BibliotecaLivro {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: string;
+  capa_url?: string;
+  arquivo_url?: string;
+}

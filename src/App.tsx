@@ -14,6 +14,7 @@ import {
   AdminOverviewPage,
   AdminRequestsPage,
   AuthCallbackPage,
+  BibliotecaPage,
   CadastroPage,
   ConvitePage,
   CronicasPage,
@@ -98,6 +99,7 @@ export default function App() {
           <Route path={ROUTES.ficha} element={<FichaTecnicaPage />} />
           <Route path={ROUTES.mercado} element={<MercadoPage />} />
           <Route path={ROUTES.grimorio} element={<GrimorioPage />} />
+          <Route path={ROUTES.biblioteca} element={<BibliotecaPage />} />
           <Route path={ROUTES.cronicas} element={<CronicasPage />} />
           {/* Tela de Campanhas oculta no momento: o código continua em
               src/pages/CampanhasPage.tsx, mas nenhum papel a renderiza. Para reativar,

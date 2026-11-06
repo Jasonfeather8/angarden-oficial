@@ -7,6 +7,7 @@ export const PersonagensPage = React.lazy(() => import('../pages/PersonagensPage
 export const FichaTecnicaPage = React.lazy(() => import('../pages/FichaTecnicaPage').then((module) => ({ default: module.FichaTecnicaPage })));
 export const MercadoPage = React.lazy(() => import('../pages/MercadoPage').then((module) => ({ default: module.MercadoPage })));
 export const GrimorioPage = React.lazy(() => import('../pages/GrimorioPage').then((module) => ({ default: module.GrimorioPage })));
+export const BibliotecaPage = React.lazy(() => import('../pages/BibliotecaPage').then((module) => ({ default: module.BibliotecaPage })));
 export const CronicasPage = React.lazy(() => import('../pages/CronicasPage').then((module) => ({ default: module.CronicasPage })));
 export const ConvitePage = React.lazy(() => import('../pages/ConvitePage').then((module) => ({ default: module.ConvitePage })));
 export const PainelMestrePage = React.lazy(() => import('../pages/PainelMestrePage').then((module) => ({ default: module.PainelMestrePage })));
@@ -31,6 +32,7 @@ const pageImports = new Map<string, () => Promise<unknown>>([
   [ROUTES.ficha, () => import('../pages/FichaTecnicaPage')],
   [ROUTES.mercado, () => import('../pages/MercadoPage')],
   [ROUTES.grimorio, () => import('../pages/GrimorioPage')],
+  [ROUTES.biblioteca, () => import('../pages/BibliotecaPage')],
   [ROUTES.cronicas, () => import('../pages/CronicasPage')],
   [ROUTES.convite, () => import('../pages/ConvitePage')],
   [ROUTES.painelMestre, () => import('../pages/PainelMestrePage')],
