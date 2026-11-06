@@ -87,6 +87,15 @@ export async function prewarmTelasSecundarias(tenantId: string, userId: string):
       queryKey: chavePaginaMercado(pagina),
       queryFn: () => carregarPaginaMercado(pagina),
     });
+
+    if (!isSessionCurrent()) return;
+    await prewarmAsyncDataCache(cacheKeys.proximaSessao(tenantId), async () => {
+      if (!isSessionCurrent()) throw new Error('Sessão alterada.');
+      const { scheduleService } = await import('./scheduleService');
+      const sessao = await scheduleService.getProximaSessao();
+      if (!isSessionCurrent()) throw new Error('Sessão alterada.');
+      return sessao;
+    });
   } catch {
     // Falhas de carregamento em segundo plano são silenciosas.
   }

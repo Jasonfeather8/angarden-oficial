@@ -9,6 +9,7 @@ export const cacheKeys = {
   campanhas: (userId?: string | null) => `campanhas:${userId ?? ''}`,
   campanhasAcessiveis: (userId?: string | null) => `campanhas-acessiveis:${userId ?? ''}`,
   mestreFichas: (tenantId?: string | null) => `mestre-fichas:${tenantId ?? ''}`,
+  proximaSessao: (tenantId?: string | null) => `proxima-sessao:${tenantId ?? ''}`,
 };
 
 /** Prefixos para descartar de uma vez todas as entradas de uma família de chaves. */

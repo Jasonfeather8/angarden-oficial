@@ -17,11 +17,12 @@ import { MedievalFrame } from '../components/MedievalFrame';
 import { Modal } from '../components/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { LoadingState } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { ROLE_LABELS } from '../auth/policies';
+import { cacheKeys } from '../services/cacheKeys';
 import { scheduleService } from '../services/scheduleService';
 import { ROUTES } from '../routes/paths';
 
@@ -156,7 +157,7 @@ export const DashboardPage: React.FC = () => {
   const { data: session, isLoading: isLoadingSessao, error: erroSessao, reload: reloadSessao } = useAsyncData(
     () => scheduleService.getProximaSessao(),
     [],
-    { cacheKey: `proxima-sessao:${user?.tenant_id ?? ''}` }
+    { cacheKey: cacheKeys.proximaSessao(user?.tenant_id) }
   );
   const [isScheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isSavingSessao, setIsSavingSessao] = useState(false);
@@ -279,7 +280,12 @@ export const DashboardPage: React.FC = () => {
                   <CalendarClock className="h-4 w-4" aria-hidden="true" />
                   Próxima sessão
                 </p>
-                {session ? (
+                {isLoadingSessao ? (
+                  <div aria-hidden="true" className="mt-1 space-y-1">
+                    <Skeleton className="h-6 w-52 max-w-full" />
+                    <Skeleton className="h-4 w-60 max-w-full" />
+                  </div>
+                ) : session ? (
                   <>
                     <h3 id="next-session-title" className="mt-1 font-cinzel text-xl font-bold text-[#f0d79b]">{session.titulo}</h3>
                     <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">{formatSessionDate(session.dataHora)}</p>
@@ -308,7 +314,10 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {isLoadingSessao ? (
-              <LoadingState variant="text" label="Carregando a sessão agendada…" />
+              <div role="status" aria-live="polite">
+                <span className="sr-only">Carregando a sessão agendada…</span>
+                <SessaoSkeleton />
+              </div>
             ) : erroSessao ? (
               <ErrorState description={erroSessao} onRetry={reloadSessao} />
             ) : session ? (
@@ -491,5 +500,27 @@ export const DashboardPage: React.FC = () => {
     </div>
   );
 };
+
+const SessaoSkeleton: React.FC = () => (
+  <div aria-hidden="true" className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+    <div>
+      <Skeleton className="mb-2 h-3 w-32" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-11/12" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    </div>
+    <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]">
+      <Skeleton className="mx-auto mb-2 h-3 w-28" />
+      <div className="flex justify-center gap-1.5 sm:gap-2">
+        <Skeleton className="h-12 w-[52px]" />
+        <Skeleton className="h-12 w-[52px]" />
+        <Skeleton className="h-12 w-[52px]" />
+        <Skeleton className="h-12 w-[52px]" />
+      </div>
+    </div>
+  </div>
+);
 
 export default DashboardPage;
