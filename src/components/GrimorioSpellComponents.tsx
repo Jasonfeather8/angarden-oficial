@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { grimorioSchools, grimorioVolumes, GrimorioSpell } from '../mocks/grimorio';
 import { urlMiniatura } from '../services/mediaService';
+import { Portal } from './ui/Portal';
 
 type VisualKind = GrimorioSpell['visual'];
 
@@ -156,7 +157,8 @@ export const SpellDetailsModal = ({ spell, learned, canManage = false, canToggle
   const schoolName = spellSchool?.name ?? '-';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050403]/90 p-2 backdrop-blur-sm sm:p-5" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <Portal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050403]/90 p-2 backdrop-blur-sm sm:p-5 text-[#dcd1ba]" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="spell-details-title" className="relative flex max-h-[calc(100dvh-0.75rem)] w-full max-w-[820px] flex-col overflow-visible border-2 border-[#76552f] bg-[#b8945c] p-1 text-[#3b2715] shadow-[0_0_50px_rgba(0,0,0,0.95)] sm:max-h-[calc(100dvh-2rem)] sm:p-1.5" onClick={(event) => event.stopPropagation()}>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(246,220,157,0.44)_0%,transparent_58%),repeating-linear-gradient(115deg,rgba(90,54,23,0.11)_0px,rgba(90,54,23,0.11)_1px,transparent_1px,transparent_7px),repeating-linear-gradient(8deg,rgba(255,244,196,0.12)_0px,rgba(255,244,196,0.12)_2px,transparent_2px,transparent_13px)] opacity-90" aria-hidden="true" />
         <div className="pointer-events-none absolute -left-3 top-5 bottom-6 w-5 bg-[#d7b979] shadow-[2px_2px_5px_rgba(52,31,14,0.4)] [clip-path:polygon(0_0,100%_4%,72%_11%,100%_20%,66%_29%,100%_39%,70%_49%,100%_59%,64%_69%,100%_80%,68%_90%,100%_100%,0_94%)]" aria-hidden="true" />
@@ -189,7 +191,8 @@ export const SpellDetailsModal = ({ spell, learned, canManage = false, canToggle
         </div>
         <footer className="relative flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#49351f] bg-[#1a110b]/95 px-2.5 py-2 sm:px-4 sm:py-2.5"><p className="text-[9px] uppercase tracking-[0.16em] text-[#80643c]">{learned ? 'Fórmula inscrita no Grimório' : 'Fórmula ainda não aprendida'}</p><div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={onClose} className="flex items-center gap-1.5 border border-[#4a351f] px-3 py-2 text-[10px] uppercase tracking-widest text-[#a88d61] transition hover:border-[#80643c] hover:text-[#e6ddc5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994]"><X size={14} /> Fechar</button><button type="button" onClick={onToggleLearned} aria-pressed={learned} className={`flex items-center gap-1.5 border px-3 py-2 text-[10px] uppercase tracking-widest transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] ${learned ? 'border-[#a88d61] bg-[#765b36]/40 text-[#f1d994]' : 'border-[#a88d61] bg-[#5a4225]/40 text-[#f1d994] hover:bg-[#765b36]'}`}>{learned ? <Check size={14} /> : <BookMarked size={14} />}{learned ? 'Remover do Grimório' : 'Adicionar ao Grimório'}</button></div></footer>
       </section>
-    </div>
+      </div>
+    </Portal>
   );
 };
 

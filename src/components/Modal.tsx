@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
 import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
+import { Portal } from './ui/Portal';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -40,7 +41,8 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <Portal>
+      <div
       id="angarden-modal-backdrop"
       className={`fixed inset-0 ${zIndex} flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200`}
       onClick={(e) => {
@@ -118,7 +120,7 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
 
           {/* Conteúdo Interno com scroll customizado */}
-          <div className="px-3 py-3 sm:px-6 sm:py-5 space-y-4 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto custom-scrollbar font-serif">
+          <div className="px-3 py-3 sm:px-6 sm:py-5 space-y-4 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto custom-scrollbar font-serif text-[#dcd1ba]">
             {/* Decoração lateral esquerda sutil */}
             <div className="absolute top-8 left-[-2px] w-[4px] h-[22px] bg-[#3a2c1d] rounded-r-md"></div>
             {children}
@@ -131,7 +133,8 @@ export const Modal: React.FC<ModalProps> = ({
 
         </div>
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 };
 

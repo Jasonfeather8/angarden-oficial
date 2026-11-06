@@ -8,7 +8,8 @@ import { FichaCompleta, MercadoItem } from '../types';
 import { ModalDetalhesCompra } from './ModalDetalhesCompra';
 import { ItemIconVisual } from './ItemIconVisual';
 import { EmptyState } from './ui/EmptyState';
-import { 
+import { Portal } from './ui/Portal';
+import {
   converterInventarioParaMercadoItem, 
   equiparItemNaFicha, 
   descartarItemDoInventario 
@@ -427,9 +428,10 @@ export const RPGInventoryModal: React.FC<RPGInventoryModalProps> = ({
   const nomePersonagem = ficha.identidade?.nome_personagem || 'Aventureiro';
 
   return (
-    <div 
+    <Portal>
+      <div
       id="modal-inventario-rpg"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-xs select-none overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-xs select-none overflow-y-auto text-[#dcd1ba] text-[13px] sm:text-[14px] leading-relaxed"
       onClick={(e) => {
         // Só fecha o inventário se o clique foi diretamente no fundo e nenhum modal de detalhes estiver aberto
         if (e.target === e.currentTarget && !itemParaDetalhes) {
@@ -769,6 +771,7 @@ export const RPGInventoryModal: React.FC<RPGInventoryModalProps> = ({
           onConsumir={handleConsumir}
         />
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 };

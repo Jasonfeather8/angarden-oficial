@@ -37,9 +37,14 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
         {/* Bordas duplas internas laterais e inferiores */}
         <div className={molduraAcento}></div>
 
+        {/* Decoração dos cantos */}
+        {posicoesDeCanto.map((posicao) => (
+          <div key={posicao} className={`${molduraCanto} ${posicao}`} />
+        ))}
+
         {/* Cabeçalho */}
         {!noHeader && (
-          <div className="border-b border-[#3a2c1d] pb-2.5 pt-3 px-3.5 sm:px-6 relative flex flex-col md:flex-row md:items-center justify-between gap-3 z-10 bg-black/50">
+          <div className="border-b border-[#3a2c1d] pb-2.5 pt-3 px-3.5 sm:px-6 relative flex flex-col md:flex-row md:items-center justify-between gap-3 bg-black/50">
             {/* Decoração superior esquerda (seta apontando para baixo/direita) */}
             <div className="absolute top-0 left-[-2px] w-0 h-0 border-t-[8px] border-t-[#3a2c1d] border-r-[8px] border-r-transparent"></div>
             
@@ -73,16 +78,11 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
         )}
 
         {/* Conteúdo */}
-        <div className={`p-2.5 sm:p-4 md:p-6 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 ${scrollable ? 'min-h-0 overflow-y-auto custom-scrollbar' : ''} ${contentClassName}`}>
+        <div className={`p-2.5 sm:p-4 md:p-6 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 bg-black/25 ${scrollable ? 'min-h-0 overflow-y-auto custom-scrollbar' : ''} ${contentClassName}`}>
           {/* Decoração lateral esquerda sutil */}
           <div className="absolute top-6 left-[-2px] w-[4px] h-[22px] bg-[#3a2c1d] rounded-r-md"></div>
           {children}
         </div>
-
-        {/* Decoração dos cantos */}
-        {posicoesDeCanto.map((posicao) => (
-          <div key={posicao} className={`${molduraCanto} ${posicao}`} />
-        ))}
 
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, X, User, Check, Coins } from 'lucide-react';
 import { MedievalFrame } from './MedievalFrame';
 import { GothicButton } from './GothicButton';
+import { Portal } from './ui/Portal';
 
 export interface PersonagemResumo {
   id: string;
@@ -43,7 +44,8 @@ export const ModalSelecionarComprador: React.FC<ModalSelecionarCompradorProps> =
   if (!isOpen) return null;
 
   return (
-    <div
+    <Portal>
+      <div
       id="modal-selecionar-comprador-backdrop"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xs select-none overflow-y-auto"
       onClick={onClose}
@@ -185,6 +187,7 @@ export const ModalSelecionarComprador: React.FC<ModalSelecionarCompradorProps> =
           </div>
         </MedievalFrame>
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 };
