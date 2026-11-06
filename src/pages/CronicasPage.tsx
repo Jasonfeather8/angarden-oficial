@@ -199,7 +199,7 @@ export const CronicasPage: React.FC = () => {
       <MedievalFrame
         title={
           <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
-            <Sparkles className="h-5 w-5 text-[#a88d61]" />
+            <ScrollText className="h-5 w-5 text-[#a88d61]" />
             Crônicas da Campanha
           </h2>
         }
@@ -208,7 +208,7 @@ export const CronicasPage: React.FC = () => {
         headerRight={
           <div className="flex w-full items-center justify-between gap-3 md:w-auto md:justify-end">
             <div className="hidden items-center gap-1.5 border border-[#5a4225] bg-[#1b120b] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[#b89558] sm:flex">
-              <ScrollText className="h-3.5 w-3.5" />
+              <FileText className="h-3.5 w-3.5" />
               {orderedChronicles.length} registros
             </div>
             {isMaster && (
