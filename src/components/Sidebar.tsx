@@ -112,7 +112,8 @@ export const Sidebar: React.FC = () => {
             {/* CABEÇALHO DO SIDEBAR */}
             <div className={`
               border-b border-[#3a2c1d] relative z-10 bg-black/60 shrink-0
-              ${isCollapsed ? 'py-3 px-1 flex flex-col items-center justify-center gap-2' : 'py-3 px-3 sm:px-4 flex items-center justify-between'}
+              ${isCollapsed ? 'py-3 px-1' : 'py-3 px-3 sm:px-4'}
+              flex flex-col items-center justify-center gap-2
             `}>
               {/* Decoração superior esquerda */}
               <div className="absolute top-0 left-[-2px] w-0 h-0 border-t-[7px] border-t-[#3a2c1d] border-r-[7px] border-r-transparent"></div>
@@ -123,8 +124,8 @@ export const Sidebar: React.FC = () => {
               {/* Modo Expandido / Mobile */}
               {(!isCollapsed || mobileOpen) ? (
                 <>
-                  <h1 className="flex min-w-0 items-center overflow-hidden">
-                    <BrandMark variant="completa" altura={26} larguraMaxima={170} />
+                  <h1 className="flex w-full min-w-0 items-center justify-center overflow-hidden">
+                    <BrandMark variant="completa" altura={42} larguraMaxima={200} />
                   </h1>
 
                   <div className="flex items-center gap-1">

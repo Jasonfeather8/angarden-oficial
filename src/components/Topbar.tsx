@@ -10,7 +10,6 @@ import { cacheKeys } from '../services/cacheKeys';
 import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
-import { BrandMark } from './BrandMark';
 
 export const Topbar: React.FC = () => {
   const toggleMobileOpen = useAppStore((state) => state.toggleMobileOpen);
@@ -48,7 +47,7 @@ export const Topbar: React.FC = () => {
       id="angarden-topbar"
       className="w-full h-14 shrink-0 bg-[#120f0d]/95 border-b border-[#3a2c1d] px-4 sm:px-6 flex items-center justify-between z-30 relative backdrop-blur-md text-[#dcd1ba]"
     >
-      {/* Esquerda: Logo + Botão Mobile */}
+      {/* Esquerda: Selo do papel na plataforma + Botão Mobile */}
       <div className="flex items-center space-x-3">
         <button
           id="btn-mobile-sidebar-toggle"
@@ -59,9 +58,20 @@ export const Topbar: React.FC = () => {
           <Menu size={18} />
         </button>
 
-        <div className="flex items-center">
-          <BrandMark variant="completa" altura={24} larguraMaxima={200} />
-        </div>
+        {/* Papel real na plataforma (definido pelo administrador, não alternável) */}
+        <span
+          className="hidden items-center gap-1.5 rounded-xs border border-[#5a4225] bg-[#120f0d] px-2.5 py-1 text-[10px] font-cinzel uppercase tracking-wider text-[#a88d61] sm:flex"
+          title="Seu papel na plataforma"
+        >
+          {isMestre ? (
+            <Crown size={13} aria-hidden="true" />
+          ) : isAdmin ? (
+            <Shield size={13} aria-hidden="true" />
+          ) : (
+            <User size={13} aria-hidden="true" />
+          )}
+          {role ? ROLE_LABELS[role] : '—'}
+        </span>
       </div>
 
       {/* Centro: Campanha Ativa */}
@@ -92,7 +102,7 @@ export const Topbar: React.FC = () => {
         )}
       </div>
 
-      {/* Direita: Perfil + Papel na plataforma */}
+      {/* Direita: Perfil */}
       <div className="flex items-center space-x-2.5 sm:space-x-3">
         <button
           id="btn-topbar-current-user"
@@ -116,21 +126,6 @@ export const Topbar: React.FC = () => {
             {user?.nome_completo ?? ''}
           </span>
         </button>
-
-        {/* Papel real na plataforma (definido pelo administrador, não alternável) */}
-        <span
-          className="hidden items-center gap-1.5 rounded-xs border border-[#5a4225] bg-[#120f0d] px-2.5 py-1 text-[10px] font-cinzel uppercase tracking-wider text-[#a88d61] sm:flex"
-          title="Seu papel na plataforma"
-        >
-          {isMestre ? (
-            <Crown size={13} aria-hidden="true" />
-          ) : isAdmin ? (
-            <Shield size={13} aria-hidden="true" />
-          ) : (
-            <User size={13} aria-hidden="true" />
-          )}
-          {role ? ROLE_LABELS[role] : '—'}
-        </span>
       </div>
     </header>
   );
