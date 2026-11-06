@@ -13,8 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X,
-  Swords
+  X
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
@@ -47,7 +46,6 @@ export const Sidebar: React.FC = () => {
   const menuItems: MenuItem[] = [
     { id: 'dashboard', to: ROUTES.dashboard, label: 'Início / Dashboard', icon: LayoutDashboard },
     { id: 'personagens', to: ROUTES.personagens, label: 'Personagens', icon: Users, tenantOnly: true },
-    { id: 'campanhas', to: ROUTES.campanhas, label: 'Campanhas', icon: Swords, tenantOnly: true },
     { id: 'mercado', to: ROUTES.mercado, label: 'Mercado Global', icon: ShoppingBag },
     { id: 'grimorio', to: ROUTES.grimorio, label: 'Grimório', icon: BookOpen },
     { id: 'biblioteca', to: ROUTES.biblioteca, label: 'Biblioteca', icon: Scroll },

@@ -6,6 +6,10 @@ import { campaignService } from './campaignService';
 import { cacheKeys } from './cacheKeys';
 import { queryClient } from './queryClient';
 
+/**
+ * Dados da tela de Campanhas — hoje oculta em App.tsx, mas preservada para quando
+ * a tela voltar. Por isso não é mais pré-aquecida no boot.
+ */
 export async function loadCampaignPageData(): Promise<{
   campaigns: Campaign[];
   members: CampaignMember[];
@@ -57,13 +61,6 @@ export async function prewarmTelasPrioritarias(tenantId: string, userId: string)
       if (!isSessionCurrent()) throw new Error('Escopo do acervo alterado.');
       return characters;
     });
-    await prewarmAsyncDataCache(cacheKeys.campanhas(userId), async () => {
-      if (!isSessionCurrent()) throw new Error('Sessão alterada.');
-      const campaigns = await loadCampaignPageData();
-      if (!isSessionCurrent()) throw new Error('Sessão alterada.');
-      return campaigns;
-    });
-
     if (!isSessionCurrent()) return;
     const characters = await fichaService.getTenantCharacters();
     if (!isSessionCurrent()) return;
