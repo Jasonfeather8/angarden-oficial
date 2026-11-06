@@ -47,7 +47,7 @@ import { ROUTES } from '../routes/paths';
 import { mercadoService } from '@/services/mercadoService';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingState } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const FichaTecnicaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -233,8 +233,18 @@ export const FichaTecnicaPage: React.FC = () => {
 
   if (isLoading || !ficha) {
     return (
-      <div className="w-full max-w-[900px] mx-auto py-10">
-        <LoadingState variant="cards" label="Invocando os pergaminhos da ficha técnica…" />
+      <div role="status" aria-live="polite" className="w-full max-w-[1280px] mx-auto pb-20 space-y-6">
+        <span className="sr-only">Invocando os pergaminhos da ficha técnica…</span>
+        <Skeleton className="h-14 w-full" />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       </div>
     );
   }

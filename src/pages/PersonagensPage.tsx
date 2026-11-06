@@ -18,6 +18,7 @@ const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 export const PersonagensPage: React.FC = () => {
   const navigate = useNavigate();
   const setCharacterId = useFichaStore((state) => state.setCharacterId);
+  const prewarmFicha = useFichaStore((state) => state.prewarmFicha);
   const { tenantId } = useAuthorization();
 
   // O acervo é sempre o do cliente (tenant) autenticado.
@@ -31,6 +32,19 @@ export const PersonagensPage: React.FC = () => {
   const [activeCharacterId, setActiveCharacterId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const prewarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleFichaPrewarm = (id: string) => {
+    if (prewarmTimerRef.current) clearTimeout(prewarmTimerRef.current);
+    prewarmTimerRef.current = setTimeout(() => {
+      prewarmTimerRef.current = null;
+      void prewarmFicha(id);
+    }, 180);
+  };
+
+  useEffect(() => () => {
+    if (prewarmTimerRef.current) clearTimeout(prewarmTimerRef.current);
+  }, []);
 
   const handleOpenFicha = (id: string) => {
     setCharacterId(id);
@@ -442,8 +456,9 @@ export const PersonagensPage: React.FC = () => {
                       const isActive = activeCharacter?.id === char.id;
 
                       return (
-                        <div 
+                        <div
                           key={char.id}
+                          onMouseEnter={() => { if (char.isKnown) scheduleFichaPrewarm(char.id); }}
                           onClick={() => {
                             if (!hasMovedRef.current && char.isKnown) {
                               if (activeCharacter?.id === char.id) {
@@ -533,7 +548,8 @@ export const PersonagensPage: React.FC = () => {
 
             {/* Centro / Mobile: Moldura Circular com a Arte do Personagem */}
             <div className="flex flex-col items-center justify-center relative z-20 py-2 lg:py-0 lg:flex-1 lg:-mx-8 shrink-0">
-              <div 
+              <div
+                onMouseEnter={() => { if (activeCharacter?.isKnown) scheduleFichaPrewarm(activeCharacter.id); }}
                 onClick={() => {
                   if (activeCharacter?.isKnown) {
                     handleOpenFicha(activeCharacter.id);

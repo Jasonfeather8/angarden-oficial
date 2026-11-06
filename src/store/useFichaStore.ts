@@ -4,6 +4,7 @@ import { fichaService } from '../services/fichaService';
 import { withTimeout } from '../utils/withTimeout';
 import { policies } from '../auth/policies';
 import { useSessionStore } from './useSessionStore';
+import { useAppStore } from './useAppStore';
 import { carregarLookupDeItens, MercadoLookupRef } from '../services/mercadoService';
 
 interface FichaStoreState {
@@ -20,6 +21,7 @@ interface FichaStoreState {
 
   setCharacterId: (id: string) => void;
   loadFicha: (id: string) => Promise<void>;
+  prewarmFicha: (id: string) => Promise<void>;
   reloadFicha: () => Promise<void>;
   updateFicha: (updater: (prev: FichaCompleta) => FichaCompleta) => void;
   saveCurrentFicha: () => Promise<void>;
@@ -39,6 +41,7 @@ let carregandoCharacterId: string | null = null;
 let loadGeneration = 0;
 const fichasEmMemoria = new Map<string, FichaCompleta>();
 const fichasComAlteracoesPendentes = new Set<string>();
+const prewarmEmAndamento = new Map<string, Promise<void>>();
 
 function cancelarGravacaoAgendada() {
   if (saveTimer !== undefined) {
@@ -96,7 +99,38 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
       void get().loadFicha(id);
     },
 
+    prewarmFicha: async (id) => {
+      // Memoriza em segundo plano: nunca mexe na ficha que está na tela e nunca
+      // sobrescreve edições pendentes nem uma cópia mais recente já em memória.
+      if (fichasEmMemoria.has(id) || fichasComAlteracoesPendentes.has(id)) return;
+      const existingRequest = prewarmEmAndamento.get(id);
+      if (existingRequest) return existingRequest;
+      const sessionUserId = useSessionStore.getState().session?.user.id;
+      if (!sessionUserId) return;
+      const request = (async () => {
+        try {
+          const loaded = await withTimeout(fichaService.getFicha(id));
+          const currentUserId = useSessionStore.getState().session?.user.id;
+          if (
+            currentUserId !== sessionUserId ||
+            fichasComAlteracoesPendentes.has(id) ||
+            fichasEmMemoria.has(id)
+          ) return;
+          fichasEmMemoria.set(id, fichaService.calcularEngine(loaded));
+        } catch {
+          // Falhas de pré-aquecimento em segundo plano são silenciosas.
+        }
+      })();
+      prewarmEmAndamento.set(id, request);
+      try {
+        await request;
+      } finally {
+        if (prewarmEmAndamento.get(id) === request) prewarmEmAndamento.delete(id);
+      }
+    },
+
     loadFicha: async (id) => {
+      useAppStore.getState().setLastCharacterId(id);
       // Evita carregar a mesma ficha duas vezes quando a navegação e o efeito da página coincidem.
       if (carregandoCharacterId === id) return;
       carregandoCharacterId = id;
@@ -218,6 +252,7 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
       cancelarGravacaoAgendada();
       fichasEmMemoria.clear();
       fichasComAlteracoesPendentes.clear();
+      prewarmEmAndamento.clear();
       carregandoCharacterId = null;
       loadGeneration += 1;
       set({
@@ -249,5 +284,6 @@ useSessionStore.subscribe((state, previous) => {
   const currentUserId = state.session?.user.id ?? null;
   if (previousUserId !== currentUserId) {
     useFichaStore.getState().reset();
+    if (previousUserId !== null) useAppStore.getState().setLastCharacterId(null);
   }
 });
