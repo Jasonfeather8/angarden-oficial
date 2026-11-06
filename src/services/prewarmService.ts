@@ -4,6 +4,7 @@ import { useSessionStore } from '../store/useSessionStore';
 import { useAppStore } from '../store/useAppStore';
 import { campaignService } from './campaignService';
 import { cacheKeys } from './cacheKeys';
+import { queryClient } from './queryClient';
 
 export async function loadCampaignPageData(): Promise<{
   campaigns: Campaign[];
@@ -61,12 +62,23 @@ export async function prewarmTelasSecundarias(tenantId: string, userId: string):
 
     if (!isSessionCurrent()) return;
     const characters = await fichaService.getTenantCharacters();
-    if (!isSessionCurrent() || characters.length === 0) return;
-    const lastCharacterId = useAppStore.getState().lastCharacterId;
-    const characterToPrewarm = characters.find((character) => character.id === lastCharacterId) ?? characters[0];
-    const { useFichaStore } = await import('../store/useFichaStore');
     if (!isSessionCurrent()) return;
-    await useFichaStore.getState().prewarmFicha(characterToPrewarm.id);
+    if (characters.length > 0) {
+      const lastCharacterId = useAppStore.getState().lastCharacterId;
+      const characterToPrewarm = characters.find((character) => character.id === lastCharacterId) ?? characters[0];
+      const { useFichaStore } = await import('../store/useFichaStore');
+      if (!isSessionCurrent()) return;
+      await useFichaStore.getState().prewarmFicha(characterToPrewarm.id);
+    }
+
+    if (!isSessionCurrent()) return;
+    const { chaveFolioGrimorio, carregarFolioGrimorio, folioInicialDoGrimorio } = await import('./grimorioQuery');
+    const folio = folioInicialDoGrimorio();
+    if (!isSessionCurrent()) return;
+    await queryClient.prefetchQuery({
+      queryKey: chaveFolioGrimorio(folio),
+      queryFn: () => carregarFolioGrimorio(folio),
+    });
   } catch {
     // Falhas de carregamento em segundo plano são silenciosas.
   }

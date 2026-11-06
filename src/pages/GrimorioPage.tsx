@@ -42,8 +42,6 @@ import {
 import {
   getLearnedSpellIds,
   setLearnedSpell,
-  listarMagiasDoVolume,
-  buscarMagias,
   criarMagia,
   atualizarMagia,
   alternarOculta,
@@ -54,13 +52,19 @@ import { cacheKeys } from '../services/cacheKeys';
 import { withTimeout } from '../utils/withTimeout';
 import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
 import { ErrorState } from '../components/ui/ErrorState';
-import { LoadingState } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { useOtimizarImagensGrimorio } from '../hooks/useOtimizarImagensGrimorio';
 import { enviarImagem } from '../services/mediaService';
 import { useFichaStore } from '../store/useFichaStore';
 import { Field, MagicVisual, SpellCard, SpellDetailsModal as SharedSpellDetailsModal } from '../components/GrimorioSpellComponents';
+import {
+  carregarFolioGrimorio,
+  chaveFolioGrimorio,
+  ESCOLA_INICIAL_DO_GRIMORIO,
+  TAMANHO_FOLIO,
+} from '../services/grimorioQuery';
 
 type View = 'schools' | 'element-tree' | 'mental-tree' | 'tree' | 'book';
 type BookVolume = 1 | 2 | 3;
@@ -112,7 +116,7 @@ export const GrimorioPage: React.FC = () => {
   const storeCharacterId = useFichaStore((state) => state.characterId);
   const setStoreCharacterId = useFichaStore((state) => state.setCharacterId);
   const [view, setView] = useState<View>('schools');
-  const [schoolId, setSchoolId] = useState('elementar');
+  const [schoolId, setSchoolId] = useState(ESCOLA_INICIAL_DO_GRIMORIO);
   const [branch, setBranch] = useState('');
   const [volumeId, setVolumeId] = useState('');
   const [selectedSpell, setSelectedSpell] = useState<GrimorioSpell | null>(null);
@@ -179,12 +183,16 @@ export const GrimorioPage: React.FC = () => {
   const termoBusca = normalizarBusca(buscaDebounced);
   const buscandoMagias = termoBusca.length >= TAMANHO_MINIMO_BUSCA;
   const queryClient = useQueryClient();
-  const chaveConsultaGrimorio = useCallback((pagina: number) => ['grimorio', buscandoMagias
-    ? { busca: termoBusca, page: pagina, pageSize: 10 }
-    : { volumeId: selectedVolume?.id, page: pagina, pageSize: 10 }], [buscandoMagias, termoBusca, selectedVolume?.id]);
-  const carregarPaginaGrimorio = useCallback((pagina: number) => withTimeout(buscandoMagias
-    ? buscarMagias(termoBusca, { page: pagina, pageSize: 10 })
-    : listarMagiasDoVolume(selectedVolume!.id, { page: pagina, pageSize: 10 })), [buscandoMagias, termoBusca, selectedVolume?.id]);
+  const chaveConsultaGrimorio = useCallback((pagina: number) => chaveFolioGrimorio({
+    volumeId: selectedVolume?.id,
+    busca: buscandoMagias ? termoBusca : undefined,
+    page: pagina,
+  }), [buscandoMagias, termoBusca, selectedVolume?.id]);
+  const carregarPaginaGrimorio = useCallback((pagina: number) => carregarFolioGrimorio({
+    volumeId: selectedVolume?.id,
+    busca: buscandoMagias ? termoBusca : undefined,
+    page: pagina,
+  }), [buscandoMagias, termoBusca, selectedVolume?.id]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setBuscaDebounced(normalizarBusca(busca)), 300);
@@ -206,7 +214,7 @@ export const GrimorioPage: React.FC = () => {
   const hiddenSpellIds = grimorioQuery.data?.ocultas ?? [];
   const totalMagias = grimorioQuery.data?.total ?? 0;
   const bookSpells = spells.filter((spell) => canManageVisibility || !hiddenSpellIds.includes(spell.id));
-  const totalFolios = Math.ceil(totalMagias / 10);
+  const totalFolios = Math.ceil(totalMagias / TAMANHO_FOLIO);
 
   useEffect(() => {
     if (grimorioQuery.isPlaceholderData || grimorioQuery.isFetching || grimorioQuery.isError || !grimorioQuery.data || folioPage >= totalFolios) return;
@@ -535,13 +543,7 @@ export const GrimorioPage: React.FC = () => {
               </GothicButton>
             </div>
           )}
-          {isLoadingGrimorio ? (
-            <LoadingState
-              variant="text"
-              label="Consultando os arquivos arcanos…"
-              className="rounded-xs border border-[#3a2c1d] bg-[#0c0806]/80 px-4 py-6"
-            />
-          ) : erroGrimorio ? (
+          {erroGrimorio && (
             <ErrorState
               title="Falha ao carregar o grimório"
               description={erroGrimorio}
@@ -552,7 +554,7 @@ export const GrimorioPage: React.FC = () => {
                 void grimorioQuery.refetch();
               }}
             />
-          ) : null}
+          )}
           {!isLoadingGrimorio && !erroGrimorio && tenantId && !isLoadingPersonagens && erroPersonagens && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#c4b9a3]" role="status">
               <span>Não foi possível carregar a lista de personagens: {erroPersonagens}</span>
@@ -578,7 +580,12 @@ export const GrimorioPage: React.FC = () => {
           {!buscandoMagias && view === 'element-tree' && <ElementTreeView onChooseElement={chooseElement} />}
           {!buscandoMagias && view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={chooseMentalizacaoSubcategory} />}
           {!buscandoMagias && view === 'tree' && <TreeView school={school} volumes={volumes} onChooseVolume={chooseVolume} />}
-          {!buscandoMagias && view === 'book' && (
+          {!buscandoMagias && view === 'book' && (isLoadingGrimorio ? (
+            <div className="space-y-5">
+              <span role="status" aria-live="polite" className="sr-only">Consultando os arquivos arcanos…</span>
+              <FolioSkeleton />
+            </div>
+          ) : (
             <BookView
               school={school}
               volume={selectedVolume}
@@ -597,8 +604,13 @@ export const GrimorioPage: React.FC = () => {
               onToggleHidden={toggleHidden}
               onDelete={deleteSpell}
             />
-          )}
-          {buscandoMagias && (
+          ))}
+          {buscandoMagias && (isLoadingGrimorio ? (
+            <div className="space-y-4">
+              <span role="status" aria-live="polite" className="sr-only">Consultando os arquivos arcanos…</span>
+              <FolioListaSkeleton />
+            </div>
+          ) : (
             <section aria-labelledby="grimorio-search-results" className="space-y-4">
               <p id="grimorio-search-results" className="border-b border-[#3a2c1d] pb-3 text-xs text-[#a88d61]" role="status">
                 Resultados da busca em todos os volumes para <strong className="text-[#e6ddc5]">“{termoBusca}”</strong> · {totalMagias} {totalMagias === 1 ? 'magia' : 'magias'}
@@ -634,7 +646,7 @@ export const GrimorioPage: React.FC = () => {
                 </>
               )}
             </section>
-          )}
+          ))}
         </div>
       </MedievalFrame>
 
@@ -922,6 +934,43 @@ const ElementTreeView = ({ onChooseElement }: { onChooseElement: (id: string) =>
 
 const TreeView = ({ school, volumes, onChooseVolume }: { school: typeof grimorioAllSchools[number]; volumes: typeof grimorioVolumes; onChooseVolume: (id: string) => void }) => (
   <section aria-labelledby="tree-heading" className="space-y-6"><div className="text-center"><p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Árvore de volumes</p><h3 id="tree-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">Os tomos de {school.name}</h3><p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">Selecione um volume para abrir suas páginas e consultar as magias guardadas.</p></div><div className="relative mx-auto max-w-3xl py-5"><div className="absolute bottom-10 left-1/2 top-10 hidden w-px -translate-x-1/2 bg-[#6b4f2d] sm:block" /><div className="space-y-4">{volumes.map((volume, index) => <div key={volume.id} className={`relative flex items-center gap-3 sm:gap-6 ${index % 2 ? 'sm:flex-row-reverse' : ''}`}><div className="hidden h-px flex-1 bg-[#6b4f2d]/70 sm:block" /><button type="button" onClick={() => onChooseVolume(volume.id)} className="group relative z-10 flex w-full items-center gap-4 border border-[#654b2c] bg-[#1a120c] p-4 text-left shadow-[0_7px_18px_rgba(0,0,0,0.4)] transition hover:border-[#c19a57] hover:bg-[#25190e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] sm:w-[45%]"><span className="flex h-14 w-14 shrink-0 items-center justify-center border border-[#9b7c43] bg-[#2b1d10] font-cinzel text-xl text-[#d7b866]">{volume.number}</span><span><span className="block font-cinzel text-sm uppercase tracking-wider text-[#e6ddc5] group-hover:text-[#f0d68b]">{volume.title}</span><span className="mt-1 block text-xs italic text-[#a88d61]">{volume.subtitle}</span><span className="mt-2 block text-[10px] text-[#8f806a]">{volume.description}</span></span></button><div className="hidden flex-1 sm:block" /></div>)}</div></div></section>
+);
+
+const FolioSkeleton = () => (
+  <section className="space-y-5" aria-hidden="true">
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-7 w-56 max-w-full" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      <Skeleton className="h-9 w-36" />
+    </div>
+    <div className="relative overflow-hidden rounded-sm border-2 border-[#654522] bg-[#2a1b0f] p-1.5 shadow-[0_12px_30px_rgba(0,0,0,0.55)] sm:p-3">
+      <div className="pointer-events-none absolute inset-1 border border-[#a88d61]/40 sm:inset-2" />
+      <div className="relative grid overflow-hidden border border-[#80603b] md:grid-cols-2 md:divide-x md:divide-[#80603b]">
+        {[0, 1].map((page) => (
+          <div key={page} className="flex min-w-0 flex-col bg-[#d4bb84] p-4 sm:p-5 lg:p-6">
+            <div className="space-y-2 border-b border-[#80603b]/60 pb-3">
+              <Skeleton className="mx-auto h-3 w-36" />
+              <Skeleton className="mx-auto h-5 w-48 max-w-full" />
+            </div>
+            <div className="mt-4 flex flex-1 flex-col gap-2.5">
+              {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-16 shrink-0 border-[#80603b]/50 bg-[#80603b]/20" />)}
+            </div>
+            <Skeleton className="mt-4 h-4 w-20 self-center border-transparent bg-[#80603b]/20" />
+          </div>
+        ))}
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-[#5a3d22]/80 shadow-[0_0_8px_rgba(42,25,12,0.7)] md:block" />
+      </div>
+    </div>
+  </section>
+);
+
+const FolioListaSkeleton = () => (
+  <div className="space-y-3" aria-hidden="true">
+    {Array.from({ length: 10 }).map((_, index) => <Skeleton key={index} className="h-24" />)}
+  </div>
 );
 
 interface BookViewProps {
