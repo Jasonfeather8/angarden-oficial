@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Session, Usuario } from '../types';
 import { sessionFromSupabaseUser, sessionService } from '../services/sessionService';
 import { queryClient } from '../services/queryClient';
-import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
+import { clearAsyncDataCache } from '../hooks/useAsyncData';
 
 export type SessionStatus = 'loading' | 'authenticated' | 'anonymous' | 'recovery';
 
@@ -20,6 +20,11 @@ interface SessionState {
 
 let unsubscribeAuth: (() => void) | null = null;
 
+function clearUserData(): void {
+  queryClient.clear();
+  clearAsyncDataCache();
+}
+
 export const useSessionStore = create<SessionState>((set, get) => ({
   session: null,
   status: 'loading',
@@ -34,8 +39,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         }
 
         if (!authSession) {
-          queryClient.clear();
-          invalidateAsyncDataCache();
+          clearUserData();
           set((state) => ({
             session: null,
             status: state.status === 'recovery' ? 'recovery' : 'anonymous',
@@ -67,13 +71,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   signOut: async () => {
     await sessionService.signOut();
-    queryClient.clear();
-    invalidateAsyncDataCache();
+    clearUserData();
     set({ session: null, status: 'anonymous', accountNotice: null });
   },
 
   refresh: async () => {
     const session = await sessionService.getSession();
+    if (!session) clearUserData();
     // Na recuperação de senha o status não pode ser sobrescrito: o link de recuperação
     // cria uma sessão válida ANTES de o usuário definir a nova senha. Sem esta guarda,
     // o boot jogaria o usuário no dashboard sem que ele trocasse a senha.
@@ -93,6 +97,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   endRecovery: () => {
     void (async () => {
       const session = await sessionService.getSession();
+      if (!session) clearUserData();
       set(session ? { session, status: 'authenticated', accountNotice: null } : { session: null, status: 'anonymous' });
     })();
   },

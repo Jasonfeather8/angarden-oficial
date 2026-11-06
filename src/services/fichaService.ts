@@ -48,13 +48,30 @@ interface AcervoBase {
   fichas: AcervoFichaRow[];
 }
 
+interface FichaResumoRow {
+  character_id: string;
+  nome_personagem: string | null;
+  imagem_url: string | null;
+  historia: string | null;
+  raca: string | null;
+  nivel: string | null;
+  dinheiro: string | null;
+}
+
+interface AcervoResumo {
+  characters: AcervoCharacterRow[];
+  fichas: FichaResumoRow[];
+}
+
 const ACERVO_TTL_MS = 60_000;
 
 let cacheAcervo: { tenantId: string; at: number; base: AcervoBase } | null = null;
+let cacheAcervoResumo: { tenantId: string; at: number; base: AcervoResumo } | null = null;
 
-/** Descarta o acervo em memória depois de qualquer escrita que o altere. */
+/** Descarta os acervos em memória depois de qualquer escrita que os altere. */
 export function invalidarCacheAcervo(): void {
   cacheAcervo = null;
+  cacheAcervoResumo = null;
 }
 
 async function carregarAcervoBase(tenantId: string): Promise<AcervoBase> {
@@ -91,6 +108,33 @@ async function acervoDoCliente(tenantId: string): Promise<AcervoBase> {
   }
   const base = await carregarAcervoBase(tenantId);
   cacheAcervo = { tenantId, at: Date.now(), base };
+  return base;
+}
+
+async function acervoResumoDoCliente(tenantId: string): Promise<AcervoResumo> {
+  if (cacheAcervoResumo && cacheAcervoResumo.tenantId === tenantId && Date.now() - cacheAcervoResumo.at < ACERVO_TTL_MS) {
+    return cacheAcervoResumo.base;
+  }
+  const [charactersResult, fichasResult] = await Promise.all([
+    supabase
+      .from('characters')
+      .select('id, nome, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao')
+      .eq('tenant_id', tenantId)
+      .order('ordem', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
+    supabase
+      .from('fichas')
+      .select('character_id, nome_personagem:dados->identidade->>nome_personagem, imagem_url:dados->identidade->>imagem_url, historia:dados->identidade->>historia, raca:dados->identidade->>raca, nivel:dados->identidade->>nivel, dinheiro:dados->recursos->>dinheiro')
+      .eq('tenant_id', tenantId),
+  ]);
+  if (charactersResult.error) throw new Error('Não foi possível carregar o acervo: ' + charactersResult.error.message);
+  if (fichasResult.error) throw new Error('Não foi possível carregar as fichas: ' + fichasResult.error.message);
+  const base: AcervoResumo = {
+    characters: (charactersResult.data ?? []) as AcervoCharacterRow[],
+    fichas: (fichasResult.data ?? []) as FichaResumoRow[],
+  };
+  cacheAcervoResumo = { tenantId, at: Date.now(), base };
   return base;
 }
 
@@ -178,22 +222,20 @@ export const fichaService = {
     const scope = currentScope();
     if (!scope) return [];
 
-    const base = await acervoDoCliente(scope.tenantId);
-
-    const fichasPorPersonagem = new Map<string, FichaCompleta>();
-    base.fichas.forEach((row) => fichasPorPersonagem.set(row.character_id, row.dados as FichaCompleta));
+    const base = await acervoResumoDoCliente(scope.tenantId);
+    const fichasPorPersonagem = new Map<string, FichaResumoRow>();
+    base.fichas.forEach((row) => fichasPorPersonagem.set(row.character_id, row));
 
     return base.characters.map((character) => {
       const ficha = fichasPorPersonagem.get(character.id);
-      const identidade = ficha?.identidade;
-      const nomePersonagem = identidade?.nome_personagem?.trim();
+      const nomePersonagem = ficha?.nome_personagem?.trim();
       return {
         id: character.id,
         nome: nomePersonagem || character.nome || 'Aventureiro',
-        raca: identidade?.raca || 'Aventureiro',
-        nivel: identidade?.nivel || 1,
-        imagem_url: identidade?.imagem_url || character.imagem_url || undefined,
-        dinheiro: Number(ficha?.recursos?.dinheiro) || 0,
+        raca: ficha?.raca || 'Aventureiro',
+        nivel: Number(ficha?.nivel) || 1,
+        imagem_url: ficha?.imagem_url || character.imagem_url || undefined,
+        dinheiro: Number(ficha?.dinheiro) || 0,
       };
     });
   },
@@ -381,10 +423,9 @@ export const fichaService = {
     const scope = currentScope();
     if (!scope) return [];
 
-    const base = await acervoDoCliente(scope.tenantId);
-
-    const fichasPorPersonagem = new Map<string, FichaCompleta>();
-    base.fichas.forEach((row) => fichasPorPersonagem.set(row.character_id, row.dados as FichaCompleta));
+    const base = await acervoResumoDoCliente(scope.tenantId);
+    const fichasPorPersonagem = new Map<string, FichaResumoRow>();
+    base.fichas.forEach((row) => fichasPorPersonagem.set(row.character_id, row));
 
     return base.characters.map((row) => {
       const character: TenantCharacter = {
@@ -401,16 +442,16 @@ export const fichaService = {
       const ficha = fichasPorPersonagem.get(row.id);
       if (!ficha) return character;
 
-      const nome = ficha.identidade?.nome_personagem?.trim();
-      const imagem = ficha.identidade?.imagem_url;
+      const nome = ficha.nome_personagem?.trim();
+      const imagem = ficha.imagem_url;
       return {
         ...character,
         name: nome || character.name,
         letter: (nome || character.name).charAt(0).toUpperCase(),
         image: imagem || character.image,
         largeImage: imagem || character.largeImage,
-        description: ficha.identidade?.historia
-          ? [ficha.identidade.historia]
+        description: ficha.historia
+          ? [ficha.historia]
           : character.description,
       };
     });

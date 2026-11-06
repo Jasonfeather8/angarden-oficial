@@ -25,6 +25,7 @@ interface FichaStoreState {
   saveCurrentFicha: () => Promise<void>;
   /** Grava imediatamente o que estiver pendente (troca de personagem, saída da tela, botão Salvar). */
   salvarPendente: () => Promise<void>;
+  reset: () => void;
   setAuraModalOpen: (open: boolean) => void;
   setInventoryModalOpen: (open: boolean) => void;
   setPdfModalOpen: (open: boolean) => void;
@@ -35,6 +36,9 @@ const SAVE_DEBOUNCE_MS = 1000;
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let carregandoCharacterId: string | null = null;
+let loadGeneration = 0;
+const fichasEmMemoria = new Map<string, FichaCompleta>();
+const fichasComAlteracoesPendentes = new Set<string>();
 
 function cancelarGravacaoAgendada() {
   if (saveTimer !== undefined) {
@@ -47,9 +51,12 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
   const gravarFicha = async (characterId: string, ficha: FichaCompleta) => {
     try {
       const salvo = await fichaService.saveFicha(characterId, ficha);
-      // Só limpa o aviso se a ficha gravada ainda é a que está aberta na tela.
-      if (salvo && get().characterId === characterId && get().ficha === ficha) {
-        set({ hasUnsavedChanges: false });
+      if (salvo && fichasEmMemoria.get(characterId) === ficha) {
+        fichasComAlteracoesPendentes.delete(characterId);
+        // Só limpa o aviso se a ficha gravada ainda é a que está aberta na tela.
+        if (get().characterId === characterId && get().ficha === ficha) {
+          set({ hasUnsavedChanges: false });
+        }
       }
     } catch (error) {
       console.warn('Persistência em background:', error);
@@ -93,20 +100,31 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
       // Evita carregar a mesma ficha duas vezes quando a navegação e o efeito da página coincidem.
       if (carregandoCharacterId === id) return;
       carregandoCharacterId = id;
+      const generation = ++loadGeneration;
+      const cached = fichasEmMemoria.get(id);
       try {
-        // Nada pode ser perdido ao trocar de personagem.
-        await get().salvarPendente();
-
-        const current = get().ficha;
-        if (!current || get().characterId !== id) {
-          set({ isLoading: true, characterId: id, loadError: null });
-        } else {
-          set({ characterId: id, loadError: null });
-        }
+        // Inicia a gravação pendente antes de selecionar a próxima ficha.
+        const pendingSave = get().salvarPendente();
+        const hasPendingChanges = fichasComAlteracoesPendentes.has(id);
+        set({
+          characterId: id,
+          ficha: cached ?? null,
+          isLoading: !cached,
+          hasUnsavedChanges: hasPendingChanges,
+          loadError: null,
+        });
+        if (hasPendingChanges) agendarGravacao();
+        await pendingSave;
+        if (generation !== loadGeneration) return;
+        const hasPendingChangesAfterSave = fichasComAlteracoesPendentes.has(id);
+        if (get().characterId === id) set({ hasUnsavedChanges: hasPendingChangesAfterSave });
+        if (hasPendingChangesAfterSave) return;
 
         const loaded = await withTimeout(fichaService.getFicha(id));
         // Uma carga mais recente assumiu o controle: este resultado é obsoleto.
-        if (carregandoCharacterId !== id) return;
+        if (generation !== loadGeneration) return;
+        const current = get();
+        if (current.characterId === id && current.hasUnsavedChanges) return;
         const computed = fichaService.calcularEngine(loaded);
         const refsLookup: MercadoLookupRef[] = [
           ...computed.suporte.inventario.map((item) => ({ id: item.id, nome: item.item || item.nome })),
@@ -117,6 +135,8 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
           { nome: computed.suporte.armamento.arma_suporte?.nome },
           { nome: computed.suporte.armamento.arco_ld?.nome },
         ];
+        fichasComAlteracoesPendentes.delete(id);
+        fichasEmMemoria.set(id, computed);
         set({ ficha: computed, isLoading: false, hasUnsavedChanges: false, loadError: null });
         void (async () => {
           try {
@@ -127,14 +147,16 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
         })();
       } catch (e) {
         console.error('Falha ao carregar ficha:', e);
+        if (generation !== loadGeneration) return;
         set({
-          ficha: null,
+          ficha: cached ?? null,
           isLoading: false,
-          loadError:
-            e instanceof Error ? e.message : 'Não foi possível carregar a ficha do personagem.',
+          loadError: cached
+            ? null
+            : e instanceof Error ? e.message : 'Não foi possível carregar a ficha do personagem.',
         });
       } finally {
-        if (carregandoCharacterId === id) carregandoCharacterId = null;
+        if (generation === loadGeneration) carregandoCharacterId = null;
       }
     },
 
@@ -155,6 +177,9 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
 
       const updated = updater(current);
       const calculated = fichaService.calcularEngine(updated);
+      const characterId = get().characterId;
+      fichasEmMemoria.set(characterId, calculated);
+      fichasComAlteracoesPendentes.add(characterId);
       set({ ficha: calculated, hasUnsavedChanges: true });
       agendarGravacao();
     },
@@ -168,24 +193,61 @@ export const useFichaStore = create<FichaStoreState>((set, get) => {
       }
       cancelarGravacaoAgendada();
       set({ isSaving: true });
+      const generation = loadGeneration;
       try {
-        await fichaService.saveFicha(characterId, ficha);
+        const saved = await fichaService.saveFicha(characterId, ficha);
+        if (generation !== loadGeneration) return;
+        const stillCurrentFicha = saved && fichasEmMemoria.get(characterId) === ficha;
+        const isOpenFicha = get().characterId === characterId && get().ficha === ficha;
+        if (stillCurrentFicha) fichasComAlteracoesPendentes.delete(characterId);
         set({
           isSaving: false,
-          hasUnsavedChanges: false,
-          saveSuccessMessage: 'Ficha salva com sucesso!',
+          hasUnsavedChanges: isOpenFicha && stillCurrentFicha ? false : get().hasUnsavedChanges,
+          saveSuccessMessage: saved ? 'Ficha salva com sucesso!' : null,
         });
         setTimeout(() => {
           set({ saveSuccessMessage: null });
         }, 3000);
       } catch (e) {
         console.error('Erro ao salvar ficha:', e);
-        set({ isSaving: false });
+        if (generation === loadGeneration) set({ isSaving: false });
       }
+    },
+
+    reset: () => {
+      cancelarGravacaoAgendada();
+      fichasEmMemoria.clear();
+      fichasComAlteracoesPendentes.clear();
+      carregandoCharacterId = null;
+      loadGeneration += 1;
+      set({
+        characterId: '',
+        ficha: null,
+        isLoading: false,
+        loadError: null,
+        isSaving: false,
+        hasUnsavedChanges: false,
+        saveSuccessMessage: null,
+        isAuraModalOpen: false,
+        isInventoryModalOpen: false,
+        isPdfModalOpen: false,
+      });
     },
 
     setAuraModalOpen: (open) => set({ isAuraModalOpen: open }),
     setInventoryModalOpen: (open) => set({ isInventoryModalOpen: open }),
     setPdfModalOpen: (open) => set({ isPdfModalOpen: open }),
   };
+});
+
+/**
+ * A memória de fichas pertence a um usuário: ao entrar outro (ou ao sair), ela é descartada.
+ * A assinatura fica aqui para o store de sessão não precisar conhecer o store da ficha.
+ */
+useSessionStore.subscribe((state, previous) => {
+  const previousUserId = previous.session?.user.id ?? null;
+  const currentUserId = state.session?.user.id ?? null;
+  if (previousUserId !== currentUserId) {
+    useFichaStore.getState().reset();
+  }
 });

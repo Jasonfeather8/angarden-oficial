@@ -36,19 +36,19 @@ interface RequestState {
 }
 
 const cache = new Map<string, CacheEntry>();
+const cacheClearListeners = new Set<() => void>();
 
-/**
- * Descarta valores em cache. Use depois de criar, editar ou excluir algo para que
- * as telas não voltem a exibir a versão antiga. Sem prefixo, limpa tudo.
- */
+/** Marca entradas como obsoletas sem remover os dados visíveis. */
 export function invalidateAsyncDataCache(prefix?: string): void {
-  if (!prefix) {
-    cache.clear();
-    return;
+  for (const [key, entry] of cache) {
+    if (prefix === undefined || key.startsWith(prefix)) entry.at = 0;
   }
-  for (const key of [...cache.keys()]) {
-    if (key.startsWith(prefix)) cache.delete(key);
-  }
+}
+
+/** Remove todas as entradas, por exemplo ao encerrar a sessão do usuário. */
+export function clearAsyncDataCache(): void {
+  cache.clear();
+  cacheClearListeners.forEach((listener) => listener());
 }
 
 function defaultIsEmpty<T>(data: T): boolean {
@@ -96,6 +96,20 @@ export function useAsyncData<T>(
     loaderRef.current = loader;
     isEmptyRef.current = isEmptyCheck;
   });
+
+  useEffect(() => {
+    const clearLocalData = () => {
+      requestIdRef.current += 1;
+      forceRefreshRef.current = true;
+      setDataState({ key: cacheKey, data: null });
+      setRequestState({ key: cacheKey, loading: enabled, error: null });
+      setReloadToken((token) => token + 1);
+    };
+    cacheClearListeners.add(clearLocalData);
+    return () => {
+      cacheClearListeners.delete(clearLocalData);
+    };
+  }, [cacheKey, enabled]);
 
   const data = dataState.key === cacheKey ? dataState.data : getCachedData<T>(cacheKey);
 
