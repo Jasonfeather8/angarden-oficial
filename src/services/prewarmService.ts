@@ -38,13 +38,17 @@ export async function prewarmAcervoDoCliente(tenantId: string): Promise<void> {
   }
 }
 
-export async function prewarmTelasSecundarias(tenantId: string, userId: string): Promise<void> {
+function criarVerificadorDeSessao(tenantId: string, userId: string): () => boolean {
+  return () => {
+    const user = useSessionStore.getState().session?.user;
+    return user?.id === userId && user.tenant_id === tenantId;
+  };
+}
+
+export async function prewarmTelasPrioritarias(tenantId: string, userId: string): Promise<void> {
   try {
     const { fichaService } = await import('./fichaService');
-    const isSessionCurrent = () => {
-      const user = useSessionStore.getState().session?.user;
-      return user?.id === userId && user.tenant_id === tenantId;
-    };
+    const isSessionCurrent = criarVerificadorDeSessao(tenantId, userId);
     if (!isSessionCurrent()) return;
 
     await prewarmAsyncDataCache(cacheKeys.personagensResumo(tenantId), async () => {
@@ -70,22 +74,41 @@ export async function prewarmTelasSecundarias(tenantId: string, userId: string):
       if (!isSessionCurrent()) return;
       await useFichaStore.getState().prewarmFicha(characterToPrewarm.id);
     }
+  } catch {
+    // Falhas de carregamento em segundo plano são silenciosas.
+  }
+}
 
+export async function prewarmCatalogo(tenantId: string, userId: string): Promise<void> {
+  try {
+    const isSessionCurrent = criarVerificadorDeSessao(tenantId, userId);
     if (!isSessionCurrent()) return;
+
     const { chaveFolioGrimorio, carregarFolioGrimorio, folioInicialDoGrimorio } = await import('./grimorioQuery');
     const folio = folioInicialDoGrimorio();
     if (!isSessionCurrent()) return;
     await queryClient.prefetchQuery({
       queryKey: chaveFolioGrimorio(folio),
-      queryFn: () => carregarFolioGrimorio(folio),
+      queryFn: async () => {
+        if (!isSessionCurrent()) throw new Error('Sessão alterada.');
+        const dados = await carregarFolioGrimorio(folio);
+        if (!isSessionCurrent()) throw new Error('Sessão alterada.');
+        return dados;
+      },
     });
 
     if (!isSessionCurrent()) return;
     const { chavePaginaMercado, carregarPaginaMercado, paginaInicialDoMercado } = await import('./mercadoQuery');
     const pagina = paginaInicialDoMercado();
+    if (!isSessionCurrent()) return;
     await queryClient.prefetchQuery({
       queryKey: chavePaginaMercado(pagina),
-      queryFn: () => carregarPaginaMercado(pagina),
+      queryFn: async () => {
+        if (!isSessionCurrent()) throw new Error('Sessão alterada.');
+        const dados = await carregarPaginaMercado(pagina);
+        if (!isSessionCurrent()) throw new Error('Sessão alterada.');
+        return dados;
+      },
     });
 
     if (!isSessionCurrent()) return;

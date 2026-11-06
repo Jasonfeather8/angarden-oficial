@@ -7,7 +7,7 @@ import { scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
-import { prewarmAcervoDoCliente, prewarmTelasSecundarias } from '../services/prewarmService';
+import { prewarmAcervoDoCliente, prewarmCatalogo, prewarmTelasPrioritarias } from '../services/prewarmService';
 import { agendarEmOciosidade } from '../utils/idleCallback';
 
 /**
@@ -40,14 +40,32 @@ export const AppLayout: React.FC = () => {
     }
 
     const sessionKey = `${userId}:${tenantId}`;
-    if (prewarmedSessionRef.current !== sessionKey) {
-      prewarmedSessionRef.current = sessionKey;
-      void prewarmAcervoDoCliente(tenantId);
-    }
+    const shouldPrewarmAcervo = prewarmedSessionRef.current !== sessionKey;
+    if (shouldPrewarmAcervo) prewarmedSessionRef.current = sessionKey;
 
-    return agendarEmOciosidade(() => {
-      void prewarmTelasSecundarias(tenantId, userId);
+    let cancelled = false;
+    let cancelCatalogo: (() => void) | undefined;
+    const cancelAcervo = shouldPrewarmAcervo
+      ? agendarEmOciosidade(() => {
+          void prewarmAcervoDoCliente(tenantId);
+        })
+      : undefined;
+    const cancelPrioritarias = agendarEmOciosidade(() => {
+      void prewarmTelasPrioritarias(tenantId, userId).then(() => {
+        if (cancelled) return;
+        cancelCatalogo = agendarEmOciosidade(() => {
+          void prewarmCatalogo(tenantId, userId);
+        }, 1500);
+        if (cancelled) cancelCatalogo();
+      });
     });
+
+    return () => {
+      cancelled = true;
+      cancelAcervo?.();
+      cancelPrioritarias();
+      cancelCatalogo?.();
+    };
   }, [session?.user.id, tenantId]);
 
   return (

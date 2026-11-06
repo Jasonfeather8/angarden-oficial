@@ -53,8 +53,13 @@ const pageImports = new Map<string, () => Promise<unknown>>([
   [ROUTES.admin.importarMagias, () => import('../pages/admin/AdminImportarMagiasPage')],
 ]);
 
+/**
+ * Grupos de rotas irmãs pré-carregadas em ociosidade. O grupo do app fica
+ * restrito aos destinos mais prováveis para não baixar trechos desnecessários
+ * durante o boot da tela inicial.
+ */
 const routeGroups: string[][] = [
-  [ROUTES.dashboard, ROUTES.personagens, ROUTES.ficha, ROUTES.mercado, ROUTES.grimorio, ROUTES.biblioteca, ROUTES.cronicas, ROUTES.campanhas, ROUTES.convite, ROUTES.painelMestre, ROUTES.perfil, ROUTES.acessoNegado],
+  [ROUTES.dashboard, ROUTES.personagens, ROUTES.ficha, ROUTES.mercado],
   [ROUTES.admin.root, ROUTES.admin.solicitacoes, ROUTES.admin.clientes, ROUTES.admin.campanhas, ROUTES.admin.midia, ROUTES.admin.importarMagias],
   [ROUTES.login, ROUTES.cadastro, ROUTES.recuperarSenha, ROUTES.redefinirSenha, ROUTES.authCallback],
 ];
@@ -93,7 +98,7 @@ export async function preloadSiblingRoutes(path: string): Promise<void> {
 export function scheduleSiblingRoutePreload(path: string): () => void {
   return agendarEmOciosidade(() => {
     void preloadSiblingRoutes(path);
-  });
+  }, 4000);
 }
 
 export default preloadRoute;

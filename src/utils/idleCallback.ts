@@ -3,7 +3,7 @@
  * com o render inicial nem com as requisições da tela atual.
  * Devolve a função de cancelamento (use no retorno do efeito).
  */
-export function agendarEmOciosidade(callback: () => void): () => void {
+export function agendarEmOciosidade(callback: () => void, timeoutMs = 2000): () => void {
   let cancelled = false;
   let idleHandle: number | undefined;
   let timerHandle: number | undefined;
@@ -17,9 +17,9 @@ export function agendarEmOciosidade(callback: () => void): () => void {
   };
 
   if (browserWindow.requestIdleCallback) {
-    idleHandle = browserWindow.requestIdleCallback(run, { timeout: 2000 });
+    idleHandle = browserWindow.requestIdleCallback(run, { timeout: timeoutMs });
   } else {
-    timerHandle = window.setTimeout(run, 0);
+    timerHandle = window.setTimeout(run, timeoutMs);
   }
 
   return () => {
