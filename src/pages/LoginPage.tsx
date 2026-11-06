@@ -1,20 +1,26 @@
 import React, { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, Shield } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Shield } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { ROUTES } from '../routes/paths';
 import { sessionService } from '../services/sessionService';
 import { useSessionStore } from '../store/useSessionStore';
 
-const inputClassName =
-  'w-full rounded-sm border border-[#5a4225] bg-[#0d0a08]/90 px-3 py-2.5 text-sm text-[#f0e2c0] placeholder:text-[#806d52] outline-none transition-colors focus:border-[#b89558] focus:ring-2 focus:ring-[#8c6b41]/40';
+const inputBaseClassName =
+  'w-full rounded-sm border border-[#5a4225] bg-[#0d0a08]/90 py-2.5 text-sm text-[#f0e2c0] placeholder:text-[#806d52] outline-none transition-colors focus:border-[#b89558] focus:ring-2 focus:ring-[#8c6b41]/40';
+
+const inputClassName = `${inputBaseClassName} px-3`;
+
+/** Campo de senha: mesmo acabamento, com espaço à direita para o botão de mostrar/ocultar. */
+const passwordInputClassName = `${inputBaseClassName} pl-3 pr-11`;
 
 export const LoginPage: React.FC = () => {
   const accountNotice = useSessionStore((state) => state.accountNotice);
   const refreshSession = useSessionStore((state) => state.refresh);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -80,18 +86,29 @@ export const LoginPage: React.FC = () => {
                 <label htmlFor="login-senha" className="mb-1.5 block text-sm font-semibold text-[#d8c9aa]">
                   Senha
                 </label>
-                <input
-                  id="login-senha"
-                  type="password"
-                  value={senha}
-                  onChange={(event) => setSenha(event.target.value)}
-                  className={inputClassName}
-                  autoComplete="current-password"
-                  placeholder="Sua senha"
-                  required
-                  minLength={6}
-                  maxLength={128}
-                />
+                <div className="relative">
+                  <input
+                    id="login-senha"
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={senha}
+                    onChange={(event) => setSenha(event.target.value)}
+                    className={passwordInputClassName}
+                    autoComplete="current-password"
+                    placeholder="Sua senha"
+                    required
+                    minLength={6}
+                    maxLength={128}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha((current) => !current)}
+                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    title={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-sm text-[#a88d61] transition-colors hover:text-[#f1d994] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d4af37]"
+                  >
+                    {mostrarSenha ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                  </button>
+                </div>
               </div>
 
               {error && (
