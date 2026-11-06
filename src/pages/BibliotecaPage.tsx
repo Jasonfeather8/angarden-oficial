@@ -32,60 +32,14 @@ interface Manual {
   index: ManualIndexEntry[];
 }
 
-const manuals: Manual[] = [
-  {
-    id: 'fundamentos-angarden',
-    title: 'Fundamentos de Angarden',
-    subtitle: 'Manual do aventureiro',
-    description: 'As regras essenciais para atravessar os reinos e sobreviver à primeira jornada.',
-    cover: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=700&q=85',
-    pdfUrl: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
-    index: [
-      { title: 'Princípios da campanha', page: 1 },
-      { title: 'Criação de personagens', page: 3 },
-      { title: 'Aventuras e conflitos', page: 8 },
-    ],
-  },
-  {
-    id: 'atlas-reinos',
-    title: 'Atlas dos Reinos',
-    subtitle: 'Geografia e viagens',
-    description: 'Mapas, fronteiras e caminhos antigos para guiar os passos de toda a companhia.',
-    cover: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=700&q=85',
-    pdfUrl: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
-    index: [
-      { title: 'Terras conhecidas', page: 1 },
-      { title: 'Rotas e perigos', page: 4 },
-      { title: 'Cidades muradas', page: 10 },
-    ],
-  },
-  {
-    id: 'bestia-angarden',
-    title: 'Bestiário do Véu',
-    subtitle: 'Criaturas e presságios',
-    description: 'Um registro das feras, assombrações e seres que espreitam além das fogueiras.',
-    cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=700&q=85',
-    pdfUrl: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
-    index: [
-      { title: 'Como ler o bestiário', page: 1 },
-      { title: 'Criaturas do ermo', page: 5 },
-      { title: 'Entidades do Véu', page: 12 },
-    ],
-  },
-  {
-    id: 'cronicas-mestre',
-    title: 'Códice do Mestre',
-    subtitle: 'Segredos da narração',
-    description: 'Ferramentas para o Mestre conduzir cenas memoráveis e revelar os segredos do mundo.',
-    cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=700&q=85',
-    pdfUrl: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
-    index: [
-      { title: 'A arte de narrar', page: 1 },
-      { title: 'Encontros e recompensas', page: 6 },
-      { title: 'Arcos de campanha', page: 13 },
-    ],
-  },
-];
+/**
+ * Catálogo da estante. Fica vazio de propósito: os manuais oficiais ainda não
+ * foram publicados, e o que havia aqui era material de demonstração (capas de
+ * banco de imagens e um PDF de exemplo de terceiros). Preencha esta lista — ou
+ * troque-a pela origem oficial — quando os arquivos chegarem: a estante e o
+ * leitor de PDF já estão prontos para recebê-los.
+ */
+const manuals: Manual[] = [];
 
 const focusRing = 'focus:outline-none focus:ring-2 focus:ring-[#d1a85a] focus:ring-offset-2 focus:ring-offset-[#15100b]';
 
