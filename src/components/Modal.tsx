@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
+import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -50,20 +51,15 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Container Principal com Bordas e Fundo Texturizado */}
       <div
         id="angarden-modal-container"
-        className={`relative w-full ${maxWidth} rounded-xs shadow-[0_0_30px_rgba(0,0,0,0.95)] p-1.5 sm:p-[10px] my-auto select-none sm:select-auto`}
+        className={`${molduraExterna} w-full ${maxWidth} my-auto select-none sm:select-auto`}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
+        style={texturaDaMoldura}
       >
         {/* Camada interna para escurecer a textura e criar a moldura */}
-        <div className="border border-[#5a4225] h-full relative bg-black/75 flex flex-col p-[2px] text-[#dcd1ba]">
+        <div className={molduraInterna}>
           
           {/* Bordas duplas internas laterais e inferiores */}
-          <div className="absolute inset-0 border-[2px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]"></div>
+          <div className={molduraAcento}></div>
 
           {/* Cabeçalho do Modal */}
           <div className="border-b border-[#3a2c1d] pb-2 pt-2.5 sm:pb-2.5 sm:pt-3.5 px-3 sm:px-5 relative flex items-center justify-between z-10 bg-black/50">
@@ -129,10 +125,9 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
 
           {/* Decoração dos cantos (reforçando o aspecto de quadro) */}
-          <div className="absolute bottom-0 left-0 w-3 h-3 border-b-[2px] border-l-[2px] border-[#a88d61] opacity-60"></div>
-          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[2px] border-r-[2px] border-[#a88d61] opacity-60"></div>
-          <div className="absolute top-0 right-0 w-3 h-3 border-t-[2px] border-r-[2px] border-[#a88d61] opacity-60"></div>
-          <div className="absolute top-0 left-0 w-3 h-3 border-t-[2px] border-l-[2px] border-[#a88d61] opacity-60"></div>
+          {posicoesDeCanto.map((posicao) => (
+            <div key={posicao} className={`${molduraCanto} ${posicao}`} />
+          ))}
 
         </div>
       </div>

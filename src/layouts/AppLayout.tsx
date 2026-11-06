@@ -76,13 +76,13 @@ export const AppLayout: React.FC = () => {
       <Topbar />
 
       {/* Estrutura Principal: Sidebar + Área de Conteúdo */}
-      <div className="flex-1 flex flex-row overflow-hidden relative min-h-0">
+      <div className="flex-1 flex flex-row overflow-hidden relative min-h-0 p-3 sm:p-5 lg:p-7 gap-3 sm:gap-5 lg:gap-7">
         <Sidebar />
 
         <main
           ref={mainRef}
           id="main-content-area"
-          className="flex-1 h-full p-3 sm:p-5 lg:p-7 flex items-start justify-center overflow-y-auto custom-scrollbar min-w-0"
+          className="flex-1 h-full flex items-start justify-center overflow-y-auto custom-scrollbar min-w-0"
         >
           <Suspense fallback={<PageSkeleton variant={variantDaRota(pathname)} />}>
             <Outlet />

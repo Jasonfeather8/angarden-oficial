@@ -21,6 +21,7 @@ import { useAuthorization } from '../hooks/useAuthorization';
 import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES, isFichaRoute } from '../routes/paths';
+import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
 
 interface MenuItem {
   id: string;
@@ -80,37 +81,32 @@ export const Sidebar: React.FC = () => {
       )}
 
       {/* SIDEBAR CONTAINER */}
-      <aside 
+      {/* A folga da casca vem da linha do AppLayout, então aqui a largura é a da própria moldura.
+          Expandido: 262px = os 290px de antes menos as duas folgas de 14px que saíram daqui.
+          Recolhido: 66px = moldura (20px) + vão interno (4px) + bordas (2px) + botão de 40px. */}
+      <aside
         id="sidebar-container"
         className={`
           transition-all duration-300 select-none shrink-0 flex flex-col
           /* Mobile: gaveta fixa lateral */
-          fixed inset-y-0 left-0 z-50 h-full w-[280px] p-3
+          fixed inset-y-0 left-0 z-50 h-full w-[280px] p-3 md:p-0
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
           /* Desktop: dentro do layout flex abaixo da topbar */
           md:relative md:translate-x-0 md:inset-auto md:z-20 md:h-full
-          ${isCollapsed ? 'md:w-[78px] md:p-2.5' : 'md:w-[290px] md:p-3.5'}
+          ${isCollapsed ? 'md:w-[66px]' : 'md:w-[262px]'}
         `}
       >
         {/* Moldura Texturizada Medieval */}
-        <div 
+        <div
           id="sidebar-frame"
-          className={`
-            relative w-full h-full flex-1 shadow-[0_0_25px_rgba(0,0,0,0.9)] flex flex-col transition-all duration-300
-            ${isCollapsed ? 'p-[6px]' : 'p-[8px] sm:p-[10px]'}
-          `}
-          style={{
-            backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
+          className={`${molduraExterna} h-full flex-1 transition-all duration-300`}
+          style={texturaDaMoldura}
         >
           {/* Camada interna para escurecer a textura e criar a moldura */}
-          <div className="border border-[#5a4225] h-full relative bg-black/75 flex flex-col p-[2px] justify-between text-[#dcd1ba] overflow-hidden">
+          <div className={`${molduraInterna} justify-between overflow-hidden`}>
             
             {/* Bordas duplas internas laterais e inferiores */}
-            <div className="absolute inset-0 border-[2px] sm:border-[3px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[1px]"></div>
+            <div className={molduraAcento}></div>
 
             {/* CABEÇALHO DO SIDEBAR */}
             <div className={`
@@ -323,10 +319,9 @@ export const Sidebar: React.FC = () => {
             </div>
 
             {/* Decoração dos cantos */}
-            <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-[2px] border-l-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-[2px] border-r-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
-            <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-[2px] border-r-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
-            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-[2px] border-l-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
+            {posicoesDeCanto.map((posicao) => (
+              <div key={posicao} className={`${molduraCanto} ${posicao}`} />
+            ))}
 
           </div>
         </div>

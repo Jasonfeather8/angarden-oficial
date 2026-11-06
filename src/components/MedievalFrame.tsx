@@ -1,4 +1,5 @@
 import React from 'react';
+import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
 
 export interface MedievalFrameProps {
   id?: string;
@@ -27,19 +28,14 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
   return (
     <div
       id={id}
-      className={`relative flex w-full flex-col rounded-xs shadow-[0_0_25px_rgba(0,0,0,0.85)] p-1.5 sm:p-[10px] ${className}`}
-      style={{
-        backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
+      className={`${molduraExterna} w-full ${className}`}
+      style={texturaDaMoldura}
     >
       {/* Camada interna para escurecer a textura e criar a moldura */}
-      <div className="border border-[#5a4225] flex-1 min-h-0 relative bg-black/75 flex flex-col p-[2px] text-[#dcd1ba]">
+      <div className={molduraInterna}>
 
         {/* Bordas duplas internas laterais e inferiores */}
-        <div className="absolute inset-0 border-[2px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]"></div>
+        <div className={molduraAcento}></div>
 
         {/* Cabeçalho */}
         {!noHeader && (
@@ -84,10 +80,9 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
         </div>
 
         {/* Decoração dos cantos */}
-        <div className="absolute bottom-0 left-0 w-3 h-3 border-b-[2px] border-l-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[2px] border-r-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-3 h-3 border-t-[2px] border-r-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
-        <div className="absolute top-0 left-0 w-3 h-3 border-t-[2px] border-l-[2px] border-[#a88d61] opacity-60 pointer-events-none"></div>
+        {posicoesDeCanto.map((posicao) => (
+          <div key={posicao} className={`${molduraCanto} ${posicao}`} />
+        ))}
 
       </div>
     </div>
