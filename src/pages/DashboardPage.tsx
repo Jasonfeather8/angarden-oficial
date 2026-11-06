@@ -131,7 +131,7 @@ const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
   const hasSessionStarted = Date.parse(dataHora) <= now;
 
   return (
-    <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]" aria-live="polite" aria-label="Contagem regressiva para a próxima sessão">
+    <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]" aria-label="Contagem regressiva para a próxima sessão">
       <p className="mb-2 flex items-center justify-center gap-1.5 font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#b89558]">
         <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
         {hasSessionStarted ? 'Sessão em andamento' : 'A mesa começa em'}
@@ -275,7 +275,7 @@ export const DashboardPage: React.FC = () => {
 
           <section aria-labelledby="next-session-title" className="border border-[#4b3823] bg-[#100b07]/90 p-4 sm:p-5">
             <div className="mb-4 flex flex-col gap-3 border-b border-[#3a2c1d] pb-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div aria-live="polite">
                 <p className="flex items-center gap-2 font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">
                   <CalendarClock className="h-4 w-4" aria-hidden="true" />
                   Próxima sessão
@@ -374,7 +374,13 @@ export const DashboardPage: React.FC = () => {
                   aria-label={`Abrir crônica ${chronicle.titulo}`}
                 >
                   <div className="relative aspect-[16/9] overflow-hidden border-b border-[#4b3823] bg-[#21130b]">
-                    <img src={chronicle.capa} alt={`Capa da crônica ${chronicle.titulo}`} className="h-full w-full object-cover opacity-75 transition-transform duration-300 group-hover:scale-105" />
+                    <img
+                      src={chronicle.capa}
+                      alt={`Capa da crônica ${chronicle.titulo}`}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover opacity-75 transition-transform duration-300 group-hover:scale-105"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#090403] via-transparent to-[#1b0d05]/20" />
                     <span className="absolute bottom-2 left-3 font-cinzel text-[10px] uppercase tracking-wider text-[#f0d79b]">Ler capítulo</span>
                   </div>
@@ -484,7 +490,13 @@ export const DashboardPage: React.FC = () => {
         {selectedChronicle && (
           <article aria-labelledby="chronicle-modal-title" className="space-y-4">
             <div className="overflow-hidden border border-[#8c6b41] bg-[#1b120b]">
-              <img src={selectedChronicle.capa} alt={`Capa da crônica ${selectedChronicle.titulo}`} className="max-h-[260px] w-full object-cover opacity-80" />
+              <img
+                src={selectedChronicle.capa}
+                alt={`Capa da crônica ${selectedChronicle.titulo}`}
+                loading="lazy"
+                decoding="async"
+                className="max-h-[260px] w-full object-cover opacity-80"
+              />
             </div>
             <div className="border-[6px] border-[#6e4b2b] bg-[#d3b47b] p-1 shadow-[inset_0_0_22px_rgba(76,42,16,0.55),0_8px_18px_rgba(0,0,0,0.45)]">
               <div className="border border-[#8d6539] bg-[#e2c995] px-5 py-5 text-[#3d2717] shadow-[inset_0_0_16px_rgba(105,63,24,0.3)] sm:px-8 sm:py-7">
