@@ -10,7 +10,8 @@ import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useSessionStore } from '../store/useSessionStore';
 import { campaignService } from '../services/campaignService';
-import { profileService } from '../services/profileService';
+import { cacheKeys } from '../services/cacheKeys';
+import { loadCampaignPageData } from '../services/prewarmService';
 import { convitePath } from '../routes/paths';
 
 interface CampaignData {
@@ -36,19 +37,9 @@ export const CampanhasPage: React.FC = () => {
   const { can } = useAuthorization();
 
   const { data, isLoading, error, reload } = useAsyncData<CampaignData>(
-    async () => {
-      const [access, profiles] = await Promise.all([
-        campaignService.listAccessible(),
-        profileService.listProfiles(),
-      ]);
-      return {
-        campaigns: access.campaigns,
-        members: access.members,
-        userNames: Object.fromEntries(profiles.map((profile) => [profile.id, profile.nome_completo])),
-      };
-    },
+    loadCampaignPageData,
     [session?.user.id],
-    { enabled: Boolean(session), cacheKey: `campanhas:${session?.user.id ?? ''}` }
+    { enabled: Boolean(session), cacheKey: cacheKeys.campanhas(session?.user.id) }
   );
 
   const [nome, setNome] = useState('');
@@ -83,7 +74,7 @@ export const CampanhasPage: React.FC = () => {
       setNome('');
       setDescricao('');
       setStatusMessage('Campanha criada. Gere um link de convite para chamar os jogadores.');
-      invalidateAsyncDataCache('campanhas');
+      invalidateAsyncDataCache(cacheKeys.campanhas('').slice(0, -1));
       reload();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Não foi possível criar a campanha.');
@@ -131,7 +122,7 @@ export const CampanhasPage: React.FC = () => {
       await campaignService.acceptInvite(token, session);
       setJoinToken('');
       setStatusMessage('Você entrou na campanha.');
-      invalidateAsyncDataCache('campanhas');
+      invalidateAsyncDataCache(cacheKeys.campanhas('').slice(0, -1));
       reload();
     } catch (err) {
       setStatusMessage(err instanceof Error ? err.message : 'Convite inválido.');
@@ -143,7 +134,7 @@ export const CampanhasPage: React.FC = () => {
   const handleLeave = async (campaignId: string) => {
     if (!session) return;
     await campaignService.removeMember(campaignId, session.user.id);
-    invalidateAsyncDataCache('campanhas');
+    invalidateAsyncDataCache(cacheKeys.campanhas('').slice(0, -1));
     reload();
   };
 

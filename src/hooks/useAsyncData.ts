@@ -37,6 +37,21 @@ interface RequestState {
 
 const cache = new Map<string, CacheEntry>();
 const cacheClearListeners = new Set<() => void>();
+let cacheClearVersion = 0;
+
+/** Preenche o cache em segundo plano sem propagar falhas ao chamador. */
+export async function prewarmAsyncDataCache<T>(key: string, loader: () => Promise<T>): Promise<void> {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.at < CACHE_TTL_PADRAO_MS) return;
+
+  const version = cacheClearVersion;
+  try {
+    const data = await loader();
+    if (version === cacheClearVersion) cache.set(key, { data, at: Date.now() });
+  } catch {
+    // Falhas de pré-aquecimento não devem afetar a interface.
+  }
+}
 
 /** Marca entradas como obsoletas sem remover os dados visíveis. */
 export function invalidateAsyncDataCache(prefix?: string): void {
@@ -47,6 +62,7 @@ export function invalidateAsyncDataCache(prefix?: string): void {
 
 /** Remove todas as entradas, por exemplo ao encerrar a sessão do usuário. */
 export function clearAsyncDataCache(): void {
+  cacheClearVersion += 1;
   cache.clear();
   cacheClearListeners.forEach((listener) => listener());
 }

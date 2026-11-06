@@ -1,5 +1,6 @@
 import React from 'react';
 import { ROUTES } from './paths';
+import { agendarEmOciosidade } from '../utils/idleCallback';
 
 export const DashboardPage = React.lazy(() => import('../pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 export const PersonagensPage = React.lazy(() => import('../pages/PersonagensPage').then((module) => ({ default: module.PersonagensPage })));
@@ -90,29 +91,9 @@ export async function preloadSiblingRoutes(path: string): Promise<void> {
 }
 
 export function scheduleSiblingRoutePreload(path: string): () => void {
-  let cancelled = false;
-  let idleHandle: number | undefined;
-  let timerHandle: number | undefined;
-  const browserWindow = window as Window & {
-    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-    cancelIdleCallback?: (handle: number) => void;
-  };
-
-  const run = () => {
-    if (!cancelled) void preloadSiblingRoutes(path);
-  };
-
-  if (browserWindow.requestIdleCallback) {
-    idleHandle = browserWindow.requestIdleCallback(run, { timeout: 2000 });
-  } else {
-    timerHandle = window.setTimeout(run, 0);
-  }
-
-  return () => {
-    cancelled = true;
-    if (idleHandle !== undefined) browserWindow.cancelIdleCallback?.(idleHandle);
-    if (timerHandle !== undefined) window.clearTimeout(timerHandle);
-  };
+  return agendarEmOciosidade(() => {
+    void preloadSiblingRoutes(path);
+  });
 }
 
 export default preloadRoute;

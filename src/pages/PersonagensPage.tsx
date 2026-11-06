@@ -7,8 +7,9 @@ import { fichaService } from '../services/fichaService';
 import { GothicButton } from '../components/GothicButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
-import { LoadingState } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
+import { cacheKeyPrefixes, cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { fichaPath } from '../routes/paths';
 
@@ -23,7 +24,7 @@ export const PersonagensPage: React.FC = () => {
   const { data, isLoading, error, reload } = useAsyncData<TenantCharacter[]>(
     () => fichaService.getTenantCharacters(),
     [],
-    { cacheKey: `acervo-personagens:${tenantId ?? ''}` }
+    { cacheKey: cacheKeys.acervoPersonagens(tenantId) }
   );
   const characters = data ?? [];
 
@@ -49,11 +50,11 @@ export const PersonagensPage: React.FC = () => {
 
     // Inicializa ficha completamente vazia para ser preenchida
     await fichaService.createTenantCharacter(newChar);
-    invalidateAsyncDataCache('acervo-personagens');
+    invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
     const blankFicha = fichaService.createBlankFicha(newId, '');
     await fichaService.saveFicha(newId, blankFicha);
 
-    invalidateAsyncDataCache('acervo-personagens');
+    invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
     reload();
     setActiveCharacterId(newId);
     handleOpenFicha(newId);
@@ -157,7 +158,7 @@ export const PersonagensPage: React.FC = () => {
 
   const handleDeleteCharacter = async (idToDelete: string) => {
     await fichaService.removeTenantCharacter(idToDelete);
-    invalidateAsyncDataCache('acervo-personagens');
+    invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
 
     const updated = characters.filter((c) => c.id !== idToDelete);
     reload();
@@ -175,8 +176,55 @@ export const PersonagensPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="mx-auto w-full max-w-[720px] py-12">
-        <LoadingState label="Convocando o acervo do seu reino…" />
+      <div
+        id="page-personagens"
+        role="status"
+        aria-live="polite"
+        className="w-full max-w-[1240px] mx-auto select-none font-serif text-[#dcd1ba]"
+      >
+        <span className="sr-only">Carregando o acervo do seu reino…</span>
+        <div
+          className="w-full min-h-[640px] lg:h-[calc(100vh-120px)] flex flex-col relative z-10 border border-[#5a4225] bg-[#0c0806]/85 shadow-[0_0_40px_rgba(0,0,0,0.9)] p-[6px] sm:p-[10px] rounded-xs"
+          style={{
+            backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          <div className="border border-[#5a4225] h-full relative bg-black/80 flex flex-col p-[2px] justify-between overflow-hidden">
+            <div className="absolute inset-0 border-[3px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]" />
+            <div className="border-b border-[#3a2c1d] pb-3 pt-3.5 px-3 sm:px-6 flex items-center justify-between gap-4 z-10 bg-black/60 shrink-0">
+              <Skeleton className="h-8 w-48 sm:w-64" />
+              <Skeleton className="h-8 w-36 sm:w-52" />
+            </div>
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 sm:p-5 relative gap-4">
+              <div className="w-full lg:w-[32%] flex items-center gap-4 h-[180px] sm:h-[220px] lg:h-full shrink-0">
+                <div className="flex h-full w-6 flex-col justify-around border-r border-[#3a281d]/40 pr-2">
+                  <Skeleton className="h-3 w-3" />
+                  <Skeleton className="h-3 w-3" />
+                  <Skeleton className="h-3 w-3" />
+                  <Skeleton className="h-3 w-3" />
+                </div>
+                <div className="flex flex-1 items-center justify-center gap-3">
+                  <Skeleton className="h-10 w-10 !rounded-full" />
+                  <Skeleton className="h-12 w-12 !rounded-full" />
+                  <Skeleton className="h-10 w-10 !rounded-full" />
+                </div>
+              </div>
+              <div className="flex flex-col items-center justify-center py-2 lg:flex-1 shrink-0">
+                <Skeleton className="h-[200px] w-[200px] !rounded-full sm:h-[260px] sm:w-[260px] lg:h-[320px] lg:w-[320px] xl:h-[390px] xl:w-[390px]" />
+              </div>
+              <div className="w-full lg:w-[38%] flex min-h-[260px] flex-1 flex-col border border-[#a88242]/40 bg-[#0c0806]/90 p-4 sm:p-6">
+                <Skeleton className="mb-5 h-7 w-3/4" />
+                <Skeleton className="mb-3 h-24 w-full" />
+                <Skeleton className="mb-2 h-4 w-full" />
+                <Skeleton className="mb-2 h-4 w-11/12" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

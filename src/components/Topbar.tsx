@@ -6,6 +6,7 @@ import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { campaignService } from '../services/campaignService';
+import { cacheKeys } from '../services/cacheKeys';
 import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
@@ -22,7 +23,7 @@ export const Topbar: React.FC = () => {
   const { data } = useAsyncData(
     () => campaignService.listAccessible(),
     [session?.user.id],
-    { enabled: Boolean(session), cacheKey: `campanhas-acessiveis:${session?.user.id ?? ''}` }
+    { enabled: Boolean(session), cacheKey: cacheKeys.campanhasAcessiveis(session?.user.id) }
   );
   const campaigns = data?.campaigns ?? [];
   const activeCampaign = campaigns.find((campaign) => campaign.id === activeCampaignId) ?? null;

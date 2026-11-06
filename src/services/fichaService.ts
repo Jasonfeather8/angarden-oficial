@@ -2,6 +2,7 @@ import { FichaCompleta, TenantCharacter } from '../types';
 import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { useSessionStore } from '../store/useSessionStore';
 import { supabase } from '@/integrations/supabase/client';
+import { cacheKeyPrefixes, cacheKeys } from './cacheKeys';
 
 export interface FichaScope {
   tenantId: string;
@@ -412,9 +413,9 @@ export const fichaService = {
       return false;
     }
     invalidarCacheAcervo();
-    invalidateAsyncDataCache('acervo-personagens');
-    invalidateAsyncDataCache('mestre-fichas:');
-    invalidateAsyncDataCache(`personagens-resumo:${tenantId}`);
+    invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
+    invalidateAsyncDataCache(cacheKeyPrefixes.mestreFichas);
+    invalidateAsyncDataCache(cacheKeys.personagensResumo(tenantId));
     return true;
   },
 

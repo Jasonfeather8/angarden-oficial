@@ -20,6 +20,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { fichaService } from '../services/fichaService';
+import { cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import type { FichaCompleta } from '../types';
@@ -75,7 +76,7 @@ export const PainelMestrePage: React.FC = () => {
     });
     return loadedRows.filter((row): row is CharacterRow => row !== null);
   }, [tenantId], {
-    cacheKey: `mestre-fichas:${tenantId ?? ''}`,
+    cacheKey: cacheKeys.mestreFichas(tenantId),
     enabled: isMaster && Boolean(tenantId),
   });
   const characters = charactersQuery.data ?? [];
@@ -98,8 +99,8 @@ export const PainelMestrePage: React.FC = () => {
   };
 
   const invalidateCharacterCaches = () => {
-    invalidateAsyncDataCache(`mestre-fichas:${tenantId ?? ''}`);
-    invalidateAsyncDataCache(`personagens-resumo:${tenantId ?? ''}`);
+    invalidateAsyncDataCache(cacheKeys.mestreFichas(tenantId));
+    invalidateAsyncDataCache(cacheKeys.personagensResumo(tenantId));
   };
 
   const getPermissions = (character: CharacterRow): CharacterPermissions => ({

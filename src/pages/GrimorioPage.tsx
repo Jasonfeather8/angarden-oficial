@@ -50,6 +50,7 @@ import {
   excluirMagia,
 } from '../services/grimorioService';
 import { fichaService } from '../services/fichaService';
+import { cacheKeys } from '../services/cacheKeys';
 import { withTimeout } from '../utils/withTimeout';
 import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -122,7 +123,7 @@ export const GrimorioPage: React.FC = () => {
     error: erroPersonagensHook,
     reload: reloadPersonagens,
   } = useAsyncData(() => fichaService.getListaPersonagens(), [tenantId], {
-    cacheKey: `personagens-resumo:${tenantId ?? ''}`,
+    cacheKey: cacheKeys.personagensResumo(tenantId),
     enabled: Boolean(tenantId),
   });
   const listaPersonagens: PersonagemResumo[] = listaPersonagensData ?? [];
