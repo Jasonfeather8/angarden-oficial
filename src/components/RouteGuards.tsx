@@ -1,6 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Shield } from 'lucide-react';
 import { UserRole } from '../types';
 import { ROUTES } from '../routes/paths';
 import { preloadRoute } from '../routes/lazyPages';
@@ -8,6 +7,7 @@ import { useSessionStore } from '../store/useSessionStore';
 import { prewarmTelaInicial } from '../services/prewarmService';
 import { withTimeout } from '../utils/withTimeout';
 import { MedievalFrame } from './MedievalFrame';
+import { BrandMark } from './BrandMark';
 import { LoadingState, Skeleton } from './ui/Skeleton';
 
 interface ProtectedRouteProps {
@@ -35,20 +35,14 @@ function SessionLoading() {
 const AuthScreenSkeleton: React.FC = () => (
   <main className="min-h-screen w-full bg-[#0a0a0a] px-4 py-8 text-[#dcd1ba]">
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl items-center justify-center">
-      <MedievalFrame
-        className="w-full"
-        title={
-          <>
-            <h1 className="flex items-center gap-2 text-xl font-bold tracking-wider text-[#e6ddc5]">
-              <Shield className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
-              Angarden
-            </h1>
-            <Skeleton className="mt-1 h-3 w-40" />
-          </>
-        }
-        headerRight={<Skeleton className="h-5 w-5" />}
-      >
+      <MedievalFrame className="w-full" noHeader contentClassName="pt-7 sm:pt-9">
         <div role="status" aria-live="polite" className="mx-auto w-full max-w-md space-y-5">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <h1 className="flex items-center justify-center">
+              <BrandMark variant="completa" altura={54} larguraMaxima={260} />
+            </h1>
+            <Skeleton className="h-3 w-44" />
+          </div>
           <span className="sr-only">Carregando a tela de acesso…</span>
           <div aria-hidden="true" className="space-y-5">
             <div className="space-y-2">

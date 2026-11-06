@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PageShell } from '../components/PageShell';
+import { BrandMark } from '../components/BrandMark';
 import {
   ArrowLeft,
   Save, 
@@ -1227,10 +1228,9 @@ export const FichaTecnicaPage: React.FC = () => {
           {/* ----------------- COLUNA ESQUERDA (38%) ----------------- */}
           <div className="lg:col-span-5 space-y-4">
             {/* Bloco Logo Angarden Oficial */}
-            <div className="text-center py-1">
-              <span className={`text-[10px] tracking-[0.25em] font-cinzel ${theme.textSubtitle} uppercase font-bold`}>Role Playing Game</span>
-              <h2 className={`text-2xl sm:text-3xl font-cinzel font-black tracking-widest ${theme.textTitle} uppercase`}>Angarden</h2>
-            </div>
+            <h2 className="flex justify-center py-1">
+              <BrandMark variant="completa" altura={34} larguraMaxima={210} escura={!theme.isDark} />
+            </h2>
 
             {/* HISTÓRIA */}
             <div className="space-y-1">
@@ -1709,24 +1709,9 @@ export const FichaTecnicaPage: React.FC = () => {
                 {/* Lado Direito: Logo Angarden Oficial RPG e Pílulas PTS / EXP */}
                 <div className="flex flex-col items-end gap-2.5">
                   {/* Logo Árvore Angarden RPG */}
-                  <div className="flex flex-col items-center">
-                    <svg viewBox="0 0 120 120" className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-md" fill="none">
-                      {/* Coroa e Ramos da Árvore */}
-                      <path d="M60 55 C55 45 45 42 35 46 C38 38 48 32 58 35 C52 26 62 20 68 25 C75 22 84 28 80 37 C88 38 90 48 83 52 C78 55 72 52 68 55 Z" fill="none" stroke={theme.previewColor} strokeWidth="1.5" strokeLinejoin="round" />
-                      <path d="M60 55 Q50 35 38 42 M60 55 Q60 28 65 24 M60 55 Q72 32 82 36 M60 55 Q55 30 46 26 M60 55 Q68 30 75 25" stroke={theme.previewColor} strokeWidth="1.2" strokeLinecap="round" />
-                      <path d="M48 38 Q40 32 32 38 M55 30 Q50 22 42 25 M65 32 Q74 25 80 30 M70 42 Q80 40 86 46" stroke={theme.isDark ? '#e6ddc5' : '#7dd3fc'} strokeWidth="0.8" strokeLinecap="round" />
-                      {/* Tronco */}
-                      <path d="M57 55 Q59 64 54 75 M63 55 Q61 64 66 75 M60 55 L60 74" stroke={theme.isDark ? '#f2dfa8' : '#e0f2fe'} strokeWidth="2" strokeLinecap="round" />
-                      {/* Raízes */}
-                      <path d="M54 75 Q42 85 30 90 M56 75 Q48 92 42 100 M60 74 Q60 92 60 102 M64 75 Q72 92 78 100 M66 75 Q78 85 90 90 M50 82 Q42 90 35 98 M70 82 Q78 90 85 98" stroke={theme.previewColor} strokeWidth="1.2" strokeLinecap="round" />
-                      {/* Tipografia Angarden */}
-                      <text x="60" y="65" textAnchor="middle" fill={theme.isDark ? '#f2dfa8' : '#ffffff'} fontFamily="Cinzel, serif" fontSize="13" fontWeight="900" letterSpacing="0.08em" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                        ANGARDEN
-                      </text>
-                      <text x="60" y="73" textAnchor="middle" fill={theme.isDark ? '#d5c7a3' : '#7dd3fc'} fontFamily="Cinzel, serif" fontSize="5" fontWeight="bold" letterSpacing="0.12em" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                        ROLE PLAYING GAME
-                      </text>
-                    </svg>
+                  <div className="flex flex-col items-center gap-1">
+                    <BrandMark variant="arvore" altura={62} escura={!theme.isDark} />
+                    <BrandMark variant="completa" altura={16} larguraMaxima={140} escura={!theme.isDark} />
                   </div>
 
                   {/* Pílulas PTS e EXP */}

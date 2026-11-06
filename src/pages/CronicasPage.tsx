@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
+import { BrandMark } from '../components/BrandMark';
 import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -90,8 +91,8 @@ const ChronicleArtwork: React.FC<{ title: string; cover?: string }> = ({ title, 
     )}
     <div className="absolute inset-0 bg-gradient-to-t from-[#080302] via-transparent to-[#1b0d05]/20" />
     <div className="absolute inset-3 border border-[#d1a85a]/45" />
-    <div className="absolute inset-x-6 top-7 text-center font-cinzel text-[9px] uppercase tracking-[0.28em] text-[#e3c77e] drop-shadow-[1px_1px_2px_#000]">
-      Angarden
+    <div className="absolute inset-x-6 top-6 flex justify-center">
+      <BrandMark variant="completa" altura={14} larguraMaxima={120} decorativa />
     </div>
     <div className="absolute inset-x-6 bottom-7 text-center">
       <p className="font-cinzel text-base font-bold uppercase leading-tight tracking-wider text-[#f0e2c0] drop-shadow-[1px_1px_2px_#000]">

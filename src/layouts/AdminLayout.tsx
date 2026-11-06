@@ -1,11 +1,12 @@
 import React, { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Coins, Crown, HardDrive, LayoutDashboard, LogOut, ScrollText, Shield, Users } from 'lucide-react';
+import { BookOpen, Coins, HardDrive, LayoutDashboard, LogOut, ScrollText, Shield, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { LoadingState } from '../components/ui/Skeleton';
 import { preloadRoute, scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
 import { useSessionStore } from '../store/useSessionStore';
+import { BrandMark } from '../components/BrandMark';
 
 const ADMIN_NAV = [
   { to: ROUTES.admin.root, label: 'Visão geral', icon: LayoutDashboard, end: true },
@@ -38,16 +39,9 @@ export const AdminLayout: React.FC = () => {
       <header className="border-b border-[#3a2c1d] bg-[#120f0d]/95 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#8c6b41] bg-[#1a140e] text-[#d4af37]">
-              <Crown className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="font-cinzel text-sm font-bold uppercase tracking-widest text-[#e6ddc5]">
-                Angarden
-              </p>
-              <p className="font-serif text-[10px] uppercase tracking-wider text-[#8c6b41]">
-                Administração da plataforma
-              </p>
+            <div className="flex flex-col gap-1">
+              <BrandMark variant="completa" altura={22} larguraMaxima={190} />
+              <p className="font-serif text-[10px] uppercase tracking-wider text-[#8c6b41]">Administração da plataforma</p>
             </div>
           </div>
 

@@ -22,6 +22,7 @@ import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES, isFichaRoute } from '../routes/paths';
 import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
+import { BrandMark } from './BrandMark';
 
 interface MenuItem {
   id: string;
@@ -122,19 +123,9 @@ export const Sidebar: React.FC = () => {
               {/* Modo Expandido / Mobile */}
               {(!isCollapsed || mobileOpen) ? (
                 <>
-                  <div className="flex items-center space-x-2.5 overflow-hidden">
-                    <div className="w-8 h-8 rounded-full border border-[#8c6b41] bg-[#1a140e] flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(140,107,65,0.3)]">
-                      <Shield size={16} className="text-[#a88d61]" />
-                    </div>
-                    <div className="truncate">
-                      <h1 className="text-[16px] tracking-widest text-[#e6ddc5] uppercase font-bold font-cinzel truncate leading-tight" style={{ textShadow: '1px 1px 3px black' }}>
-                        Angarden
-                      </h1>
-                      <div className="text-[10px] tracking-widest text-[#8c6b41] uppercase font-serif">
-                        RPG System
-                      </div>
-                    </div>
-                  </div>
+                  <h1 className="flex min-w-0 items-center overflow-hidden">
+                    <BrandMark variant="completa" altura={26} larguraMaxima={170} />
+                  </h1>
 
                   <div className="flex items-center gap-1">
                     {/* Botão de Recolher (Desktop) */}
@@ -165,8 +156,10 @@ export const Sidebar: React.FC = () => {
                     onClick={toggleCollapsed}
                     className="w-10 h-10 rounded-sm border border-[#5a4225] bg-[#1a140e]/90 hover:bg-[#2a1d10] text-[#a88d61] hover:text-[#f3ebd3] flex items-center justify-center transition-all shadow-[0_0_8px_rgba(0,0,0,0.8)] group relative"
                     title="Expandir Menu"
+                    aria-label="Expandir Menu"
                   >
-                    <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                    <BrandMark variant="arvore" altura={24} decorativa className="transition-opacity duration-200 group-hover:opacity-0" />
+                    <ChevronRight size={18} className="absolute opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
                   </button>
                 </div>
               )}

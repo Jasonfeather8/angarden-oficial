@@ -72,3 +72,8 @@
 - Preserve the existing medieval visual language, typography, color palette, and responsive behavior unless a request explicitly changes the design.
 - Use accessible semantic HTML, visible focus states, descriptive button labels, and meaningful `alt` text for images.
 - Keep TypeScript checks passing with `npm run lint` and avoid introducing `any` unless an external boundary makes it unavoidable.
+
+## Marca
+
+- A marca oficial vive em `public/brand/` e é sempre renderizada por `src/components/BrandMark.tsx` (`completa` onde aparece o nome, `arvore` no lugar do símbolo). Nunca recrie a marca com ícone de escudo/coroa e texto solto.
+- As artes são brancas com transparência (fundos escuros); em superfície clara, use a prop `escura`.

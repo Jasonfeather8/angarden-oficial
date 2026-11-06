@@ -10,6 +10,7 @@ import { cacheKeys } from '../services/cacheKeys';
 import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
+import { BrandMark } from './BrandMark';
 
 export const Topbar: React.FC = () => {
   const toggleMobileOpen = useAppStore((state) => state.toggleMobileOpen);
@@ -58,18 +59,8 @@ export const Topbar: React.FC = () => {
           <Menu size={18} />
         </button>
 
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-full border border-[#8c6b41] bg-[#1a140e] flex items-center justify-center shadow-[0_0_8px_rgba(140,107,65,0.4)]">
-            <Shield className="w-4 h-4 text-[#a88d61]" />
-          </div>
-          <div>
-            <span className="font-bold tracking-widest text-[#e6ddc5] uppercase font-cinzel text-sm sm:text-base">
-              Angarden
-            </span>
-            <span className="hidden sm:inline-block ml-2 text-[10px] text-[#8c6b41] uppercase tracking-wider font-serif">
-              RPG System
-            </span>
-          </div>
+        <div className="flex items-center">
+          <BrandMark variant="completa" altura={24} larguraMaxima={200} />
         </div>
       </div>
 

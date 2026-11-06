@@ -14,6 +14,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
+import { BrandMark } from '../components/BrandMark';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ROUTES } from '../routes/paths';
 
@@ -151,8 +152,8 @@ export const BibliotecaPage: React.FC = () => {
                     className="h-full w-full object-cover opacity-75 transition duration-300 group-hover:scale-105 group-hover:opacity-90"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#120c08] via-[#1a110c]/35 to-[#110c08]/30" />
-                  <div className="absolute inset-x-4 top-4 border border-[#d1a85a]/60 px-2 py-1 text-center font-cinzel text-[9px] uppercase tracking-[0.2em] text-[#e1c681]">
-                    Angarden
+                  <div className="absolute inset-x-4 top-4 flex justify-center border border-[#d1a85a]/60 px-2 py-1 text-center font-cinzel text-[9px] uppercase tracking-[0.2em] text-[#e1c681]">
+                    <BrandMark variant="completa" altura={13} larguraMaxima={110} decorativa />
                   </div>
                   <div className="absolute inset-x-4 bottom-4">
                     <p className="font-cinzel text-base font-bold uppercase leading-tight tracking-wider text-[#f0e2c0] drop-shadow-[1px_1px_2px_#000]">

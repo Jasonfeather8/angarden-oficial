@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { Shield } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { LoadingState } from '../components/ui/Skeleton';
 import { ROUTES } from '../routes/paths';
@@ -31,12 +31,14 @@ export const AuthCallbackPage: React.FC = () => {
   return (
     <main className="min-h-screen w-full bg-[#0a0a0a] px-4 py-8 text-[#dcd1ba]">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl items-center justify-center">
-        <MedievalFrame
-          className="w-full"
-          title={<h1 className="flex items-center gap-2 text-xl font-bold tracking-wider text-[#e6ddc5]"><Shield className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Angarden</h1>}
-          subtitle="Confirmação de acesso"
-        >
+        <MedievalFrame className="w-full" noHeader contentClassName="pt-7 sm:pt-9">
           <div className="mx-auto w-full max-w-md space-y-4 text-center">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h1 className="flex items-center justify-center">
+                <BrandMark variant="completa" altura={54} larguraMaxima={260} />
+              </h1>
+              <p className="font-cinzel text-[10px] uppercase tracking-[0.28em] text-[#8c6b41]">Confirmação de acesso</p>
+            </div>
             <p role="alert" className="border border-amber-800/80 bg-amber-950/40 px-3 py-3 text-sm text-amber-200">
               Não foi possível confirmar seu acesso. O link pode ter expirado ou ser inválido.
             </p>

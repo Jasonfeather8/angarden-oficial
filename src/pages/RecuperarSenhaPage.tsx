@@ -1,7 +1,7 @@
 import React, { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
+import { BrandMark } from '../components/BrandMark';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { supabase } from '../integrations/supabase/client';
 import { ROUTES } from '../routes/paths';
@@ -32,12 +32,14 @@ export const RecuperarSenhaPage: React.FC = () => {
   return (
     <main className="min-h-screen w-full bg-[#0a0a0a] px-4 py-8 text-[#dcd1ba] selection:bg-[#5a4225] selection:text-[#f3ebd3]">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl items-center justify-center">
-        <MedievalFrame
-          className="w-full"
-          title={<h1 className="flex items-center gap-2 text-xl font-bold tracking-wider text-[#e6ddc5]"><Shield className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Angarden</h1>}
-          subtitle="Recuperar acesso às crônicas"
-        >
+        <MedievalFrame className="w-full" noHeader contentClassName="pt-7 sm:pt-9">
           <div className="mx-auto w-full max-w-md space-y-5">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h1 className="flex items-center justify-center">
+                <BrandMark variant="completa" altura={54} larguraMaxima={260} />
+              </h1>
+              <p className="font-cinzel text-[10px] uppercase tracking-[0.28em] text-[#8c6b41]">Recuperar acesso às crônicas</p>
+            </div>
             <div>
               <h2 className="font-cinzel text-lg font-bold text-[#f0e2c0]">Esqueci minha senha</h2>
               <p className="mt-1 text-sm text-[#b9aa91]">Informe o email associado à sua conta para receber as instruções.</p>
