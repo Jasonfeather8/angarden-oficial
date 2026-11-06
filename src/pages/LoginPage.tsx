@@ -34,12 +34,15 @@ export const LoginPage: React.FC = () => {
         setError(result.error || 'Não foi possível entrar. Tente novamente.');
         return;
       }
+      // Em caso de sucesso o botão continua em "entrando": a guarda de acesso
+      // aguarda o trecho e os dados da tela de entrada antes de navegar, e esta
+      // tela é desmontada no redirecionamento.
       await refreshSession();
+      return;
     } catch {
       setError('Não foi possível entrar. Tente novamente.');
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   };
 
   return (

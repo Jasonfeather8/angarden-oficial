@@ -218,8 +218,15 @@ export const Sidebar: React.FC = () => {
                       onMouseEnter={() => void preloadRoute(item.to)}
                       onFocus={() => void preloadRoute(item.to)}
                       onClick={() => {
-                        navigate(item.to);
-                        setMobileOpen(false);
+                        void (async () => {
+                          try {
+                            await preloadRoute(item.to);
+                          } catch {
+                            // A navegação não deve ser bloqueada se o pré-carregamento falhar.
+                          }
+                          navigate(item.to);
+                          setMobileOpen(false);
+                        })();
                       }}
                       className={`
                         w-full flex items-center transition-all duration-200 relative group rounded-xs

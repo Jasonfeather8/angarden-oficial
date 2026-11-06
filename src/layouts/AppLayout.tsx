@@ -7,7 +7,7 @@ import { scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
-import { prewarmAcervoDoCliente, prewarmCatalogo, prewarmTelasPrioritarias } from '../services/prewarmService';
+import { prewarmAcervoDoCliente, prewarmCatalogo, prewarmTelaInicial, prewarmTelasPrioritarias } from '../services/prewarmService';
 import { agendarEmOciosidade } from '../utils/idleCallback';
 
 /**
@@ -45,6 +45,7 @@ export const AppLayout: React.FC = () => {
 
     let cancelled = false;
     let cancelCatalogo: (() => void) | undefined;
+    void prewarmTelaInicial(tenantId);
     const cancelAcervo = shouldPrewarmAcervo
       ? agendarEmOciosidade(() => {
           void prewarmAcervoDoCliente(tenantId);

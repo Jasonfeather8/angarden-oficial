@@ -1,9 +1,12 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { UserRole } from '../types';
 import { ROUTES } from '../routes/paths';
+import { preloadRoute } from '../routes/lazyPages';
 import { useSessionStore } from '../store/useSessionStore';
+import { prewarmTelaInicial } from '../services/prewarmService';
+import { withTimeout } from '../utils/withTimeout';
 import { MedievalFrame } from './MedievalFrame';
 import { LoadingState, Skeleton } from './ui/Skeleton';
 
@@ -113,13 +116,39 @@ export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }
  */
 export const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const status = useSessionStore((state) => state.status);
+  const tenantId = useSessionStore((state) => state.session?.user.tenant_id ?? null);
   const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const destination = from && from !== ROUTES.login ? from : ROUTES.dashboard;
+  const preparationKey = `${destination}:${tenantId ?? ''}`;
+  const [preparedDestination, setPreparedDestination] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || destination !== ROUTES.dashboard) return;
+
+    let active = true;
+    const preparation = Promise.all([
+      preloadRoute(destination),
+      tenantId ? prewarmTelaInicial(tenantId) : Promise.resolve(),
+    ]).then(() => undefined);
+
+    void withTimeout(preparation, 2500)
+      .catch(() => undefined)
+      .then(() => {
+        if (active) setPreparedDestination(preparationKey);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [status, destination, tenantId, preparationKey]);
 
   if (status === 'loading') return <AuthScreenSkeleton />;
 
   if (status === 'authenticated') {
-    const from = (location.state as { from?: string } | null)?.from;
-    const destination = from && from !== ROUTES.login ? from : ROUTES.dashboard;
+    if (destination === ROUTES.dashboard && preparedDestination !== preparationKey) {
+      return <Suspense fallback={<AuthScreenSkeleton />}>{children}</Suspense>;
+    }
     return <Navigate to={destination} replace />;
   }
 

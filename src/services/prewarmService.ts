@@ -42,6 +42,21 @@ export async function prewarmAcervoDoCliente(tenantId: string): Promise<void> {
   }
 }
 
+export async function prewarmTelaInicial(tenantId: string): Promise<void> {
+  try {
+    if (useSessionStore.getState().session?.user.tenant_id !== tenantId) return;
+    const { scheduleService } = await import('./scheduleService');
+    await prewarmAsyncDataCache(cacheKeys.proximaSessao(tenantId), async () => {
+      if (useSessionStore.getState().session?.user.tenant_id !== tenantId) throw new Error('Sessão alterada.');
+      const sessao = await scheduleService.getProximaSessao();
+      if (useSessionStore.getState().session?.user.tenant_id !== tenantId) throw new Error('Sessão alterada.');
+      return sessao;
+    });
+  } catch {
+    // Falhas de carregamento em segundo plano são silenciosas.
+  }
+}
+
 function criarVerificadorDeSessao(tenantId: string, userId: string): () => boolean {
   return () => {
     const user = useSessionStore.getState().session?.user;
@@ -108,14 +123,6 @@ export async function prewarmCatalogo(tenantId: string, userId: string): Promise
       },
     });
 
-    if (!isSessionCurrent()) return;
-    await prewarmAsyncDataCache(cacheKeys.proximaSessao(tenantId), async () => {
-      if (!isSessionCurrent()) throw new Error('Sessão alterada.');
-      const { scheduleService } = await import('./scheduleService');
-      const sessao = await scheduleService.getProximaSessao();
-      if (!isSessionCurrent()) throw new Error('Sessão alterada.');
-      return sessao;
-    });
   } catch {
     // Falhas de carregamento em segundo plano são silenciosas.
   }

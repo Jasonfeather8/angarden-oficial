@@ -36,17 +36,28 @@ interface RequestState {
 }
 
 const cache = new Map<string, CacheEntry>();
+const inFlightRequests = new Map<string, Promise<unknown>>();
 const cacheClearListeners = new Set<() => void>();
 let cacheClearVersion = 0;
+
+function trackInFlightRequest<T>(key: string, request: Promise<T>): Promise<T> {
+  const tracked = request.finally(() => {
+    if (inFlightRequests.get(key) === tracked) inFlightRequests.delete(key);
+  });
+  inFlightRequests.set(key, tracked);
+  return tracked;
+}
 
 /** Preenche o cache em segundo plano sem propagar falhas ao chamador. */
 export async function prewarmAsyncDataCache<T>(key: string, loader: () => Promise<T>): Promise<void> {
   const entry = cache.get(key);
   if (entry && Date.now() - entry.at < CACHE_TTL_PADRAO_MS) return;
+  // Uma resposta null também é dado carregado; a presença da chave é o que conta.
+  if (inFlightRequests.has(key)) return;
 
   const version = cacheClearVersion;
   try {
-    const data = await loader();
+    const data = await trackInFlightRequest(key, loader());
     if (version === cacheClearVersion) cache.set(key, { data, at: Date.now() });
   } catch {
     // Falhas de pré-aquecimento não devem afetar a interface.
@@ -64,6 +75,7 @@ export function invalidateAsyncDataCache(prefix?: string): void {
 export function clearAsyncDataCache(): void {
   cacheClearVersion += 1;
   cache.clear();
+  inFlightRequests.clear();
   cacheClearListeners.forEach((listener) => listener());
 }
 
@@ -98,7 +110,8 @@ export function useAsyncData<T>(
   const [dataState, setDataState] = useState(() => ({ key: cacheKey, data: getCachedData<T>(cacheKey) }));
   const [requestState, setRequestState] = useState<RequestState>(() => ({
     key: cacheKey,
-    loading: enabled && getCachedData<T>(cacheKey) === null,
+    // null é uma resposta legítima: só a ausência da entrada significa que falta carregar.
+    loading: enabled && (!cacheKey || !cache.has(cacheKey)),
     error: null,
   }));
   const [reloadToken, setReloadToken] = useState(0);
@@ -138,7 +151,10 @@ export function useAsyncData<T>(
     const forceRefresh = forceRefreshRef.current;
     forceRefreshRef.current = false;
     const entry = cacheKey ? cache.get(cacheKey) : undefined;
-    const hasVisibleData = dataState.key === cacheKey ? dataState.data !== null : entry !== undefined;
+    // null é resposta legítima; uma entrada existente continua visível durante a revalidação.
+    const hasVisibleData = cacheKey
+      ? cache.has(cacheKey)
+      : dataState.key === cacheKey && dataState.data !== null;
 
     if (entry && !forceRefresh && Date.now() - entry.at < cacheTtlMs) {
       setDataState({ key: cacheKey, data: entry.data as T });
@@ -150,7 +166,12 @@ export function useAsyncData<T>(
     requestIdRef.current = requestId;
     setRequestState({ key: cacheKey, loading: !hasVisibleData, error: null });
 
-    withTimeout(loaderRef.current(), timeoutMs)
+    const existingRequest = cacheKey ? inFlightRequests.get(cacheKey) as Promise<T> | undefined : undefined;
+    const request = existingRequest ?? (cacheKey
+      ? trackInFlightRequest(cacheKey, withTimeout(loaderRef.current(), timeoutMs))
+      : withTimeout(loaderRef.current(), timeoutMs));
+
+    withTimeout(request, timeoutMs)
       .then((result) => {
         if (requestId !== requestIdRef.current) return;
         if (cacheKey) cache.set(cacheKey, { data: result, at: Date.now() });

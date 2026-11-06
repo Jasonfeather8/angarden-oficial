@@ -10,13 +10,16 @@ import { queryClient } from './services/queryClient';
 import { preloadRoute } from './routes/lazyPages';
 
 async function bootstrap() {
-  // 1. Começa a baixar o trecho da rota atual em paralelo com a verificação da
-  //    sessão, para a tela de entrada não passar pelo carregamento do chunk.
-  void preloadRoute(window.location.pathname);
+  // 1. Baixa o trecho da rota de entrada antes do primeiro render.
   // 2. Garante o layout de dados atual (zera dados de versões anteriores).
-  await ensureDataVersion();
   // 3. Resolve a sessão antes do primeiro render, evitando piscar a tela de acesso.
-  await useSessionStore.getState().initialize();
+  await Promise.all([
+    // Falha ao baixar o trecho não pode travar o boot: a casca entra e o
+    // <Suspense> da rota assume o carregamento (e o erro, se persistir).
+    preloadRoute(window.location.pathname).catch(() => undefined),
+    ensureDataVersion(),
+    useSessionStore.getState().initialize(),
+  ]);
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
