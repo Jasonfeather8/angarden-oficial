@@ -23,10 +23,10 @@ export const NotFoundPage: React.FC = () => {
     >
       <div className="mx-auto w-full max-w-[720px]">
         <EmptyState
+          variant="plano"
           icon={<Compass className="h-8 w-8" aria-hidden="true" />}
           title="Página inexistente"
           description="O endereço acessado não corresponde a nenhuma tela do sistema Angarden."
-          className="border-none bg-transparent px-0 py-6 shadow-none"
           action={
             <GothicButton size="sm" onClick={() => navigate(ROUTES.dashboard)}>
               Voltar ao Dashboard

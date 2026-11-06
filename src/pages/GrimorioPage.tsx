@@ -616,6 +616,7 @@ export const GrimorioPage: React.FC = () => {
               </p>
               {totalMagias === 0 ? (
                 <EmptyState
+                  variant="plano"
                   title="Nenhuma magia encontrada"
                   description="Não há fórmulas que correspondam a esta busca."
                   action={<button type="button" onClick={() => { setBusca(''); setFolioPage(1); }} className="text-xs uppercase tracking-widest text-[#d6b56a] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">Limpar busca</button>}

@@ -367,6 +367,7 @@ export const DashboardPage: React.FC = () => {
               </div>
             ) : (
               <EmptyState
+                variant="plano"
                 icon={<CalendarClock className="h-8 w-8" aria-hidden="true" />}
                 title="Nenhuma sessão agendada"
                 description={
@@ -391,6 +392,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             {chronicles.length === 0 ? (
               <EmptyState
+                variant="plano"
                 title="Nenhuma crônica publicada"
                 description={
                   isMestre

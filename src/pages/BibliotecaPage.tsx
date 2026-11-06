@@ -130,6 +130,7 @@ export const BibliotecaPage: React.FC = () => {
 
           {manuals.length === 0 ? (
             <EmptyState
+              variant="plano"
               title="Acervo vazio"
               description="Nenhum manual foi catalogado para esta campanha até o momento."
             />

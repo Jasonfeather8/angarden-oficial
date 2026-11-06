@@ -228,6 +228,7 @@ export const FichaTecnicaPage: React.FC = () => {
         title={<h2 className="flex items-center gap-2"><ScrollText className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Ficha Técnica</h2>}
       >
         <EmptyState
+          variant="plano"
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
           title="Nenhum personagem selecionado"
           description="Crie um personagem no seu acervo para abrir a ficha técnica."

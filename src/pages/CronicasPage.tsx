@@ -229,13 +229,13 @@ export const CronicasPage: React.FC = () => {
       >
         {orderedChronicles.length === 0 || !selectedChronicle ? (
           <EmptyState
+            variant="plano"
             title="Nenhuma crônica registrada"
             description={
               isMaster
                 ? 'Registre o primeiro relato usando o botão “Nova Crônica” acima.'
                 : 'Assim que a primeira sessão for narrada, o relato aparecerá aqui.'
             }
-            className="border-none bg-transparent py-8 shadow-none"
           />
         ) : (
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(220px,0.85fr)_minmax(300px,1.35fr)_minmax(220px,0.8fr)]">

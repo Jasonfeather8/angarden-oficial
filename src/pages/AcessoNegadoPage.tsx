@@ -23,6 +23,7 @@ export const AcessoNegadoPage: React.FC = () => {
     >
       <div className="mx-auto w-full max-w-[720px]">
         <EmptyState
+          variant="plano"
           icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
           title="Permissão insuficiente"
           description="Esta tela é restrita a papéis específicos. Fale com o administrador da plataforma caso precise de acesso."

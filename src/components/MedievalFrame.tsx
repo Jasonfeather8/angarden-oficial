@@ -27,7 +27,7 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
   return (
     <div
       id={id}
-      className={`relative flex w-full flex-col shadow-[0_0_25px_rgba(0,0,0,0.85)] p-1.5 sm:p-[10px] ${className}`}
+      className={`relative flex w-full flex-col rounded-xs shadow-[0_0_25px_rgba(0,0,0,0.85)] p-1.5 sm:p-[10px] ${className}`}
       style={{
         backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
         backgroundSize: 'cover',
@@ -39,7 +39,7 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
       <div className="border border-[#5a4225] flex-1 min-h-0 relative bg-black/75 flex flex-col p-[2px] text-[#dcd1ba]">
 
         {/* Bordas duplas internas laterais e inferiores */}
-        <div className="absolute inset-0 border-[3px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]"></div>
+        <div className="absolute inset-0 border-[2px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]"></div>
 
         {/* Cabeçalho */}
         {!noHeader && (

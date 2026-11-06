@@ -236,6 +236,7 @@ export const PersonagensPage: React.FC = () => {
     return (
       <PageShell id="page-personagens" variant="amplo" fill title={<h2 className="flex items-center gap-2"><Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Galeria de Personagens</h2>}>
         <EmptyState
+          variant="plano"
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
           title="Nenhum personagem no seu acervo"
           description={
@@ -374,9 +375,10 @@ export const PersonagensPage: React.FC = () => {
                 <div className="relative w-full h-full">
                   {filteredCharacters.length === 0 ? (
                     <EmptyState
+                      variant="plano"
                       title="Nenhum personagem encontrado"
                       description={`Não há registros que correspondam a "${searchTerm}".`}
-                      className="h-full border-none bg-transparent py-6 shadow-none"
+                      className="h-full"
                     />
                   ) : (
                     filteredCharacters.map((char, index) => {

@@ -20,6 +20,7 @@
 - Keep `src/App.tsx` limited to `<Routes>` and the layout wrappers. Never put table, chart or operational modal logic there.
 - Shell components (Sidebar, Topbar) live in `src/layouts/` and render children strictly through `<Outlet/>`.
 - Declare every new screen in `src/App.tsx` and add its path to `src/routes/paths.ts` so it is reachable by URL. Auth guards live in `src/components/RouteGuards.tsx`; wrap pages with them instead of branching inside pages.
+- Every screen inside the app shell renders through `PageShell` (`src/components/PageShell.tsx`) with a variant (`estreito` 720, `padrao` 1200, `amplo` 1440); never use a literal page width, and never add page-level padding (the frame owns it). Loading, error, empty and loaded states use the **same** variant. `fill` (fixed height with internal scrolling) is a documented exception for Personagens and Ficha Técnica only.
 - `vercel.json` must keep the SPA rewrite `/(.*)` → `/index.html` so deep links survive an F5.
 
 ## Library and implementation rules

@@ -959,9 +959,9 @@ export const MercadoPage: React.FC = () => {
               />
             ) : totalItens === 0 ? (
               <EmptyState
+                variant="plano"
                 title="Nenhum item encontrado nesta subcategoria."
                 description={'Tente selecionar "Todas as Armas" ou cadastrar uma nova mercadoria através do botão do Administrador.'}
-                className="py-16"
               />
             ) : (
               <div className="space-y-2 bg-[#0c0806]/85 p-1.5 sm:p-3 rounded-xs border border-[#5a4225] shadow-[0_0_20px_rgba(0,0,0,0.8)]">

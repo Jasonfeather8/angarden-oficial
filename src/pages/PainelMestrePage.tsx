@@ -335,9 +335,9 @@ export const PainelMestrePage: React.FC = () => {
                         />
                       ) : (
                         <EmptyState
+                          variant="plano"
                           title="Nenhuma ficha disponível"
                           description="Nenhum personagem foi encontrado para monitoramento nesta campanha."
-                          className="border-none bg-transparent py-6 shadow-none"
                         />
                       )}
                     </td>
