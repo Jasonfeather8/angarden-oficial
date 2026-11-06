@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
-import { LoadingState } from '../components/ui/Skeleton';
+import { PageSkeleton } from '../components/ui/PageSkeleton';
 import { scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
@@ -82,7 +82,7 @@ export const AppLayout: React.FC = () => {
           id="main-content-area"
           className="flex-1 h-full p-3 sm:p-5 lg:p-7 flex items-start justify-center overflow-y-auto custom-scrollbar min-w-0"
         >
-          <Suspense fallback={<div className="mx-auto w-full max-w-xl px-4 py-10"><LoadingState label="Preparando esta página…" /></div>}>
+          <Suspense fallback={<PageSkeleton />}>
             <Outlet />
           </Suspense>
         </main>

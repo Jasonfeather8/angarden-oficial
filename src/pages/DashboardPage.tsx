@@ -12,6 +12,7 @@ import {
   Shield,
   Users,
 } from 'lucide-react';
+import { clsx } from 'clsx';
 import { GothicButton } from '../components/GothicButton';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { Modal } from '../components/Modal';
@@ -149,6 +150,56 @@ const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
     </div>
   );
 });
+
+/**
+ * Cartão do mural. A capa vem de um CDN externo e só é buscada quando o mural
+ * se aproxima da tela, então o cartão mostra a silhueta no lugar da moldura
+ * vazia e revela a imagem quando ela chega.
+ */
+const ChronicleCard: React.FC<{ chronicle: Chronicle; onOpen: (chronicle: Chronicle) => void }> = ({
+  chronicle,
+  onOpen,
+}) => {
+  const [capaCarregada, setCapaCarregada] = useState(false);
+
+  const revelarCapa = () => setCapaCarregada(true);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(chronicle)}
+      className="group overflow-hidden border border-[#4b3823] bg-[#120d09] text-left transition-all hover:border-[#b89558] hover:shadow-[0_0_16px_rgba(184,149,88,0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
+      aria-label={`Abrir crônica ${chronicle.titulo}`}
+    >
+      <div className="relative aspect-[16/9] overflow-hidden border-b border-[#4b3823] bg-[#21130b]">
+        {!capaCarregada && <Skeleton className="absolute inset-0 h-full w-full" />}
+        <img
+          ref={(node) => {
+            // Imagem já em cache pode completar antes do evento de load.
+            if (node?.complete) revelarCapa();
+          }}
+          src={chronicle.capa}
+          alt={`Capa da crônica ${chronicle.titulo}`}
+          loading="lazy"
+          decoding="async"
+          onLoad={revelarCapa}
+          onError={revelarCapa}
+          className={clsx(
+            'h-full w-full object-cover transition-all duration-300 group-hover:scale-105',
+            capaCarregada ? 'opacity-75' : 'opacity-0'
+          )}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#090403] via-transparent to-[#1b0d05]/20" />
+        <span className="absolute bottom-2 left-3 font-cinzel text-[10px] uppercase tracking-wider text-[#f0d79b]">Ler capítulo</span>
+      </div>
+      <div className="p-3">
+        <h3 className="font-cinzel text-sm font-bold uppercase leading-tight text-[#e0c787]">{chronicle.titulo}</h3>
+        <p className="mt-1 font-serif text-xs italic text-[#927754]">{formatChronicleDate(chronicle.dataSessao)}</p>
+        <p className="mt-2 line-clamp-2 font-serif text-sm leading-relaxed text-[#c4b9a3]">{chronicle.relato}</p>
+      </div>
+    </button>
+  );
+};
 
 export const DashboardPage: React.FC = () => {
   const user = useSessionStore((state) => state.session?.user ?? null);
@@ -366,30 +417,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {chronicles.slice(0, 3).map((chronicle) => (
-                <button
-                  key={chronicle.id}
-                  type="button"
-                  onClick={() => setSelectedChronicle(chronicle)}
-                  className="group overflow-hidden border border-[#4b3823] bg-[#120d09] text-left transition-all hover:border-[#b89558] hover:shadow-[0_0_16px_rgba(184,149,88,0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
-                  aria-label={`Abrir crônica ${chronicle.titulo}`}
-                >
-                  <div className="relative aspect-[16/9] overflow-hidden border-b border-[#4b3823] bg-[#21130b]">
-                    <img
-                      src={chronicle.capa}
-                      alt={`Capa da crônica ${chronicle.titulo}`}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-full w-full object-cover opacity-75 transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#090403] via-transparent to-[#1b0d05]/20" />
-                    <span className="absolute bottom-2 left-3 font-cinzel text-[10px] uppercase tracking-wider text-[#f0d79b]">Ler capítulo</span>
-                  </div>
-                  <div className="p-3">
-                    <h3 className="font-cinzel text-sm font-bold uppercase leading-tight text-[#e0c787]">{chronicle.titulo}</h3>
-                    <p className="mt-1 font-serif text-xs italic text-[#927754]">{formatChronicleDate(chronicle.dataSessao)}</p>
-                    <p className="mt-2 line-clamp-2 font-serif text-sm leading-relaxed text-[#c4b9a3]">{chronicle.relato}</p>
-                  </div>
-                </button>
+                <ChronicleCard key={chronicle.id} chronicle={chronicle} onOpen={setSelectedChronicle} />
               ))}
             </div>
           </section>
