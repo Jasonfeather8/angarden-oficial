@@ -5,7 +5,7 @@ import {
   Weight, Search, Filter, ArrowRight, ArrowLeft, Plus, Hammer, Layers, Info,
   User, ChevronDown, X, Crown, Flame, Wand2, Loader2
 } from 'lucide-react';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { PageShell } from '../components/PageShell';
 import { InfiniteCategoryScroll } from '../components/InfiniteCategoryScroll';
 import { ItemIconVisual } from '../components/ItemIconVisual';
 import { ModalCriarMercadoria } from '../components/ModalCriarMercadoria';
@@ -655,12 +655,8 @@ export const MercadoPage: React.FC = () => {
   }, [secaoMercado, activeCategory]);
 
   return (
-    <div id="page-mercado" className="w-full max-w-6xl mx-auto space-y-6 select-none">
-      
-      {/* ========================================================================= */}
-      {/* MERCADO GLOBAL & ARSENAL - LAYOUT ATUALIZADO */}
-      {/* ========================================================================= */}
-      <MedievalFrame
+    <>
+      <PageShell id="page-mercado" variant="padrao" className="select-none"
         title={
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             {themeMode === 'epico' ? (
@@ -1281,7 +1277,7 @@ export const MercadoPage: React.FC = () => {
             )}
 
           </div>
-        </MedievalFrame>
+      </PageShell>
 
       {/* ========================================================================= */}
       {/* TELA 3.1 - MODAL DE DETALHES E COMPRA DE ITEM */}
@@ -1332,7 +1328,7 @@ export const MercadoPage: React.FC = () => {
         }}
       />
 
-    </div>
+    </>
   );
 };
 

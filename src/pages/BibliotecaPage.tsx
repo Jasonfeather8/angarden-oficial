@@ -13,7 +13,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { PageShell } from '../components/PageShell';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ROUTES } from '../routes/paths';
 
@@ -94,8 +94,8 @@ export const BibliotecaPage: React.FC = () => {
     : '';
 
   return (
-    <div id="page-biblioteca" className="w-full max-w-[1100px] mx-auto space-y-6">
-      <MedievalFrame
+    <>
+      <PageShell id="page-biblioteca" variant="padrao"
         title={
           <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
             <Scroll className="w-5 h-5 text-[#a88d61]" />
@@ -175,7 +175,7 @@ export const BibliotecaPage: React.FC = () => {
           </div>
           )}
         </div>
-      </MedievalFrame>
+      </PageShell>
 
       {selectedManual && (
         <div
@@ -322,7 +322,7 @@ export const BibliotecaPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

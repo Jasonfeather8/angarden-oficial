@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { larguraDaPagina } from '../components/PageShell';
 import {
   ArrowLeft,
   Save, 
@@ -204,7 +205,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
   if (loadError) {
     return (
-      <div className="w-full max-w-[720px] mx-auto py-16">
+      <div className={`w-full ${larguraDaPagina('amplo')} mx-auto py-16`}>
         <ErrorState
           title="Não foi possível abrir a ficha"
           description={loadError}
@@ -216,7 +217,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
   if (!targetCharacterId) {
     return (
-      <div className="w-full max-w-[720px] mx-auto py-16">
+      <div className={`w-full ${larguraDaPagina('amplo')} mx-auto py-16`}>
         <EmptyState
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
           title="Nenhum personagem selecionado"
@@ -233,7 +234,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
   if (isLoading || !ficha) {
     return (
-      <div role="status" aria-live="polite" className="w-full max-w-[1280px] mx-auto pb-20 space-y-6">
+      <div role="status" aria-live="polite" className={`w-full ${larguraDaPagina('amplo')} mx-auto pb-20 space-y-6`}>
         <span className="sr-only">Invocando os pergaminhos da ficha técnica…</span>
         <Skeleton className="h-14 w-full" />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -1077,7 +1078,7 @@ export const FichaTecnicaPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto pb-20 space-y-6">
+    <div className={`w-full ${larguraDaPagina('amplo')} mx-auto pb-20 space-y-6`}>
       {/* ========================================================================= */}
       {/* BARRA SUPERIOR DE CONTROLE E AÇÕES                                        */}
       {/* ========================================================================= */}

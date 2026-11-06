@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GothicButton } from '../components/GothicButton';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -252,8 +252,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div id="page-dashboard" className="w-full max-w-[1020px] mx-auto space-y-6">
-      <MedievalFrame
+      <PageShell id="page-dashboard" variant="padrao"
         title={
           <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
             <LayoutDashboard className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
@@ -409,7 +408,6 @@ export const DashboardPage: React.FC = () => {
             )}
           </section>
         </div>
-      </MedievalFrame>
 
       {isMestre && (
         <Modal
@@ -524,7 +522,7 @@ export const DashboardPage: React.FC = () => {
           </article>
         )}
       </Modal>
-    </div>
+      </PageShell>
   );
 };
 

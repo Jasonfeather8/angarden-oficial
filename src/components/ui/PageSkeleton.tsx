@@ -1,10 +1,9 @@
 import React from 'react';
-import { MedievalFrame } from '../MedievalFrame';
+import { PageShell, type PageShellVariant } from '../PageShell';
 import { Skeleton } from './Skeleton';
 
 export interface PageSkeletonProps {
-  /** Classes extras de largura, para casar com a tela de destino. */
-  className?: string;
+  variant?: PageShellVariant;
 }
 
 /**
@@ -12,18 +11,15 @@ export interface PageSkeletonProps {
  * real com o título e as seções em esqueleto, para a tela nascer no formato
  * final em vez de exibir um carregamento genérico com texto.
  */
-export const PageSkeleton: React.FC<PageSkeletonProps> = ({ className = '' }) => (
-  <div
-    role="status"
-    aria-live="polite"
-    className={`mx-auto w-full max-w-[1020px] space-y-6 ${className}`}
-  >
-    <span className="sr-only">Preparando esta página…</span>
-    <MedievalFrame
+export const PageSkeleton: React.FC<PageSkeletonProps> = ({ variant = 'padrao' as PageShellVariant }) => (
+  <div role="status" aria-live="polite" className="w-full">
+    <PageShell
+      variant={variant}
       title={<Skeleton className="h-6 w-64 max-w-full" />}
       headerRight={<Skeleton className="h-5 w-24" />}
       contentClassName="p-3 sm:p-5 lg:p-6"
     >
+      <span className="sr-only">Preparando esta página…</span>
       <div aria-hidden="true" className="space-y-6">
         <div className="flex items-center gap-3 border border-[#5a4225] bg-[#140e09] p-4 sm:p-5">
           <Skeleton className="h-14 w-14 shrink-0" />
@@ -57,7 +53,7 @@ export const PageSkeleton: React.FC<PageSkeletonProps> = ({ className = '' }) =>
           ))}
         </div>
       </div>
-    </MedievalFrame>
+    </PageShell>
   </div>
 );
 

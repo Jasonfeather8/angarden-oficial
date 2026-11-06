@@ -1,7 +1,7 @@
 import React, { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { Camera, Crown, KeyRound, LogOut, Mail, Save, UserCheck } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { PageShell } from '../components/PageShell';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useSessionStore } from '../store/useSessionStore';
@@ -111,22 +111,24 @@ export const PerfilPage: React.FC = () => {
   const inputClassName = 'w-full rounded-sm border border-[#5a4225] bg-[#0d0a08]/90 px-3 py-2.5 text-sm text-[#f0e2c0] placeholder:text-[#806d52] outline-none transition-colors focus:border-[#b89558] focus:ring-2 focus:ring-[#8c6b41]/40';
 
   return (
-    <div id="page-perfil" className="w-full max-w-[860px] mx-auto space-y-6">
-      <MedievalFrame
-        title={
-          <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
-            <UserCheck className="w-5 h-5 text-[#a88d61]" />
-            Meu Perfil & Configurações
-          </h2>
-        }
-        subtitle="Gerenciamento de credenciais, dados cadastrais e preferências"
-        headerRight={
-          <span className="inline-flex items-center gap-1.5 rounded-sm border border-[#8c6b41]/70 bg-[#2a1d10]/80 px-2.5 py-1 text-xs font-cinzel uppercase tracking-wider text-[#d4af37]">
-            {isMestre ? <Crown className="h-3.5 w-3.5" aria-hidden="true" /> : <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />}
-            {role ? ROLE_LABELS[role] : 'Visitante'}
-          </span>
-        }
-      >
+    <PageShell
+      id="page-perfil"
+      variant="padrao"
+      title={
+        <h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase">
+          <UserCheck className="w-5 h-5 text-[#a88d61]" />
+          Meu Perfil & Configurações
+        </h2>
+      }
+      subtitle="Gerenciamento de credenciais, dados cadastrais e preferências"
+      headerRight={
+        <span className="inline-flex items-center gap-1.5 rounded-sm border border-[#8c6b41]/70 bg-[#2a1d10]/80 px-2.5 py-1 text-xs font-cinzel uppercase tracking-wider text-[#d4af37]">
+          {isMestre ? <Crown className="h-3.5 w-3.5" aria-hidden="true" /> : <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+          {role ? ROLE_LABELS[role] : 'Visitante'}
+        </span>
+      }
+    >
+      <div className="mx-auto w-full max-w-[720px] space-y-6">
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="flex flex-col items-center gap-3 border-b border-[#3a2c1d] pb-5 sm:flex-row sm:items-start">
             <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-[#8c6b41] bg-[#1e1710] shadow-[0_0_12px_rgba(140,107,65,0.35)]">
@@ -199,8 +201,8 @@ export const PerfilPage: React.FC = () => {
             </GothicButton>
           </div>
         </form>
-      </MedievalFrame>
-    </div>
+      </div>
+    </PageShell>
   );
 };
 

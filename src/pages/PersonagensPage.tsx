@@ -12,6 +12,7 @@ import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import { cacheKeyPrefixes, cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { fichaPath } from '../routes/paths';
+import { larguraDaPagina } from '../components/PageShell';
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -194,7 +195,7 @@ export const PersonagensPage: React.FC = () => {
         id="page-personagens"
         role="status"
         aria-live="polite"
-        className="w-full max-w-[1240px] mx-auto select-none font-serif text-[#dcd1ba]"
+        className={`w-full ${larguraDaPagina('amplo')} mx-auto select-none font-serif text-[#dcd1ba]`}
       >
         <span className="sr-only">Carregando o acervo do seu reino…</span>
         <div
@@ -245,7 +246,7 @@ export const PersonagensPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="mx-auto w-full max-w-[720px] py-12">
+      <div className={`mx-auto w-full ${larguraDaPagina('amplo')} py-12`}>
         <ErrorState description={error} onRetry={reload} />
       </div>
     );
@@ -253,7 +254,7 @@ export const PersonagensPage: React.FC = () => {
 
   if (characters.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-[720px] py-12">
+      <div className={`mx-auto w-full ${larguraDaPagina('amplo')} py-12`}>
         <EmptyState
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
           title="Nenhum personagem no seu acervo"
@@ -279,7 +280,7 @@ export const PersonagensPage: React.FC = () => {
   }
 
   return (
-    <div id="page-personagens" className="w-full max-w-[1240px] mx-auto select-none font-serif text-[#dcd1ba]">
+    <div id="page-personagens" className={`w-full ${larguraDaPagina('amplo')} mx-auto select-none font-serif text-[#dcd1ba]`}>
       {/* Container Principal com Moldura e Textura */}
       <div 
         className="w-full min-h-[640px] lg:h-[calc(100vh-120px)] flex flex-col relative z-10 border border-[#5a4225] bg-[#0c0806]/85 shadow-[0_0_40px_rgba(0,0,0,0.9)] p-[6px] sm:p-[10px] rounded-xs"

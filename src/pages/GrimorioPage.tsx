@@ -18,7 +18,7 @@ import {
   Search,
   User,
 } from 'lucide-react';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
 import { ModalSelecionarComprador, PersonagemResumo } from '../components/ModalSelecionarComprador';
 import { GothicButton } from '../components/GothicButton';
@@ -504,8 +504,7 @@ export const GrimorioPage: React.FC = () => {
   );
 
   return (
-    <div id="page-grimorio" className="mx-auto w-full max-w-[1100px] space-y-6">
-      <MedievalFrame
+      <PageShell id="page-grimorio" variant="padrao"
         title={<h2 className="flex items-center gap-2 text-xl font-bold tracking-wider text-[#e6ddc5] uppercase"><BookOpen className="h-5 w-5 text-[#a88d61]" /> Grimório de Magias</h2>}
         subtitle="Escolas arcanas, níveis de conjuração e rituais do sistema"
         headerRight={headerAction}
@@ -648,7 +647,6 @@ export const GrimorioPage: React.FC = () => {
             </section>
           ))}
         </div>
-      </MedievalFrame>
 
       {selectedSpell && (canManageVisibility || !hiddenSpellIds.includes(selectedSpell.id)) && (
         <SharedSpellDetailsModal
@@ -702,7 +700,7 @@ export const GrimorioPage: React.FC = () => {
         personagemSelecionadoId={personagemId}
         onSelecionar={selectCharacter}
       />
-    </div>
+      </PageShell>
   );
 };
 

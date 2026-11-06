@@ -22,9 +22,9 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
   noHeader = false,
 }) => {
   return (
-    <div 
+    <div
       id={id}
-      className={`relative w-full shadow-[0_0_25px_rgba(0,0,0,0.85)] p-1.5 sm:p-[10px] ${className}`}
+      className={`relative flex w-full flex-col shadow-[0_0_25px_rgba(0,0,0,0.85)] p-1.5 sm:p-[10px] ${className}`}
       style={{
         backgroundImage: `url('https://i.postimg.cc/ydLhG37r/Create-matching-texture-background-202608261823.jpg')`,
         backgroundSize: 'cover',
@@ -33,8 +33,8 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
       }}
     >
       {/* Camada interna para escurecer a textura e criar a moldura */}
-      <div className="border border-[#5a4225] h-full relative bg-black/75 flex flex-col p-[2px] text-[#dcd1ba]">
-        
+      <div className="border border-[#5a4225] flex-1 min-h-0 relative bg-black/75 flex flex-col p-[2px] text-[#dcd1ba]">
+
         {/* Bordas duplas internas laterais e inferiores */}
         <div className="absolute inset-0 border-[3px] border-transparent border-l-[#3a2c1d] border-r-[#3a2c1d] border-b-[#3a2c1d] pointer-events-none m-[2px]"></div>
 
@@ -74,7 +74,7 @@ export const MedievalFrame: React.FC<MedievalFrameProps> = ({
         )}
 
         {/* Conteúdo */}
-        <div className={`p-2.5 sm:p-4 md:p-6 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 overflow-y-auto custom-scrollbar ${contentClassName}`}>
+        <div className={`p-2.5 sm:p-4 md:p-6 text-[13px] sm:text-[14px] leading-relaxed relative flex-1 z-10 bg-black/25 ${contentClassName}`}>
           {/* Decoração lateral esquerda sutil */}
           <div className="absolute top-6 left-[-2px] w-[4px] h-[22px] bg-[#3a2c1d] rounded-r-md"></div>
           {children}

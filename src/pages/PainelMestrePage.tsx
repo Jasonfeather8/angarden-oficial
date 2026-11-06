@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -242,8 +242,7 @@ export const PainelMestrePage: React.FC = () => {
 
   if (!isMaster) {
     return (
-      <div id="page-painel-mestre" className="w-full max-w-[860px] mx-auto">
-        <MedievalFrame
+      <PageShell id="page-painel-mestre" variant="padrao"
           title={<h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase"><ShieldCheck className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
           subtitle="Centro de controle restrito ao mestre da campanha"
           headerRight={<div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>}
@@ -252,14 +251,13 @@ export const PainelMestrePage: React.FC = () => {
             <ShieldCheck className="mx-auto mb-3 h-10 w-10 text-[#a88d61]" />
             Esta câmara está reservada ao Mestre da campanha.
           </div>
-        </MedievalFrame>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div id="page-painel-mestre" className="w-full max-w-[1120px] mx-auto space-y-5">
-      <MedievalFrame
+    <>
+      <PageShell id="page-painel-mestre" variant="padrao"
         title={<h2 className="flex items-center gap-2 text-xl font-bold font-cinzel tracking-wider text-[#e6ddc5] uppercase"><Crown className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
         subtitle="Monitoramento consolidado da mesa e permissões da campanha"
         headerRight={<div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>}
@@ -385,7 +383,7 @@ export const PainelMestrePage: React.FC = () => {
             <button type="button" onClick={refreshCharacters} className="inline-flex items-center gap-1.5 rounded-xs border border-transparent px-2 py-1 font-cinzel uppercase tracking-wider transition-colors hover:border-[#5a4225] hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"><RefreshCw className="h-3.5 w-3.5" /> Atualizar tabela</button>
           </div>
         </div>
-      </MedievalFrame>
+      </PageShell>
 
       {isPermissionsOpen && (
         <div className="fixed inset-0 z-40 bg-black/70" onClick={() => setIsPermissionsOpen(false)}>
@@ -505,7 +503,7 @@ export const PainelMestrePage: React.FC = () => {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 };
 

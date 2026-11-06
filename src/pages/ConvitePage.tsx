@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Link2, Swords } from 'lucide-react';
 import { CampaignInvitePreview } from '../types';
 import { GothicButton } from '../components/GothicButton';
-import { MedievalFrame } from '../components/MedievalFrame';
+import { larguraDaPagina, PageShell } from '../components/PageShell';
 import { ErrorState } from '../components/ui/ErrorState';
 import { LoadingState } from '../components/ui/Skeleton';
 import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
@@ -43,7 +43,7 @@ export const ConvitePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="mx-auto w-full max-w-[720px] py-10">
+      <div className={`mx-auto w-full ${larguraDaPagina('estreito')} py-10`}>
         <LoadingState label="Lendo o convite da campanha…" />
       </div>
     );
@@ -51,7 +51,7 @@ export const ConvitePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="mx-auto w-full max-w-[720px] py-10">
+      <div className={`mx-auto w-full ${larguraDaPagina('estreito')} py-10`}>
         <ErrorState title="Convite indisponível" description={error} onRetry={reload} />
       </div>
     );
@@ -60,8 +60,7 @@ export const ConvitePage: React.FC = () => {
   const preview = data ?? null;
 
   return (
-    <div id="page-convite" className="mx-auto w-full max-w-[720px]">
-      <MedievalFrame
+      <PageShell id="page-convite" variant="estreito"
         title={
           <h2 className="flex items-center gap-2 font-cinzel text-xl font-bold uppercase tracking-wider text-[#e6ddc5]">
             <Link2 className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
@@ -116,8 +115,7 @@ export const ConvitePage: React.FC = () => {
             </div>
           )}
         </div>
-      </MedievalFrame>
-    </div>
+      </PageShell>
   );
 };
 

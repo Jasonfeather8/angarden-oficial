@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
 import { PageSkeleton } from '../components/ui/PageSkeleton';
+import { variantDaRota } from '../components/PageShell';
 import { scheduleSiblingRoutePreload } from '../routes/lazyPages';
 import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
@@ -83,7 +84,7 @@ export const AppLayout: React.FC = () => {
           id="main-content-area"
           className="flex-1 h-full p-3 sm:p-5 lg:p-7 flex items-start justify-center overflow-y-auto custom-scrollbar min-w-0"
         >
-          <Suspense fallback={<PageSkeleton />}>
+          <Suspense fallback={<PageSkeleton variant={variantDaRota(pathname)} />}>
             <Outlet />
           </Suspense>
         </main>
