@@ -127,9 +127,11 @@ const useRecorteDaArte = (src: string) => {
 
 export interface BrandMarkProps {
   variant?: MarcaVariante;
-  /** Altura da marca já recortada, em pixels. */
-  altura: number;
-  /** Teto de largura: arte muito larga diminui de altura para caber inteira, sem cortar nada. */
+  /** Altura da marca em pixels. Em marca horizontal, prefira `largura`. */
+  altura?: number;
+  /** Largura da marca em pixels: a altura vem da proporção da arte. É o eixo certo da marca horizontal. */
+  largura?: number;
+  /** Teto de largura quando o tamanho vem de `altura`: arte muito larga diminui de altura para caber inteira. */
   larguraMaxima?: number;
   /** Pinta a arte de escuro: para superfícies claras, como a folha da ficha técnica. */
   escura?: boolean;
@@ -145,7 +147,8 @@ export interface BrandMarkProps {
  */
 export const BrandMark: React.FC<BrandMarkProps> = ({
   variant = 'completa',
-  altura,
+  altura = 24,
+  largura,
   larguraMaxima,
   escura = false,
   decorativa = false,
@@ -155,7 +158,6 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
   const recorte = useRecorteDaArte(src);
 
   const proporcao = recorte ? recorte.largura / recorte.altura : null;
-  const alturaFinal = proporcao && larguraMaxima ? Math.min(altura, larguraMaxima / proporcao) : altura;
   const classes = clsx('inline-block select-none align-middle', escura && 'brightness-0 opacity-80', className);
   const texto = decorativa ? '' : rotulo;
 
@@ -166,17 +168,25 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
         src={src}
         alt={texto}
         draggable={false}
-        className={clsx(classes, 'w-auto')}
-        style={{ height: alturaFinal }}
+        className={clsx(classes, largura ? 'h-auto' : 'w-auto')}
+        style={largura ? { width: largura } : { height: altura }}
       />
     );
   }
 
+  // Marca horizontal: quando a largura é informada ela manda no tamanho e a altura vem da proporção da arte.
+  const alturaFinal = largura
+    ? largura / proporcao
+    : larguraMaxima
+      ? Math.min(altura, larguraMaxima / proporcao)
+      : altura;
+  const larguraFinal = largura ?? alturaFinal * proporcao;
   const escala = alturaFinal / recorte.altura;
+
   return (
     <span
       className={clsx(classes, 'relative overflow-hidden')}
-      style={{ width: alturaFinal * proporcao, height: alturaFinal }}
+      style={{ width: larguraFinal, height: alturaFinal }}
     >
       <img
         src={src}

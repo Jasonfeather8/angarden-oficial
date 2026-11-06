@@ -35,7 +35,7 @@ export const AuthCallbackPage: React.FC = () => {
           <div className="mx-auto w-full max-w-md space-y-4 text-center">
             <div className="flex flex-col items-center gap-2 text-center">
               <h1 className="flex items-center justify-center">
-                <BrandMark variant="completa" altura={54} larguraMaxima={260} />
+                <BrandMark variant="completa" largura={230} />
               </h1>
               <p className="font-cinzel text-[10px] uppercase tracking-[0.28em] text-[#8c6b41]">Confirmação de acesso</p>
             </div>
