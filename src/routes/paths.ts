@@ -10,7 +10,6 @@ export const ROUTES = {
   ficha: '/ficha/:characterId',
   mercado: '/mercado',
   grimorio: '/grimorio',
-  biblioteca: '/biblioteca',
   cronicas: '/cronicas',
   campanhas: '/campanhas',
   convite: '/convites/:token',
