@@ -18,7 +18,12 @@ import { GothicButton } from '../components/GothicButton';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { Modal } from '../components/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
+import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
+import { useAsyncData } from '../hooks/useAsyncData';
+import { cacheKeys } from '../services/cacheKeys';
+import { fichaService } from '../services/fichaService';
 
 type ChronicleStatus = 'PUBLICADA' | 'AGENDADA';
 
@@ -35,54 +40,8 @@ type Chronicle = {
   cover?: string;
 };
 
-const AVAILABLE_CHARACTERS = ['Geralt de Rívia', 'Yennefer de Vengerberg', 'Ciri', 'Dandelion'];
-
-const INITIAL_CHRONICLES: Chronicle[] = [
-  {
-    id: 'cronica-05',
-    title: 'A Vigília de Cinzas',
-    date: '2026-08-22',
-    summary:
-      'Depois da queda do antigo posto de vigia, a companhia atravessou as colinas cobertas de neblina para descobrir quem estava acendendo os sinais proibidos. Entre ruínas e juramentos quebrados, uma nova ameaça começou a tomar forma.',
-    progress: 78,
-    characters: ['Geralt de Rívia', 'Yennefer de Vengerberg', 'Ciri'],
-    location: 'Colinas de Angarden',
-    status: 'PUBLICADA',
-  },
-  {
-    id: 'cronica-04',
-    title: 'O Sussurro do Pântano',
-    date: '2026-08-08',
-    summary:
-      'A trilha levou os heróis até um pântano onde as árvores pareciam lembrar os nomes dos mortos. Uma aldeia escondida pediu ajuda, mas cada resposta trouxe consigo uma dívida mais antiga que o próprio reino.',
-    progress: 61,
-    characters: ['Geralt de Rívia', 'Ciri', 'Dandelion'],
-    location: 'Pântano de Velen',
-    status: 'PUBLICADA',
-  },
-  {
-    id: 'cronica-03',
-    title: 'Sob o Estandarte Partido',
-    date: '2026-07-18',
-    summary:
-      'A companhia encontrou os sobreviventes de uma batalha esquecida e precisou decidir entre seguir o mapa roubado ou escoltar os camponeses para um lugar seguro. Ao anoitecer, o estandarte partido revelou um símbolo que ninguém esperava ver.',
-    progress: 42,
-    characters: ['Yennefer de Vengerberg', 'Dandelion'],
-    location: 'Estrada Real',
-    status: 'PUBLICADA',
-  },
-  {
-    id: 'cronica-02',
-    title: 'O Primeiro Juramento',
-    date: '2026-06-27',
-    summary:
-      'Foi nas muralhas de uma fortaleza abandonada que o grupo selou o primeiro pacto. Ainda sem conhecer a extensão do perigo, os aventureiros aceitaram uma missão que mudaria o destino da campanha.',
-    progress: 25,
-    characters: ['Geralt de Rívia', 'Ciri'],
-    location: 'Fortaleza de Kaer Morhen',
-    status: 'PUBLICADA',
-  },
-];
+// O catálogo fica vazio de propósito: os relatos oficiais ainda não foram escritos; o conteúdo anterior era material de demonstração, com crônicas inventadas e nomes de personagens de terceiros. A linha do tempo, o leitor e o formulário de criação já estão prontos para receber o conteúdo oficial.
+const INITIAL_CHRONICLES: Chronicle[] = [];
 
 const inputClassName =
   'w-full border border-[#4b3823] bg-[#0d0906] px-3 py-2.5 text-sm text-[#e6ddc5] outline-none transition-colors placeholder:text-[#6f5c47] focus:border-[#b89558] focus:ring-1 focus:ring-[#b89558]/50';
@@ -144,11 +103,21 @@ const ChronicleArtwork: React.FC<{ title: string; cover?: string }> = ({ title, 
 );
 
 export const CronicasPage: React.FC = () => {
-  const { isAdmin, isMestre } = useAuthorization();
+  const { isAdmin, isMestre, tenantId } = useAuthorization();
   const isMaster = isAdmin || isMestre;
   const [chronicles, setChronicles] = useState<Chronicle[]>(INITIAL_CHRONICLES);
-  const [selectedId, setSelectedId] = useState(INITIAL_CHRONICLES[0].id);
+  const [selectedId, setSelectedId] = useState<string>(() => INITIAL_CHRONICLES[0]?.id ?? '');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const {
+    data: personagensData,
+    isLoading: isLoadingPersonagens,
+    error: erroPersonagens,
+    reload: reloadPersonagens,
+  } = useAsyncData(() => fichaService.getListaPersonagens(), [tenantId], {
+    cacheKey: cacheKeys.personagensResumo(tenantId),
+    enabled: isCreateModalOpen && Boolean(tenantId),
+  });
+  const personagens = personagensData ?? [];
   const [expandedCharacters, setExpandedCharacters] = useState(true);
   const [publishMode, setPublishMode] = useState<'now' | 'schedule'>('now');
   const [form, setForm] = useState({
@@ -225,27 +194,6 @@ export const CronicasPage: React.FC = () => {
     closeCreateModal();
   };
 
-  if (!selectedChronicle) {
-    return (
-      <div id="page-cronicas" className="w-full max-w-[720px] mx-auto space-y-6">
-        <MedievalFrame
-          title={
-            <h2 className="flex items-center gap-2 font-cinzel text-xl font-bold uppercase tracking-wider text-[#e6ddc5]">
-              <Sparkles className="h-5 w-5 text-[#a88d61]" /> Crônicas da Campanha
-            </h2>
-          }
-          subtitle="Linha do tempo narrativa das sessões de Angarden"
-        >
-          <EmptyState
-            title="Nenhuma crônica registrada"
-            description="Assim que a primeira sessão for narrada, o relato aparecerá aqui."
-            className="border-none bg-transparent py-8 shadow-none"
-          />
-        </MedievalFrame>
-      </div>
-    );
-  }
-
   return (
     <div id="page-cronicas" className="w-full max-w-[1320px] mx-auto space-y-6">
       <MedievalFrame
@@ -280,136 +228,148 @@ export const CronicasPage: React.FC = () => {
           </div>
         }
       >
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(220px,0.85fr)_minmax(300px,1.35fr)_minmax(220px,0.8fr)]">
-          <section aria-labelledby="timeline-title" className="min-w-0">
-            <div className="mb-3 flex items-end justify-between border-b border-[#3a2c1d] pb-2">
-              <div>
-                <p id="timeline-title" className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Linha do tempo</p>
-                <p className="mt-1 font-serif text-xs italic text-[#80613d]">Sessões mais recentes primeiro</p>
+        {orderedChronicles.length === 0 || !selectedChronicle ? (
+          <EmptyState
+            title="Nenhuma crônica registrada"
+            description={
+              isMaster
+                ? 'Registre o primeiro relato usando o botão “Nova Crônica” acima.'
+                : 'Assim que a primeira sessão for narrada, o relato aparecerá aqui.'
+            }
+            className="border-none bg-transparent py-8 shadow-none"
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(220px,0.85fr)_minmax(300px,1.35fr)_minmax(220px,0.8fr)]">
+            <section aria-labelledby="timeline-title" className="min-w-0">
+              <div className="mb-3 flex items-end justify-between border-b border-[#3a2c1d] pb-2">
+                <div>
+                  <p id="timeline-title" className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Linha do tempo</p>
+                  <p className="mt-1 font-serif text-xs italic text-[#80613d]">Sessões mais recentes primeiro</p>
+                </div>
+                <Clock3 className="h-4 w-4 text-[#8c6b41]" />
               </div>
-              <Clock3 className="h-4 w-4 text-[#8c6b41]" />
-            </div>
 
-            <div className="relative space-y-2 pl-3 before:absolute before:bottom-3 before:left-[7px] before:top-3 before:w-px before:bg-[#5a4225]">
-              {orderedChronicles.map((chronicle) => {
-                const isSelected = chronicle.id === selectedChronicle.id;
-                return (
-                  <button
-                    key={chronicle.id}
-                    type="button"
-                    onClick={() => setSelectedId(chronicle.id)}
-                    aria-current={isSelected ? 'true' : undefined}
-                    className={`group relative w-full border p-3 text-left transition-all focus:outline-none focus:ring-1 focus:ring-[#d1a85a] ${
-                      isSelected
-                        ? 'border-[#b89558] bg-gradient-to-r from-[#2b1d10] to-[#17100a] shadow-[0_0_14px_rgba(184,149,88,0.18)]'
-                        : 'border-[#332519] bg-[#100b08]/80 hover:border-[#70552f] hover:bg-[#1a120c]'
-                    }`}
-                  >
-                    <span className={`absolute -left-[18px] top-5 h-2.5 w-2.5 rounded-full border-2 ${isSelected ? 'border-[#f0c265] bg-[#8c6b41] shadow-[0_0_8px_#d1a85a]' : 'border-[#70552f] bg-[#120d09]'}`} />
-                    <div className="absolute right-3 top-3 h-11 w-8 overflow-hidden border border-[#70552f] bg-[#21130b]">
-                      {chronicle.cover ? (
-                        <img src={chronicle.cover} alt={`Capa da crônica ${chronicle.title}`} className="h-full w-full object-cover opacity-80" />
-                      ) : (
-                        <div aria-hidden="true" className="h-full w-full bg-[radial-gradient(circle_at_65%_25%,#d59b4d_0%,#663317_42%,#160805_100%)]" />
-                      )}
-                    </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`pr-10 font-cinzel text-[11px] font-bold uppercase leading-tight tracking-wide ${isSelected ? 'text-[#f0d79b]' : 'text-[#c2ae87]'}`}>
-                        {chronicle.title}
-                      </p>
-                      {chronicle.status === 'AGENDADA' && (
-                        <span className="shrink-0 border border-[#8c6b41]/70 bg-[#2a1d10] px-1.5 py-0.5 font-cinzel text-[8px] uppercase tracking-wider text-[#e0bd71]">Agendada</span>
-                      )}
-                    </div>
-                    <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#806b53]">
-                      <CalendarDays className="h-3 w-3" />
-                      {formatSessionDate(chronicle.date)}
-                    </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="h-1 flex-1 overflow-hidden bg-[#2b1d13]">
-                        <div className="h-full bg-gradient-to-r from-[#735126] to-[#d1a85a]" style={{ width: `${chronicle.progress}%` }} />
+              <div className="relative space-y-2 pl-3 before:absolute before:bottom-3 before:left-[7px] before:top-3 before:w-px before:bg-[#5a4225]">
+                {orderedChronicles.map((chronicle) => {
+                  const isSelected = chronicle.id === selectedChronicle.id;
+                  return (
+                    <button
+                      key={chronicle.id}
+                      type="button"
+                      onClick={() => setSelectedId(chronicle.id)}
+                      aria-current={isSelected ? 'true' : undefined}
+                      className={`group relative w-full border p-3 text-left transition-all focus:outline-none focus:ring-1 focus:ring-[#d1a85a] ${
+                        isSelected
+                          ? 'border-[#b89558] bg-gradient-to-r from-[#2b1d10] to-[#17100a] shadow-[0_0_14px_rgba(184,149,88,0.18)]'
+                          : 'border-[#332519] bg-[#100b08]/80 hover:border-[#70552f] hover:bg-[#1a120c]'
+                      }`}
+                    >
+                      <span className={`absolute -left-[18px] top-5 h-2.5 w-2.5 rounded-full border-2 ${isSelected ? 'border-[#f0c265] bg-[#8c6b41] shadow-[0_0_8px_#d1a85a]' : 'border-[#70552f] bg-[#120d09]'}`} />
+                      <div className="absolute right-3 top-3 h-11 w-8 overflow-hidden border border-[#70552f] bg-[#21130b]">
+                        {chronicle.cover ? (
+                          <img src={chronicle.cover} alt={`Capa da crônica ${chronicle.title}`} className="h-full w-full object-cover opacity-80" />
+                        ) : (
+                          <div aria-hidden="true" className="h-full w-full bg-[radial-gradient(circle_at_65%_25%,#d59b4d_0%,#663317_42%,#160805_100%)]" />
+                        )}
                       </div>
-                      <span className="font-mono text-[10px] text-[#aa8a55]">{chronicle.progress}%</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`pr-10 font-cinzel text-[11px] font-bold uppercase leading-tight tracking-wide ${isSelected ? 'text-[#f0d79b]' : 'text-[#c2ae87]'}`}>
+                          {chronicle.title}
+                        </p>
+                        {chronicle.status === 'AGENDADA' && (
+                          <span className="shrink-0 border border-[#8c6b41]/70 bg-[#2a1d10] px-1.5 py-0.5 font-cinzel text-[8px] uppercase tracking-wider text-[#e0bd71]">Agendada</span>
+                        )}
+                      </div>
+                      <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#806b53]">
+                        <CalendarDays className="h-3 w-3" />
+                        {formatSessionDate(chronicle.date)}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="h-1 flex-1 overflow-hidden bg-[#2b1d13]">
+                          <div className="h-full bg-gradient-to-r from-[#735126] to-[#d1a85a]" style={{ width: `${chronicle.progress}%` }} />
+                        </div>
+                        <span className="font-mono text-[10px] text-[#aa8a55]">{chronicle.progress}%</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
 
-          <section aria-labelledby="chronicle-detail-title" className="min-w-0 border-x border-[#3a2c1d]/60 px-0 sm:px-5">
-            <div className="relative mb-5 border border-[#6b5238] bg-gradient-to-r from-[#21170e] via-[#2b1f14] to-[#17100a] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.35)]">
-              <div className="absolute left-1/2 top-0 h-[2px] w-16 -translate-x-1/2 bg-[#d4a359]" />
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-[#70552f] bg-[#0d0906] text-[#c6a35e]">
-                  <FileText className="h-5 w-5" />
+            <section aria-labelledby="chronicle-detail-title" className="min-w-0 border-x border-[#3a2c1d]/60 px-0 sm:px-5">
+              <div className="relative mb-5 border border-[#6b5238] bg-gradient-to-r from-[#21170e] via-[#2b1f14] to-[#17100a] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.35)]">
+                <div className="absolute left-1/2 top-0 h-[2px] w-16 -translate-x-1/2 bg-[#d4a359]" />
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-[#70552f] bg-[#0d0906] text-[#c6a35e]">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-cinzel text-[10px] uppercase tracking-[0.2em] text-[#9d7c4d]">Registro selecionado</p>
+                    <h3 id="chronicle-detail-title" className="mt-1 font-cinzel text-lg font-bold leading-tight tracking-wide text-[#f0c265]">{selectedChronicle.title}</h3>
+                    <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#a89071]"><CalendarDays className="h-3.5 w-3.5" />{formatSessionDate(selectedChronicle.date)}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-cinzel text-[10px] uppercase tracking-[0.2em] text-[#9d7c4d]">Registro selecionado</p>
-                  <h3 id="chronicle-detail-title" className="mt-1 font-cinzel text-lg font-bold leading-tight tracking-wide text-[#f0c265]">{selectedChronicle.title}</h3>
-                  <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#a89071]"><CalendarDays className="h-3.5 w-3.5" />{formatSessionDate(selectedChronicle.date)}</p>
+                <div className="absolute bottom-0 left-1/2 h-[2px] w-16 -translate-x-1/2 bg-[#d4a359]" />
+              </div>
+
+              <article className="font-garamond text-[16px] leading-relaxed tracking-wide text-[#d6c4ae]">
+                <p className="first-letter:mr-1 first-letter:font-cinzel first-letter:text-3xl first-letter:font-bold first-letter:text-[#f0c265]">{selectedChronicle.summary}</p>
+              </article>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="border border-[#3d2e20] bg-[#120d09]/80 p-3">
+                  <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]"><MapPin className="h-3.5 w-3.5" /> Local da aventura</p>
+                  <p className="mt-1 font-serif text-sm text-[#d0b98d]">{selectedChronicle.location}</p>
+                </div>
+                <div className="border border-[#3d2e20] bg-[#120d09]/80 p-3">
+                  <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]"><Clock3 className="h-3.5 w-3.5" /> Estado do registro</p>
+                  <p className="mt-1 font-serif text-sm text-[#d0b98d]">
+                    {selectedChronicle.status === 'AGENDADA' && selectedChronicle.scheduledAt
+                      ? `Agendada para ${formatScheduledDate(selectedChronicle.scheduledAt)}`
+                      : 'Crônica publicada'}
+                  </p>
                 </div>
               </div>
-              <div className="absolute bottom-0 left-1/2 h-[2px] w-16 -translate-x-1/2 bg-[#d4a359]" />
-            </div>
 
-            <article className="font-garamond text-[16px] leading-relaxed tracking-wide text-[#d6c4ae]">
-              <p className="first-letter:mr-1 first-letter:font-cinzel first-letter:text-3xl first-letter:font-bold first-letter:text-[#f0c265]">{selectedChronicle.summary}</p>
-            </article>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="border border-[#3d2e20] bg-[#120d09]/80 p-3">
-                <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]"><MapPin className="h-3.5 w-3.5" /> Local da aventura</p>
-                <p className="mt-1 font-serif text-sm text-[#d0b98d]">{selectedChronicle.location}</p>
+              <div className="mt-6 border-t border-[#3a2c1d] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setExpandedCharacters((expanded) => !expanded)}
+                  aria-expanded={expandedCharacters}
+                  className="flex w-full items-center justify-between text-left font-cinzel text-xs font-bold uppercase tracking-[0.16em] text-[#d1a85a] focus:outline-none focus:ring-1 focus:ring-[#d1a85a]"
+                >
+                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Personagens presentes ({selectedChronicle.characters.length})</span>
+                  {expandedCharacters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {expandedCharacters && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedChronicle.characters.map((character) => (
+                      <span key={character} className="inline-flex items-center gap-1.5 border border-[#5a4225] bg-[#1b120b] px-2.5 py-1 font-serif text-xs text-[#cdb887]"><Check className="h-3 w-3 text-[#c6a35e]" />{character}</span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="border border-[#3d2e20] bg-[#120d09]/80 p-3">
-                <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]"><Clock3 className="h-3.5 w-3.5" /> Estado do registro</p>
-                <p className="mt-1 font-serif text-sm text-[#d0b98d]">
-                  {selectedChronicle.status === 'AGENDADA' && selectedChronicle.scheduledAt
-                    ? `Agendada para ${formatScheduledDate(selectedChronicle.scheduledAt)}`
-                    : 'Crônica publicada'}
-                </p>
-              </div>
-            </div>
+            </section>
 
-            <div className="mt-6 border-t border-[#3a2c1d] pt-4">
-              <button
-                type="button"
-                onClick={() => setExpandedCharacters((expanded) => !expanded)}
-                aria-expanded={expandedCharacters}
-                className="flex w-full items-center justify-between text-left font-cinzel text-xs font-bold uppercase tracking-[0.16em] text-[#d1a85a] focus:outline-none focus:ring-1 focus:ring-[#d1a85a]"
-              >
-                <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Personagens presentes ({selectedChronicle.characters.length})</span>
-                {expandedCharacters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
-              {expandedCharacters && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedChronicle.characters.map((character) => (
-                    <span key={character} className="inline-flex items-center gap-1.5 border border-[#5a4225] bg-[#1b120b] px-2.5 py-1 font-serif text-xs text-[#cdb887]"><Check className="h-3 w-3 text-[#c6a35e]" />{character}</span>
-                  ))}
+            <aside aria-label="Resumo da crônica" className="min-w-0">
+              <div className="mb-3 flex items-center justify-between border-b border-[#3a2c1d] pb-2">
+                <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Capa da sessão</p>
+                <Sparkles className="h-4 w-4 text-[#8c6b41]" />
+              </div>
+              <ChronicleArtwork title={selectedChronicle.title} cover={selectedChronicle.cover} />
+              <div className="mt-4 border border-[#4b3823] bg-[#120d09] p-3">
+                <div className="flex items-center justify-between font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
+                  <span>Progresso da campanha</span>
+                  <span className="text-[#e0bd71]">{selectedChronicle.progress}%</span>
                 </div>
-              )}
-            </div>
-          </section>
-
-          <aside aria-label="Resumo da crônica" className="min-w-0">
-            <div className="mb-3 flex items-center justify-between border-b border-[#3a2c1d] pb-2">
-              <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Capa da sessão</p>
-              <Sparkles className="h-4 w-4 text-[#8c6b41]" />
-            </div>
-            <ChronicleArtwork title={selectedChronicle.title} cover={selectedChronicle.cover} />
-            <div className="mt-4 border border-[#4b3823] bg-[#120d09] p-3">
-              <div className="flex items-center justify-between font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
-                <span>Progresso da campanha</span>
-                <span className="text-[#e0bd71]">{selectedChronicle.progress}%</span>
+                <div className="mt-2 h-2 overflow-hidden border border-[#3a2c1d] bg-[#0a0705] p-px">
+                  <div className="h-full bg-gradient-to-r from-[#735126] via-[#b89558] to-[#f0c265]" style={{ width: `${selectedChronicle.progress}%` }} />
+                </div>
+                <p className="mt-2 font-serif text-xs italic text-[#806b53]">O destino da companhia ainda está sendo escrito.</p>
               </div>
-              <div className="mt-2 h-2 overflow-hidden border border-[#3a2c1d] bg-[#0a0705] p-px">
-                <div className="h-full bg-gradient-to-r from-[#735126] via-[#b89558] to-[#f0c265]" style={{ width: `${selectedChronicle.progress}%` }} />
-              </div>
-              <p className="mt-2 font-serif text-xs italic text-[#806b53]">O destino da companhia ainda está sendo escrito.</p>
-            </div>
-          </aside>
-        </div>
+            </aside>
+          </div>
+        )}
       </MedievalFrame>
 
       {isMaster && (
@@ -424,7 +384,7 @@ export const CronicasPage: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Título da crônica</span>
-                <input required value={form.title} onChange={(event) => updateForm('title', event.target.value)} className={inputClassName} placeholder="Ex.: A Vigília de Cinzas" />
+                <input required value={form.title} onChange={(event) => updateForm('title', event.target.value)} className={inputClassName} placeholder="Título do capítulo" />
               </label>
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Data da aventura</span>
@@ -435,7 +395,7 @@ export const CronicasPage: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-[1fr_140px]">
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Local da aventura</span>
-                <input value={form.location} onChange={(event) => updateForm('location', event.target.value)} className={inputClassName} placeholder="Ex.: Pântano de Velen" />
+                <input value={form.location} onChange={(event) => updateForm('location', event.target.value)} className={inputClassName} placeholder="Onde a aventura aconteceu" />
               </label>
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Progresso (%)</span>
@@ -461,14 +421,24 @@ export const CronicasPage: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Personagens presentes</span>
-                <div className="grid grid-cols-2 gap-2 border border-[#4b3823] bg-[#0d0906] p-2">
-                  {AVAILABLE_CHARACTERS.map((character) => (
-                    <label key={character} className="flex cursor-pointer items-center gap-2 font-serif text-xs text-[#c4b9a3]">
-                      <input type="checkbox" checked={form.characters.includes(character)} onChange={() => toggleCharacter(character)} className="accent-[#b89558]" />
-                      <span>{character}</span>
-                    </label>
-                  ))}
-                </div>
+                {isLoadingPersonagens ? (
+                  <LoadingState variant="text" label="Reunindo os personagens do cliente…" />
+                ) : erroPersonagens ? (
+                  <ErrorState onRetry={reloadPersonagens} description={erroPersonagens} />
+                ) : personagens.length === 0 ? (
+                  <p className="border border-[#4b3823] bg-[#0d0906] p-3 font-serif text-xs text-[#c4b9a3]">
+                    Nenhum personagem do cliente disponível.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 border border-[#4b3823] bg-[#0d0906] p-2">
+                    {personagens.map((personagem) => (
+                      <label key={personagem.id} className="flex cursor-pointer items-center gap-2 font-serif text-xs text-[#c4b9a3]">
+                        <input type="checkbox" checked={form.characters.includes(personagem.nome)} onChange={() => toggleCharacter(personagem.nome)} className="accent-[#b89558]" />
+                        <span>{personagem.nome}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

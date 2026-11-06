@@ -42,32 +42,8 @@ type SessionForm = {
   linkVtt: string;
 };
 
-const chronicles: Chronicle[] = [
-  {
-    id: 'cronica-05',
-    titulo: 'A Vigília de Cinzas',
-    dataSessao: '2026-08-22',
-    capa: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=700&q=80',
-    relato:
-      'Depois da queda do antigo posto de vigia, a companhia atravessou as colinas cobertas de neblina para descobrir quem estava acendendo os sinais proibidos.\n\nEntre ruínas e juramentos quebrados, uma nova ameaça começou a tomar forma. O fogo distante não era um pedido de socorro: era o primeiro aviso de uma guerra que o reino julgava esquecida.',
-  },
-  {
-    id: 'cronica-04',
-    titulo: 'O Sussurro do Pântano',
-    dataSessao: '2026-08-08',
-    capa: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=700&q=80',
-    relato:
-      'A trilha levou os heróis até um pântano onde as árvores pareciam lembrar os nomes dos mortos. Uma aldeia escondida pediu ajuda, mas cada resposta trouxe consigo uma dívida mais antiga que o próprio reino.\n\nAo deixar as águas escuras, a companhia carregava um mapa incompleto e a certeza de que alguma coisa os observava sob a superfície.',
-  },
-  {
-    id: 'cronica-03',
-    titulo: 'Sob o Estandarte Partido',
-    dataSessao: '2026-07-18',
-    capa: 'https://images.unsplash.com/photo-1518709594023-6eab9bab7b23?auto=format&fit=crop&w=700&q=80',
-    relato:
-      'A companhia encontrou os sobreviventes de uma batalha esquecida e precisou decidir entre seguir o mapa roubado ou escoltar os camponeses para um lugar seguro. Ao anoitecer, o estandarte partido revelou um símbolo que ninguém esperava ver.\n\nA escolha custou uma noite de descanso, mas garantiu novos aliados para a estrada real e uma pista sobre quem financiava os ataques.',
-  },
-];
+// O mural fica vazio até existirem crônicas oficiais; o conteúdo anterior era material de demonstração.
+const chronicles: Chronicle[] = [];
 
 const fieldClassName =
   'w-full border border-[#4b3823] bg-[#0d0906] px-3 py-2.5 text-sm text-[#e6ddc5] outline-none transition-colors focus:border-[#b89558] focus:ring-1 focus:ring-[#b89558]/50';
@@ -415,11 +391,22 @@ export const DashboardPage: React.FC = () => {
               </div>
               <BookOpen className="h-5 w-5 text-[#8c6b41]" aria-hidden="true" />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {chronicles.slice(0, 3).map((chronicle) => (
-                <ChronicleCard key={chronicle.id} chronicle={chronicle} onOpen={setSelectedChronicle} />
-              ))}
-            </div>
+            {chronicles.length === 0 ? (
+              <EmptyState
+                title="Nenhuma crônica publicada"
+                description={
+                  isMestre
+                    ? 'Escreva o primeiro relato na tela de Crônicas.'
+                    : 'Quando a primeira sessão for narrada, os capítulos aparecerão aqui.'
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {chronicles.slice(0, 3).map((chronicle) => (
+                  <ChronicleCard key={chronicle.id} chronicle={chronicle} onOpen={setSelectedChronicle} />
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </MedievalFrame>
