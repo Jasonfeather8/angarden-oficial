@@ -314,6 +314,7 @@ export const fichaService = {
         ficha_id: `ficha-${characterId}`,
         dinheiro: 0,
         outros: '',
+        outros_valor: 0,
         carga_total_peso: 0,
         carga_status: 'Normal',
       },

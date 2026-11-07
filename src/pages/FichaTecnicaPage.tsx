@@ -2808,15 +2808,29 @@ export const FichaTecnicaPage: React.FC = () => {
 
               <div className="flex flex-col items-center">
                 <span className={`text-[10px] font-cinzel font-bold ${theme.textMuted} uppercase mb-1`}>Outros</span>
-                <div className={`w-full h-14 ${theme.boxBg} rounded-xl p-1.5 overflow-hidden`}>
-                  <textarea
+                <div className={`w-full h-14 ${theme.boxBg} rounded-xl flex items-center gap-1 p-1.5`}>
+                  <input
+                    type="text"
                     value={ficha.recursos.outros || ''}
                     onChange={(e) => {
                       const val = e.target.value;
                       updateFicha((prev) => ({ ...prev, recursos: { ...prev.recursos, outros: val } }));
                     }}
-                    placeholder="Outros bens..."
-                    className="w-full h-full bg-transparent text-[10px] font-serif outline-none resize-none leading-tight"
+                    placeholder="PO"
+                    title="Nome do outro valor (ex.: PO, Pontos)"
+                    aria-label="Nome do outro valor (ex.: PO, Pontos)"
+                    className="w-8 shrink-0 text-center bg-transparent text-[10px] font-cinzel font-bold uppercase outline-none sm:w-10"
+                  />
+                  <input
+                    type="number"
+                    value={ficha.recursos.outros_valor ?? 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      updateFicha((prev) => ({ ...prev, recursos: { ...prev.recursos, outros_valor: val } }));
+                    }}
+                    title="Valor do outro recurso"
+                    aria-label="Valor do outro recurso"
+                    className="min-w-0 flex-1 text-center bg-transparent font-cinzel font-bold text-sm outline-none sm:text-base"
                   />
                 </div>
               </div>

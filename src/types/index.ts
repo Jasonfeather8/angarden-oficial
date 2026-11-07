@@ -61,7 +61,10 @@ export interface FichaStatus {
 export interface FichaRecursos {
   ficha_id: string;
   dinheiro: number;
+  /** Nome curto do outro valor do personagem (ex.: PO, Pontos). */
   outros?: string;
+  /** Quantidade do outro valor nomeado em `outros`. */
+  outros_valor?: number;
   carga_total_peso: number;
   carga_status: 'Normal' | 'Leve' | 'Média' | 'Pesada' | 'Muito Pesada';
 }
