@@ -2803,7 +2803,6 @@ export const FichaTecnicaPage: React.FC = () => {
                     }}
                     className="w-full text-center bg-transparent font-cinzel font-bold text-base outline-none"
                   />
-                  <span className="text-xs font-cinzel font-bold opacity-75 ml-1">GP</span>
                 </div>
               </div>
 
