@@ -1664,11 +1664,6 @@ export const FichaTecnicaPage: React.FC = () => {
                 style={{ backgroundColor: theme.previewColor }}
               ></div>
 
-              {/* Árvore Angarden no mobile: marca d'água atrás do conteúdo, para não roubar largura do nome. */}
-              <div className="pointer-events-none absolute right-2 top-3 z-0 opacity-15 sm:hidden">
-                <BrandMark variant="arvore" altura={52} escura={!theme.isDark} decorativa />
-              </div>
-
               <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 {/* Lado Esquerdo: Shield Nível & Nome Completo */}
                 <div className="flex items-center gap-2 sm:flex-1 sm:min-w-0 sm:max-w-sm sm:flex-col sm:items-stretch">
@@ -1712,7 +1707,7 @@ export const FichaTecnicaPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* No mobile, o cabeçalho empilha em duas linhas (escudo + nome e PTS/EXP), e a árvore vira marca d'água; a partir de sm volta ao arranjo em duas colunas, com as pílulas na linha do nome. */}
+                {/* No mobile, o cabeçalho empilha em duas linhas (escudo + nome e PTS/EXP) e a árvore fica oculta; a partir de sm volta ao arranjo em duas colunas, com a árvore no fluxo e as pílulas na linha do nome. */}
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
                   {/* Árvore Angarden (símbolo sozinho) */}
                   <div className="hidden h-16 items-center sm:flex sm:h-18">
