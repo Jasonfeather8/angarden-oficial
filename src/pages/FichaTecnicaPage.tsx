@@ -1962,15 +1962,15 @@ export const FichaTecnicaPage: React.FC = () => {
                     </div>
                     
                     {/* Linha de Equipamento com Botões de Ação (Visualizar e Catálogo de Armaduras) */}
-                    <div className={`flex items-center gap-1.5 text-[8px] font-bold ${theme.textMuted} font-sans`}>
+                    <div className={`flex min-w-0 items-center gap-1.5 text-[8px] font-bold ${theme.textMuted} font-sans`}>
                       <span className="shrink-0 uppercase">EQUIPAMENTO</span>
-                      <div className="flex-1 flex items-center gap-1">
+                      <div className="flex min-w-0 flex-1 items-center gap-1">
                         <input 
                           type="text" 
                           value={ficha.suporte.armadura.nome || ''} 
                           onChange={(e) => handleArmaduraNomeChange(e.target.value)}
-                          placeholder="Nome da Armadura Equipada..." 
-                          className={`flex-1 ${theme.boxBgLight} h-6 px-2 rounded-xs outline-none text-[10px] sm:text-xs ${theme.textTitle} font-bold font-serif`} 
+                          placeholder="Nome da Armadura Equipada..."
+                          className={`min-w-0 flex-1 ${theme.boxBgLight} h-6 px-2 rounded-xs outline-none text-[10px] sm:text-xs ${theme.textTitle} font-bold font-serif`}
                         />
                         {/* Botão 1: Visualizar Detalhes Completos */}
                         <button
