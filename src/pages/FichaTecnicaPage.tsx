@@ -1229,7 +1229,7 @@ export const FichaTecnicaPage: React.FC = () => {
           <div className="lg:col-span-5 space-y-4">
             {/* Bloco Logo Angarden Oficial */}
             <h2 className="flex justify-center py-1">
-              <BrandMark variant="completa" altura={34} larguraMaxima={210} escura={!theme.isDark} />
+              <BrandMark variant="completa" largura={200} escura={!theme.isDark} />
             </h2>
 
             {/* HISTÓRIA */}
@@ -1706,12 +1706,11 @@ export const FichaTecnicaPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Lado Direito: Logo Angarden Oficial RPG e Pílulas PTS / EXP */}
+                {/* Lado Direito: Árvore Angarden e Pílulas PTS / EXP */}
                 <div className="flex flex-col items-end gap-2.5">
-                  {/* Logo Árvore Angarden RPG */}
-                  <div className="flex flex-col items-center gap-1">
+                  {/* Árvore Angarden (símbolo sozinho) */}
+                  <div className="flex flex-col items-center">
                     <BrandMark variant="arvore" altura={62} escura={!theme.isDark} />
-                    <BrandMark variant="completa" altura={16} larguraMaxima={140} escura={!theme.isDark} />
                   </div>
 
                   {/* Pílulas PTS e EXP */}
