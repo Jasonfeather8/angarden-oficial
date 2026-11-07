@@ -2249,17 +2249,17 @@ export const FichaTecnicaPage: React.FC = () => {
                 ];
 
                 return (
-                  <div className="space-y-2 pt-0.5">
+                  <div className="space-y-3 sm:space-y-2 pt-0.5">
                     {/* Linhas 1 e 2: Armas Corpo a Corpo (Primária, Segunda) */}
                     {meleeList.map((w) => (
                       <div key={w.key} className="space-y-0.5">
-                        <div className="grid grid-cols-12 gap-1.5 items-end">
+                        <div className="grid grid-cols-4 sm:grid-cols-12 gap-1.5 items-end">
                           {/* Nome da Arma */}
-                          <div className="col-span-3 flex flex-col">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 truncate`}>
+                          <div className="col-span-4 sm:col-span-3 flex flex-col">
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 truncate`}>
                               {w.label}
                             </span>
-                            <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center px-2 shadow-xs mb-[14px]`}>
+                            <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center px-2 shadow-xs mb-0 sm:mb-[14px]`}>
                               <input
                                 type="text"
                                 value={w.data.nome || ''}
@@ -2271,8 +2271,8 @@ export const FichaTecnicaPage: React.FC = () => {
                           </div>
 
                           {/* Dano (Arma + Total) */}
-                          <div className="col-span-3 flex flex-col items-center">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center`}>
+                          <div className="col-span-2 sm:col-span-3 flex flex-col items-center">
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center`}>
                               DANO
                             </span>
                             <div className="grid grid-cols-2 gap-1 w-full">
@@ -2289,7 +2289,7 @@ export const FichaTecnicaPage: React.FC = () => {
                                     className={`w-full text-center bg-transparent text-xs ${theme.textTitle} font-bold outline-none font-sans`}
                                   />
                                 </div>
-                                <span className={`text-[7px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
+                                <span className={`text-[8px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
                                   ARMA
                                 </span>
                               </div>
@@ -2304,7 +2304,7 @@ export const FichaTecnicaPage: React.FC = () => {
                                     className={`w-full text-center bg-transparent text-xs ${theme.textTitle} font-black outline-none font-sans`}
                                   />
                                 </div>
-                                <span className={`text-[7px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
+                                <span className={`text-[8px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
                                   TOTAL
                                 </span>
                               </div>
@@ -2313,7 +2313,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
                           {/* Resistência */}
                           <div className="col-span-1 flex flex-col items-center">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                               RESIST.
                             </span>
                             <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs mb-[14px]`}>
@@ -2328,7 +2328,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
                           {/* Peso */}
                           <div className="col-span-1 flex flex-col items-center">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                               PESO
                             </span>
                             <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs mb-[14px]`}>
@@ -2344,10 +2344,10 @@ export const FichaTecnicaPage: React.FC = () => {
 
                           {/* Efeito (Resumo + Botões de Ação) */}
                           <div className="col-span-4 flex flex-col">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
                               EFEITO
                             </span>
-                            <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center pl-2.5 pr-1 gap-1 shadow-xs mb-[14px] overflow-hidden`}>
+                            <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center pl-2.5 pr-1 gap-1 shadow-xs mb-0 sm:mb-[14px] overflow-hidden`}>
                               <input
                                 type="text"
                                 value={w.data.efeito || ''}
@@ -2362,18 +2362,18 @@ export const FichaTecnicaPage: React.FC = () => {
                                   id={`btn-ver-${w.key}`}
                                   onClick={() => handleOpenWeaponDetails(w.key, w.label)}
                                   title="Visualizar Detalhes Completos da Arma"
-                                  className="w-[18px] h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
+                                  className="w-6 h-6 sm:w-[18px] sm:h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
                                 >
-                                  <Eye size={10} strokeWidth={2} />
+                                  <Eye size={10} strokeWidth={2} className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                                 </button>
                                 <button
                                   type="button"
                                   id={`btn-cat-${w.key}`}
                                   onClick={() => handleOpenWeaponCatalog(w.key, w.label)}
                                   title="Abrir Catálogo de Armamentos do Mercado"
-                                  className="w-[18px] h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
+                                  className="w-6 h-6 sm:w-[18px] sm:h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
                                 >
-                                  <Sword size={10} strokeWidth={2} />
+                                  <Sword size={10} strokeWidth={2} className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                                 </button>
                               </div>
                             </div>
@@ -2384,13 +2384,13 @@ export const FichaTecnicaPage: React.FC = () => {
 
                     {/* Linha 3: ESCUDO (Nome | RD | Peso | Efeito) */}
                     <div className="space-y-0.5">
-                      <div className="grid grid-cols-12 gap-1.5 items-end">
+                      <div className="grid grid-cols-4 sm:grid-cols-12 gap-1.5 items-end">
                         {/* Nome do Escudo */}
                         <div className="col-span-4 flex flex-col">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 truncate`}>
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 truncate`}>
                             ESCUDO
                           </span>
-                          <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center px-2 shadow-xs mb-[14px]`}>
+                          <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center px-2 shadow-xs mb-0 sm:mb-[14px]`}>
                             <input
                               type="text"
                               value={armaSuporte.nome || ''}
@@ -2403,10 +2403,10 @@ export const FichaTecnicaPage: React.FC = () => {
 
                         {/* RD do Escudo */}
                         <div className="col-span-2 flex flex-col items-center">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                             RD
                           </span>
-                          <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs mb-[14px]`}>
+                          <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs mb-0 sm:mb-[14px]`}>
                             <input
                               type="number"
                               value={(armaSuporte as any).rd_base ?? armaSuporte.resist ?? 0}
@@ -2422,10 +2422,10 @@ export const FichaTecnicaPage: React.FC = () => {
 
                         {/* Peso do Escudo */}
                         <div className="col-span-2 flex flex-col items-center">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                             PESO
                           </span>
-                          <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs mb-[14px]`}>
+                          <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs mb-0 sm:mb-[14px]`}>
                             <input
                               type="number"
                               step="0.1"
@@ -2438,10 +2438,10 @@ export const FichaTecnicaPage: React.FC = () => {
 
                         {/* Efeito (Resumo + Botões de Ação) */}
                         <div className="col-span-4 flex flex-col">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
                             EFEITO
                           </span>
-                          <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center pl-2.5 pr-1 gap-1 shadow-xs mb-[14px] overflow-hidden`}>
+                          <div className={`h-8 rounded-xl ${theme.boxBg} flex items-center pl-2.5 pr-1 gap-1 shadow-xs mb-0 sm:mb-[14px] overflow-hidden`}>
                             <input
                               type="text"
                               value={armaSuporte.efeito || ''}
@@ -2456,18 +2456,18 @@ export const FichaTecnicaPage: React.FC = () => {
                                 id="btn-ver-arma_suporte"
                                 onClick={() => handleOpenWeaponDetails('arma_suporte', 'ESCUDO')}
                                 title="Visualizar Detalhes Completos do Escudo"
-                                className="w-[18px] h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
+                                className="w-6 h-6 sm:w-[18px] sm:h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
                               >
-                                <Eye size={10} strokeWidth={2} />
+                                <Eye size={10} strokeWidth={2} className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                               </button>
                               <button
                                 type="button"
                                 id="btn-cat-arma_suporte"
                                 onClick={() => handleOpenWeaponCatalog('arma_suporte', 'ESCUDO')}
                                 title="Abrir Catálogo de Escudos do Mercado"
-                                className="w-[18px] h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
+                                className="w-6 h-6 sm:w-[18px] sm:h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
                               >
-                                <Shield size={10} strokeWidth={2} />
+                                <Shield size={10} strokeWidth={2} className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                               </button>
                             </div>
                           </div>
@@ -2477,10 +2477,10 @@ export const FichaTecnicaPage: React.FC = () => {
 
                     {/* Linha 4: ARCO (LD) */}
                     <div className="space-y-0.5 pt-0.5">
-                      <div className="grid grid-cols-12 gap-1.5 items-start">
+                      <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 items-start">
                         {/* Arco Nome */}
-                        <div className="col-span-3 flex flex-col">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
+                        <div className="col-span-6 sm:col-span-3 flex flex-col">
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
                             ARCO (LD)
                           </span>
                           <div className={`h-[82px] rounded-xl ${theme.boxBg} p-2 shadow-xs`}>
@@ -2495,7 +2495,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
                         {/* Dano (Flecha + Total) */}
                         <div className="col-span-3 flex flex-col items-center">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center`}>
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center`}>
                             DANO
                           </span>
                           <div className="grid grid-cols-2 gap-1 w-full">
@@ -2512,7 +2512,7 @@ export const FichaTecnicaPage: React.FC = () => {
                                   className={`w-full text-center bg-transparent text-xs ${theme.textTitle} font-bold outline-none font-sans`}
                                 />
                               </div>
-                              <span className={`text-[7px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
+                              <span className={`text-[8px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
                                 FLECHA
                               </span>
                             </div>
@@ -2527,7 +2527,7 @@ export const FichaTecnicaPage: React.FC = () => {
                                   className={`w-full text-center bg-transparent text-xs ${theme.textTitle} font-black outline-none font-sans`}
                                 />
                               </div>
-                              <span className={`text-[7px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
+                              <span className={`text-[8px] sm:text-[7.5px] font-bold ${theme.textMuted} uppercase font-sans mt-0.5`}>
                                 TOTAL
                               </span>
                             </div>
@@ -2535,10 +2535,10 @@ export const FichaTecnicaPage: React.FC = () => {
                         </div>
 
                         {/* Prec. e Tensão (Empilhados Verticalmente) */}
-                        <div className="col-span-1 flex flex-col items-center space-y-1">
+                        <div className="col-span-2 sm:col-span-1 flex flex-row items-center gap-1 sm:flex-col">
                           {/* Prec */}
                           <div className="w-full flex flex-col items-center">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                               PREC.
                             </span>
                             <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs`}>
@@ -2553,7 +2553,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
                           {/* Tensão */}
                           <div className="w-full flex flex-col items-center">
-                            <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                            <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                               TENSÃO
                             </span>
                             <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs`}>
@@ -2569,7 +2569,7 @@ export const FichaTecnicaPage: React.FC = () => {
 
                         {/* Peso */}
                         <div className="col-span-1 flex flex-col items-center">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5 text-center truncate w-full`}>
                             PESO
                           </span>
                           <div className={`w-full h-8 rounded-xl ${theme.boxBg} flex items-center justify-center shadow-xs`}>
@@ -2584,8 +2584,8 @@ export const FichaTecnicaPage: React.FC = () => {
                         </div>
 
                         {/* Efeito (Resumo + Botões de Ação) */}
-                        <div className="col-span-4 flex flex-col">
-                          <span className={`text-[8px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
+                        <div className="col-span-6 sm:col-span-4 flex flex-col">
+                          <span className={`text-[9px] sm:text-[8.5px] font-bold ${theme.textMuted} uppercase font-sans mb-0.5`}>
                             EFEITO
                           </span>
                           <div className={`h-[82px] rounded-xl ${theme.boxBg} p-2 shadow-xs flex flex-col justify-between overflow-hidden`}>
@@ -2603,18 +2603,18 @@ export const FichaTecnicaPage: React.FC = () => {
                                   id="btn-ver-arco_ld"
                                   onClick={() => handleOpenWeaponDetails('arco_ld', 'ARCO (LD)')}
                                   title="Visualizar Detalhes Completos do Arco"
-                                  className="w-[18px] h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
+                                  className="w-6 h-6 sm:w-[18px] sm:h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
                                 >
-                                  <Eye size={10} strokeWidth={2} />
+                                  <Eye size={10} strokeWidth={2} className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                                 </button>
                                 <button
                                   type="button"
                                   id="btn-cat-arco_ld"
                                   onClick={() => handleOpenWeaponCatalog('arco_ld', 'ARCO (LD)')}
                                   title="Abrir Catálogo de Armas de Longa Distância"
-                                  className="w-[18px] h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
+                                  className="w-6 h-6 sm:w-[18px] sm:h-[18px] rounded-xs bg-[#1a140e] hover:bg-[#2e1f14] border border-[#8c6b41]/70 hover:border-[#fde68a] text-[#dcd1ba] hover:text-[#fde68a] flex items-center justify-center transition-all duration-150 cursor-pointer active:scale-90"
                                 >
-                                  <Crosshair size={10} strokeWidth={2} />
+                                  <Crosshair size={10} strokeWidth={2} className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                                 </button>
                               </div>
                             </div>
