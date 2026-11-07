@@ -1659,22 +1659,27 @@ export const FichaTecnicaPage: React.FC = () => {
             {/* TOPO: CABEÇALHO ESCURO COM NÍVEL, NOME COMPLETO, LOGO ANGARDEN E PTS/EXP */}
             <div className={`${theme.headerBarBg} rounded-t-xs p-3 sm:p-4 border ${theme.headerBorder} relative overflow-hidden shadow-md`}>
               {/* Brilho de fundo / textura sutil */}
-              <div 
+              <div
                 className="absolute -top-12 -right-12 w-48 h-48 rounded-full blur-2xl pointer-events-none opacity-20"
                 style={{ backgroundColor: theme.previewColor }}
               ></div>
 
-              <div className="flex items-start justify-between gap-3 relative z-10">
+              {/* Árvore Angarden no mobile: marca d'água atrás do conteúdo, para não roubar largura do nome. */}
+              <div className="pointer-events-none absolute right-2 top-3 z-0 opacity-15 sm:hidden">
+                <BrandMark variant="arvore" altura={52} escura={!theme.isDark} decorativa />
+              </div>
+
+              <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 {/* Lado Esquerdo: Shield Nível & Nome Completo */}
-                <div className="flex flex-col gap-2 flex-1 max-w-sm">
+                <div className="flex items-center gap-2 sm:flex-1 sm:min-w-0 sm:max-w-sm sm:flex-col sm:items-stretch">
                   {/* Shield Nível */}
-                  <div className="relative w-14 h-16 sm:w-16 sm:h-18 flex flex-col items-center justify-center filter drop-shadow-xs">
+                  <div className="relative w-14 h-16 sm:w-16 sm:h-18 flex flex-col items-center justify-center filter drop-shadow-xs shrink-0">
                     <svg viewBox="0 0 100 120" className="absolute inset-0 w-full h-full" fill="none">
-                      <path 
-                        d="M 6 12 C 30 22, 70 22, 94 12 L 94 58 C 94 88, 50 112, 50 112 C 50 112, 6 88, 6 58 Z" 
-                        fill={theme.isDark ? '#1f1710' : '#f0f5f8'} 
-                        stroke={theme.previewColor} 
-                        strokeWidth="5" 
+                      <path
+                        d="M 6 12 C 30 22, 70 22, 94 12 L 94 58 C 94 88, 50 112, 50 112 C 50 112, 6 88, 6 58 Z"
+                        fill={theme.isDark ? '#1f1710' : '#f0f5f8'}
+                        stroke={theme.previewColor}
+                        strokeWidth="5"
                         strokeLinejoin="round"
                       />
                     </svg>
@@ -1690,51 +1695,50 @@ export const FichaTecnicaPage: React.FC = () => {
                   </div>
 
                   {/* Nome Completo */}
-                  <div className="w-full">
+                  <div className="min-w-0 flex-1 sm:flex-none sm:w-full">
                     <div className={`${theme.boxBgLight} rounded-xs px-3 py-1.5 backdrop-blur-xs shadow-inner`}>
                       <input
                         type="text"
                         value={ficha.identidade.nome_personagem}
                         onChange={(e) => handleIdentidadeChange('nome_personagem', e.target.value)}
                         placeholder="NOME COMPLETO"
+                        aria-label="Nome completo"
                         className={`w-full bg-transparent ${theme.textTitle} font-black text-sm tracking-wider uppercase outline-none font-sans`}
                       />
                     </div>
-                    <span className={`text-xs sm:text-sm font-black tracking-wider ${theme.textTitle} uppercase block mt-1 font-sans`}>
+                    <span className={`text-xs sm:text-sm font-black tracking-wider ${theme.textTitle} uppercase hidden sm:block mt-1 font-sans`}>
                       NOME COMPLETO
                     </span>
                   </div>
                 </div>
 
-                {/* Lado Direito: Árvore Angarden e Pílulas PTS / EXP.
-                    A árvore ocupa a mesma altura do escudo de nível e o vão é o mesmo da
-                    coluna da esquerda, para as pílulas caírem exatamente na linha do nome. */}
-                <div className="flex flex-col items-end gap-2">
+                {/* No mobile, o cabeçalho empilha em duas linhas (escudo + nome e PTS/EXP), e a árvore vira marca d'água; a partir de sm volta ao arranjo em duas colunas, com as pílulas na linha do nome. */}
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
                   {/* Árvore Angarden (símbolo sozinho) */}
-                  <div className="flex h-16 items-center sm:h-18">
+                  <div className="hidden h-16 items-center sm:flex sm:h-18">
                     <BrandMark variant="arvore" altura={62} escura={!theme.isDark} />
                   </div>
 
                   {/* Pílulas PTS e EXP — mesma altura do campo de nome */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
                     {/* PTS */}
-                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 w-20 sm:w-22 h-8 shadow-xs`}>
+                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 min-w-0 flex-1 h-8 sm:w-22 sm:flex-none shadow-xs`}>
                       <input
                         type="number"
                         value={ficha.identidade.pts}
                         onChange={(e) => handleIdentidadeChange('pts', parseInt(e.target.value) || 0)}
-                        className={`w-10 text-center bg-transparent font-black text-xs ${theme.textTitle} outline-none`}
+                        className={`min-w-0 flex-1 text-center bg-transparent font-black text-xs ${theme.textTitle} sm:w-10 sm:flex-none outline-none`}
                       />
                       <span className={`text-[10px] font-black ${theme.textTitle} uppercase font-sans`}>PTS</span>
                     </div>
 
                     {/* EXP */}
-                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 w-24 sm:w-28 h-8 shadow-xs`}>
+                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 min-w-0 flex-1 h-8 sm:w-28 sm:flex-none shadow-xs`}>
                       <input
                         type="number"
                         value={ficha.identidade.xp}
                         onChange={(e) => handleIdentidadeChange('xp', parseInt(e.target.value) || 0)}
-                        className={`w-14 text-center bg-transparent font-black text-xs ${theme.textTitle} outline-none`}
+                        className={`min-w-0 flex-1 text-center bg-transparent font-black text-xs ${theme.textTitle} sm:w-14 sm:flex-none outline-none`}
                       />
                       <span className={`text-[10px] font-black ${theme.textTitle} uppercase font-sans`}>EXP</span>
                     </div>
