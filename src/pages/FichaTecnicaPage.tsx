@@ -1706,17 +1706,19 @@ export const FichaTecnicaPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Lado Direito: Árvore Angarden e Pílulas PTS / EXP */}
-                <div className="flex flex-col items-end gap-2.5">
+                {/* Lado Direito: Árvore Angarden e Pílulas PTS / EXP.
+                    A árvore ocupa a mesma altura do escudo de nível e o vão é o mesmo da
+                    coluna da esquerda, para as pílulas caírem exatamente na linha do nome. */}
+                <div className="flex flex-col items-end gap-2">
                   {/* Árvore Angarden (símbolo sozinho) */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex h-16 items-center sm:h-18">
                     <BrandMark variant="arvore" altura={62} escura={!theme.isDark} />
                   </div>
 
-                  {/* Pílulas PTS e EXP */}
+                  {/* Pílulas PTS e EXP — mesma altura do campo de nome */}
                   <div className="flex items-center gap-2">
                     {/* PTS */}
-                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 w-20 sm:w-22 h-7 shadow-xs`}>
+                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 w-20 sm:w-22 h-8 shadow-xs`}>
                       <input
                         type="number"
                         value={ficha.identidade.pts}
@@ -1727,7 +1729,7 @@ export const FichaTecnicaPage: React.FC = () => {
                     </div>
 
                     {/* EXP */}
-                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 w-24 sm:w-28 h-7 shadow-xs`}>
+                    <div className={`flex items-center justify-between border-2 ${theme.badgeBorder} ${theme.badgeBg} rounded-full px-2.5 py-0.5 w-24 sm:w-28 h-8 shadow-xs`}>
                       <input
                         type="number"
                         value={ficha.identidade.xp}
