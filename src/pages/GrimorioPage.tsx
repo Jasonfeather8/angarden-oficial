@@ -772,11 +772,10 @@ const ExpandedCircleSection = ({ id, title, description, schools, circleClassNam
         <div className="pointer-events-none absolute inset-[17%] rounded-full border border-dashed border-[#8c6b41]/35" aria-hidden="true" />
         <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {positions.map((position, index) => <line key={`${schools[index].id}-connection`} x1="50" y1="50" x2={position.x} y2={position.y} stroke="#9b7748" strokeWidth="0.34" strokeOpacity="0.72" />)}
-          <circle cx="50" cy="50" r="7" fill="#d8b86b" fillOpacity="0.08" stroke="#c6a15b" strokeOpacity="0.62" strokeWidth="0.35" />
         </svg>
-        <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-center text-[#8c6b41]" aria-hidden="true">
-          <Sparkles className="mx-auto mb-1 text-[#d8b86b]" size={25} />
-          <span className="font-cinzel text-[10px] uppercase tracking-[0.2em]">{title}</span>
+        <div className="absolute left-1/2 top-1/2 z-10 flex size-[96px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-[#c6a15b]/70 bg-[#1a110a] px-2 text-center shadow-[0_0_30px_rgba(216,184,107,0.25)] sm:size-[120px] lg:size-[136px]" aria-hidden="true">
+          <BrandMark variant="arvore" altura={32} decorativa className="mb-1" />
+          <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[1.05] tracking-[0.15em] text-[#d8b86b] sm:text-[9px] lg:text-[10px]">{title}</span>
         </div>
         {schools.map((school, index) => (
           <button
@@ -786,10 +785,10 @@ const ExpandedCircleSection = ({ id, title, description, schools, circleClassNam
             aria-label={`Escolher ${school.name}${school.subtitle ? ` (${school.subtitle})` : ''}`}
             title={school.description}
             style={{ left: `${positions[index].x}%`, top: `${positions[index].y}%`, borderColor: school.accent }}
-            className="absolute z-20 flex size-[68px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-1.5 text-center shadow-[0_0_18px_rgba(0,0,0,0.75)] transition hover:scale-105 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:size-[58px] max-[639px]:px-0.5 sm:size-[86px] lg:size-[98px]"
+            className="absolute z-20 flex size-[68px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-2 text-center shadow-[0_0_18px_rgba(0,0,0,0.75)] transition hover:scale-105 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:size-[58px] max-[639px]:px-0.5 sm:size-[104px] lg:size-[118px]"
           >
-            <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[0.95] tracking-wide text-[#eadfc8] max-[639px]:text-[6px] sm:text-[9px] lg:text-[10px]">{school.name}</span>
-            <span className="mt-1 block max-w-full break-words text-[7px] italic leading-[0.95] text-[#c6a15b] max-[639px]:text-[6px] sm:text-[8px] lg:text-[9px]">{school.subtitle}</span>
+            <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[0.95] tracking-wide text-[#eadfc8] max-[639px]:text-[6px] sm:text-[10px] lg:text-[11px]">{school.name}</span>
+            <span className="mt-1 block max-w-full break-words text-[7px] italic leading-[0.95] text-[#c6a15b] max-[639px]:text-[6px] sm:text-[9px] lg:text-[10px]">{school.subtitle}</span>
           </button>
         ))}
       </div>
