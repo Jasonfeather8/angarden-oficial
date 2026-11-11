@@ -64,7 +64,7 @@ const MercadoListaSkeleton: React.FC = () => (
 
 // Marca d'água rúnica sutil gravada no fundo das ranhuras de item
 const RuneWatermark: React.FC = () => (
-  <svg viewBox="0 0 100 100" className="w-14 h-14 opacity-15 filter blur-[0.5px]">
+  <svg viewBox="0 0 100 100" className="w-14 h-14 opacity-15">
     <path
       d="M 50 20 C 30 20 20 35 20 50 C 20 70 35 80 50 80 C 68 80 78 66 78 50 C 78 36 68 28 54 28 C 42 28 34 36 34 48 C 34 58 42 64 52 64 C 60 64 64 58 64 52 C 64 46 58 44 52 44"
       fill="none"
@@ -253,6 +253,11 @@ export const MercadoPage: React.FC = () => {
   const [personagemId, setPersonagemId] = useState<string>(() => storeCharacterId);
   const [listaPersonagens, setListaPersonagens] = useState<Array<{ id: string; nome: string; raca?: string; nivel?: number; imagem_url?: string; dinheiro: number }>>([]);
   const [isModalCompradorOpen, setIsModalCompradorOpen] = useState<boolean>(false);
+  const handleSelecionarCategoria = useCallback((catId: string) => {
+    setActiveCategory(catId as CategoriaMercado);
+    setSubcategoriaAtiva('todas');
+    setBusca('');
+  }, []);
 
   // Estado da Ficha do Personagem Selecionado
   const [ficha, setFicha] = useState<FichaCompleta | null>(null);
@@ -783,7 +788,7 @@ export const MercadoPage: React.FC = () => {
                 setSubcategoriaAtiva('todas');
                 setBusca('');
               }}
-              className={`relative px-1 sm:px-4 py-2 rounded-xs border transition-all text-[10px] sm:text-xs font-cinzel tracking-wider uppercase font-bold flex items-center justify-center gap-1 sm:gap-2 cursor-pointer w-full text-center ${
+              className={`relative px-1 sm:px-4 py-2 rounded-xs border transition-colors text-[10px] sm:text-xs font-cinzel tracking-wider uppercase font-bold flex items-center justify-center gap-1 sm:gap-2 cursor-pointer w-full text-center ${
                 secaoMercado === 'comum'
                   ? 'bg-gradient-to-b from-[#2a1d12] via-[#1a120b] to-[#100b07] text-[#f2dfa8] border-[#c5a059] shadow-[0_0_12px_rgba(197,160,89,0.35)]'
                   : 'bg-[#120d09]/80 text-[#8c6b41] border-[#3e2c1a] hover:text-[#e6ddc5] hover:border-[#6a4f2c]'
@@ -808,7 +813,7 @@ export const MercadoPage: React.FC = () => {
                 setSubcategoriaAtiva('todas');
                 setBusca('');
               }}
-              className={`relative px-1 sm:px-4 py-2 rounded-xs border transition-all text-[10px] sm:text-xs font-cinzel tracking-wider uppercase font-bold flex items-center justify-center gap-1 sm:gap-2 cursor-pointer w-full text-center ${
+              className={`relative px-1 sm:px-4 py-2 rounded-xs border transition-colors text-[10px] sm:text-xs font-cinzel tracking-wider uppercase font-bold flex items-center justify-center gap-1 sm:gap-2 cursor-pointer w-full text-center ${
                 secaoMercado === 'epico'
                   ? 'bg-gradient-to-b from-[#3a2810] via-[#221606] to-[#120b02] text-[#fef08a] border-[#eab308] shadow-[0_0_15px_rgba(234,179,8,0.45)]'
                   : 'bg-[#120d09]/80 text-[#ca8a04] border-[#5a421a] hover:text-[#fde047] hover:border-[#a16207]'
@@ -833,7 +838,7 @@ export const MercadoPage: React.FC = () => {
                 setSubcategoriaAtiva('todas');
                 setBusca('');
               }}
-              className={`relative px-1 sm:px-4 py-2 rounded-xs border transition-all text-[10px] sm:text-xs font-cinzel tracking-wider uppercase font-bold flex items-center justify-center gap-1 sm:gap-2 cursor-pointer w-full text-center ${
+              className={`relative px-1 sm:px-4 py-2 rounded-xs border transition-colors text-[10px] sm:text-xs font-cinzel tracking-wider uppercase font-bold flex items-center justify-center gap-1 sm:gap-2 cursor-pointer w-full text-center ${
                 secaoMercado === 'arcano'
                   ? 'bg-gradient-to-b from-[#2e1845] via-[#1a0c2a] to-[#0f0619] text-[#e9d5ff] border-[#a855f7] shadow-[0_0_15px_rgba(168,85,247,0.45)]'
                   : 'bg-[#120d09]/80 text-[#a855f7] border-[#4a2468] hover:text-[#f3e8ff] hover:border-[#9333ea]'
@@ -855,11 +860,7 @@ export const MercadoPage: React.FC = () => {
               tabs={tabsConfig}
               activeId={activeCategory}
               themeMode={themeMode}
-              onSelect={(catId) => {
-                setActiveCategory(catId as CategoriaMercado);
-                setSubcategoriaAtiva('todas');
-                setBusca('');
-              }}
+              onSelect={handleSelecionarCategoria}
             />
           </div>
 
@@ -890,7 +891,7 @@ export const MercadoPage: React.FC = () => {
                       type="button"
                       id={`subcat-btn-${sub.id.replace(/\s+/g, '-').toLowerCase()}`}
                       onClick={() => setSubcategoriaAtiva(sub.id)}
-                      className={`shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xs border transition-all text-[11px] sm:text-xs font-cinzel cursor-pointer flex items-center gap-1.5 ${
+                      className={`shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xs border transition-colors text-[11px] sm:text-xs font-cinzel cursor-pointer flex items-center gap-1.5 ${
                         isSelected
                           ? 'bg-[#3a2818] border-[#8c6b41] text-[#f2dfa8] shadow-[0_0_10px_rgba(140,107,65,0.35)] font-bold'
                           : 'bg-[#120f0d]/90 border-[#5a4225] text-[#8c6b41] hover:text-[#e6ddc5] hover:border-[#8c6b41]'
@@ -940,7 +941,7 @@ export const MercadoPage: React.FC = () => {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Pesquisar por nome, material..."
-                  className="w-full bg-[#120f0d]/90 border border-[#5a4225] focus:border-[#a88d61] text-[#e6ddc5] placeholder-[#8c6b41] text-xs font-serif pl-8 pr-3 py-1.5 sm:py-1.5 rounded-xs outline-none transition-all"
+                  className="w-full bg-[#120f0d]/90 border border-[#5a4225] focus:border-[#a88d61] text-[#e6ddc5] placeholder-[#8c6b41] text-xs font-serif pl-8 pr-3 py-1.5 sm:py-1.5 rounded-xs outline-none transition-colors"
                 />
               </div>
             </div>
@@ -986,10 +987,8 @@ export const MercadoPage: React.FC = () => {
                         key={item.id}
                         id={`card-item-${item.id}`}
                         onMouseEnter={preloadModalDetalhesCompra}
-                        className={`relative rounded-xs p-1.5 flex flex-col sm:grid sm:grid-cols-12 items-stretch sm:items-center gap-1.5 transition-all ${
-                          bloqueadoEpico
-                            ? 'opacity-60 cursor-not-allowed'
-                            : 'hover:brightness-105 shadow-[0_4px_14px_rgba(0,0,0,0.7)]'
+                        className={`group relative rounded-xs p-1.5 flex flex-col sm:grid sm:grid-cols-12 items-stretch sm:items-center gap-1.5 ${
+                          bloqueadoEpico ? 'opacity-60 cursor-not-allowed' : ''
                         }`}
                         style={{
                           background: 'linear-gradient(180deg, #323b44 0%, #222930 15%, #151a1e 50%, #0d1013 85%, #07090b 100%)',
@@ -1061,7 +1060,7 @@ export const MercadoPage: React.FC = () => {
 
                               {/* Overlay de Bloqueio se restrito */}
                               {bloqueadoEpico && (
-                                <div className="absolute inset-0 bg-black/85 z-40 rounded-xs flex items-center justify-center border border-[#3d4955] backdrop-blur-[1px]">
+                                <div className="absolute inset-0 bg-black/85 z-40 rounded-xs flex items-center justify-center border border-[#3d4955]">
                                   <Lock size={14} className="text-[#8c6b41]" />
                                 </div>
                               )}
@@ -1235,6 +1234,12 @@ export const MercadoPage: React.FC = () => {
                             </GothicButton>
                           </div>
                         </div>
+                        {!bloqueadoEpico && (
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 rounded-xs bg-gradient-to-b from-white/10 via-white/5 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                          />
+                        )}
 
                       </div>
                     );

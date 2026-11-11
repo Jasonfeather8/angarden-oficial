@@ -72,7 +72,6 @@ export const GothicButton: React.FC<GothicButtonProps> = ({
   const metalGradId = `metal-grad-${uniqueId}`;
   const bgGradId = `bg-grad-${uniqueId}`;
   const highlightGradId = `highlight-grad-${uniqueId}`;
-  const glowFilterId = `glow-filter-${uniqueId}`;
 
   return (
     <button
@@ -80,13 +79,13 @@ export const GothicButton: React.FC<GothicButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center shrink-0 relative group cursor-pointer outline-none focus:outline-none transition-all duration-200 active:scale-95 select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${className}`}
-      style={{ width: finalWidth, height: finalHeight }}
+      className={`inline-flex items-center justify-center shrink-0 relative group cursor-pointer outline-none focus:outline-none transition-[transform,opacity] duration-200 active:scale-95 select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${className}`}
+      style={{ width: finalWidth, height: finalHeight, boxShadow: '0 6px 14px rgba(0,0,0,0.85)' }}
       {...rest}
     >
       <svg
         viewBox="0 0 380 100"
-        className="w-full h-full filter drop-shadow-[0_6px_14px_rgba(0,0,0,0.85)]"
+        className="w-full h-full"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="none"
@@ -154,12 +153,6 @@ export const GothicButton: React.FC<GothicButtonProps> = ({
             <stop offset="70%" stopColor={isDanger ? '#fca5a5' : isPrimary ? '#fde68a' : '#c9b798'} />
             <stop offset="100%" stopColor="transparent" />
           </linearGradient>
-
-          {/* Filtro de Brilho */}
-          <filter id={glowFilterId} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite operator="over" in="SourceGraphic" />
-          </filter>
         </defs>
 
         {/* 1. Sombra e Borda Externa Gótica com chanfros angulares */}
@@ -241,12 +234,10 @@ export const GothicButton: React.FC<GothicButtonProps> = ({
 
         {/* 6. Luz de realce sutil no rodapé para efeito dimensional */}
         {isPrimary && (
-          <path
-            d="M 30 78 Q 190 92 350 78 Q 190 65 30 78 Z"
-            fill={`url(#${highlightGradId})`}
-            opacity="0.3"
-            filter={`url(#${glowFilterId})`}
-          />
+          <>
+            <path d="M 22 80 Q 190 96 358 80 Q 190 62 22 80 Z" fill={`url(#${highlightGradId})`} opacity="0.14" />
+            <path d="M 30 78 Q 190 92 350 78 Q 190 65 30 78 Z" fill={`url(#${highlightGradId})`} opacity="0.3" />
+          </>
         )}
       </svg>
 
@@ -262,7 +253,7 @@ export const GothicButton: React.FC<GothicButtonProps> = ({
           </span>
         )}
         <span
-          className={`font-cinzel font-bold uppercase text-center whitespace-nowrap transition-all duration-150 ${
+          className={`font-cinzel font-bold uppercase text-center whitespace-nowrap transition-colors duration-150 ${
             textClassName || `${sizeStyles.fontSize} ${sizeStyles.tracking}`
           } ${
             isDanger

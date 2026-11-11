@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryOrnamentTab } from './CategoryOrnamentTab';
 
@@ -16,23 +16,22 @@ interface InfiniteCategoryScrollProps {
   themeMode?: 'default' | 'epico' | 'arcano';
 }
 
-export const InfiniteCategoryScroll: React.FC<InfiniteCategoryScrollProps> = ({
+export const InfiniteCategoryScroll: React.FC<InfiniteCategoryScrollProps> = React.memo(function InfiniteCategoryScroll({
   tabs,
   activeId,
   onSelect,
   themeMode = 'default',
-}) => {
+}: InfiniteCategoryScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const scrollLeftRef = useRef(0);
   const dragDistanceRef = useRef(0);
 
-  const [isHovered, setIsHovered] = useState(false);
   const [isGrabbing, setIsGrabbing] = useState(false);
 
   // Criamos 3 repetições para garantir loop infinito contínuo e sem emendas
-  const repeatedTabs = [...tabs, ...tabs, ...tabs];
+  const repeatedTabs = useMemo(() => [...tabs, ...tabs, ...tabs], [tabs]);
   const numTabs = tabs.length;
 
   // Inicializa o scroll no bloco central
@@ -137,18 +136,14 @@ export const InfiniteCategoryScroll: React.FC<InfiniteCategoryScrollProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="relative w-full py-4 select-none group/scroll"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        handleMouseUp();
-      }}
+      onMouseLeave={handleMouseUp}
     >
       {/* Botão de navegação Esquerda */}
       <button
         onClick={() => scrollByAmount(-220)}
-        className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-40 w-8 h-12 items-center justify-center bg-[#151a1e]/90 hover:bg-[#222930] text-[#c5a059] hover:text-[#fde68a] border-y border-r border-[#546473]/70 hover:border-[#c5a059] rounded-r-xs backdrop-blur-sm transition-all duration-200 opacity-70 hover:opacity-100 shadow-[0_4px_12px_rgba(0,0,0,0.9)] focus:outline-none cursor-pointer"
+        className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-40 w-8 h-12 items-center justify-center bg-[#151a1e]/90 hover:bg-[#222930] text-[#c5a059] hover:text-[#fde68a] border-y border-r border-[#546473]/70 hover:border-[#c5a059] rounded-r-xs transition-all duration-200 opacity-70 hover:opacity-100 shadow-[0_4px_12px_rgba(0,0,0,0.9)] focus:outline-none cursor-pointer"
         title="Rolar para a esquerda"
         aria-label="Rolar para a esquerda"
       >
@@ -158,7 +153,7 @@ export const InfiniteCategoryScroll: React.FC<InfiniteCategoryScrollProps> = ({
       {/* Botão de navegação Direita */}
       <button
         onClick={() => scrollByAmount(220)}
-        className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-40 w-8 h-12 items-center justify-center bg-[#151a1e]/90 hover:bg-[#222930] text-[#c5a059] hover:text-[#fde68a] border-y border-l border-[#546473]/70 hover:border-[#c5a059] rounded-l-xs backdrop-blur-sm transition-all duration-200 opacity-70 hover:opacity-100 shadow-[0_4px_12px_rgba(0,0,0,0.9)] focus:outline-none cursor-pointer"
+        className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-40 w-8 h-12 items-center justify-center bg-[#151a1e]/90 hover:bg-[#222930] text-[#c5a059] hover:text-[#fde68a] border-y border-l border-[#546473]/70 hover:border-[#c5a059] rounded-l-xs transition-all duration-200 opacity-70 hover:opacity-100 shadow-[0_4px_12px_rgba(0,0,0,0.9)] focus:outline-none cursor-pointer"
         title="Rolar para a direita"
         aria-label="Rolar para a direita"
       >
@@ -210,4 +205,4 @@ export const InfiniteCategoryScroll: React.FC<InfiniteCategoryScrollProps> = ({
       </div>
     </div>
   );
-};
+});

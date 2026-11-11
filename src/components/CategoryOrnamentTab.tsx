@@ -37,53 +37,49 @@ export const CategoryOrnamentTab: React.FC<CategoryOrnamentProps> = ({
       id={id}
       type="button"
       onClick={onClick}
-      className={`group relative flex flex-col items-center justify-center transition-all duration-300 focus:outline-none select-none p-1 ${
-        active 
-          ? '-translate-y-2.5 z-30 scale-105' 
-          : 'hover:-translate-y-1 hover:brightness-110 opacity-75 hover:opacity-100 z-10'
+      className={`group relative flex flex-col items-center justify-center transition-[transform,opacity] duration-300 focus:outline-none select-none p-1 ${
+        active
+          ? '-translate-y-2.5 z-30 scale-105'
+          : 'hover:-translate-y-1 opacity-75 hover:opacity-100 z-10'
       }`}
       title={label}
     >
       {/* Container da Moldura Estilizada */}
       <div
-        className={`relative w-[84px] h-[88px] sm:w-[94px] sm:h-[98px] transition-all duration-300 flex items-center justify-center ${
-          active 
+        className={`relative w-[84px] h-[88px] sm:w-[94px] sm:h-[98px] rounded-[18px] transition-shadow duration-300 flex items-center justify-center ${
+          active
             ? isArcane
-              ? 'filter drop-shadow-[0_0_20px_rgba(168,85,247,0.75)] drop-shadow-[0_0_35px_rgba(56,189,248,0.5)]'
-              : 'filter drop-shadow-[0_0_20px_rgba(245,158,11,0.75)] drop-shadow-[0_0_32px_rgba(217,119,6,0.45)]' 
+              ? 'shadow-[0_0_20px_rgba(168,85,247,0.75),0_0_35px_rgba(56,189,248,0.5)]'
+              : 'shadow-[0_0_20px_rgba(245,158,11,0.75),0_0_32px_rgba(217,119,6,0.45)]'
             : isArcane
-              ? 'filter drop-shadow-[0_0_12px_rgba(147,51,234,0.4)]'
+              ? 'shadow-[0_0_12px_rgba(147,51,234,0.4)]'
               : isEpicTheme
-                ? 'filter drop-shadow-[0_0_14px_rgba(217,119,6,0.5)]'
-                : 'filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]'
+                ? 'shadow-[0_0_14px_rgba(217,119,6,0.5)]'
+                : 'shadow-[0_4px_12px_rgba(0,0,0,0.95)]'
         }`}
       >
         {/* Halos de luz superior e inferior com brilho incandescente */}
-        <div 
-          className={`absolute -top-3.5 left-1/2 -translate-x-1/2 w-16 h-4 rounded-full blur-sm pointer-events-none transition-opacity duration-300 ${
-            active 
-              ? isArcane
-                ? 'bg-purple-400/70 opacity-100'
-                : 'bg-amber-400/70 opacity-100' 
-              : isArcane
-                ? 'bg-purple-600/40 opacity-70'
-                : isEpicTheme
-                  ? 'bg-amber-600/40 opacity-70'
-                  : 'bg-[#546473]/15 opacity-20 group-hover:opacity-50'
-          }`} 
+        <div
+          className={`absolute -top-3.5 left-1/2 -translate-x-1/2 w-20 h-6 rounded-full pointer-events-none transition-opacity duration-300 ${
+            active ? 'opacity-100' : isArcane ? 'opacity-70' : isEpicTheme ? 'opacity-70' : 'opacity-20 group-hover:opacity-50'
+          }`}
+          style={{
+            backgroundImage: `radial-gradient(ellipse at center, ${
+              active ? (isArcane ? 'rgba(192,132,252,0.7)' : 'rgba(251,191,36,0.7)')
+                     : (isArcane ? 'rgba(147,51,234,0.4)' : isEpicTheme ? 'rgba(217,119,6,0.4)' : 'rgba(84,100,115,0.15)')
+            } 0%, transparent 72%)`,
+          }}
         />
-        <div 
-          className={`absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-18 h-5 rounded-full blur-md pointer-events-none transition-opacity duration-300 ${
-            active 
-              ? isArcane
-                ? 'bg-cyan-500/60 opacity-100'
-                : 'bg-amber-500/60 opacity-100' 
-              : isArcane
-                ? 'bg-purple-900/60 opacity-75'
-                : isEpicTheme
-                  ? 'bg-amber-700/50 opacity-75'
-                  : 'bg-black/40 opacity-40 group-hover:opacity-70'
-          }`} 
+        <div
+          className={`absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-24 h-8 rounded-full pointer-events-none transition-opacity duration-300 ${
+            active ? 'opacity-100' : isArcane ? 'opacity-75' : isEpicTheme ? 'opacity-75' : 'opacity-40 group-hover:opacity-70'
+          }`}
+          style={{
+            backgroundImage: `radial-gradient(ellipse at center, ${
+              active ? (isArcane ? 'rgba(6,182,212,0.6)' : 'rgba(245,158,11,0.6)')
+                     : (isArcane ? 'rgba(88,28,135,0.6)' : isEpicTheme ? 'rgba(180,83,9,0.5)' : 'rgba(0,0,0,0.4)')
+            } 0%, transparent 75%)`,
+          }}
         />
 
         {/* --- MOLDURA ORNAMENTAL EM SVG FIEL À ESTÉTICA DE AÇO E OURO POLIDO / RUNAS ARCANAS --- */}
@@ -414,7 +410,7 @@ export const CategoryOrnamentTab: React.FC<CategoryOrnamentProps> = ({
 
         {/* 5. CONTAINER INTERNO COM A ESTÉTICA DA TABELA DE MERCADORIAS (Placa adaptada ao tema) */}
         <div
-          className={`absolute inset-[13%] rounded-xl overflow-hidden transition-all duration-300 flex items-center justify-center ${
+          className={`absolute inset-[13%] rounded-xl overflow-hidden transition-colors duration-300 flex items-center justify-center ${
             isArcane
               ? active
                 ? 'border border-[#c084fc] shadow-[inset_0_0_18px_rgba(168,85,247,0.65),0_0_16px_rgba(56,189,248,0.4)]'
