@@ -74,33 +74,27 @@ export const Topbar: React.FC = () => {
         </span>
       </div>
 
-      {/* Centro: Campanha Ativa */}
-      <div className="hidden lg:flex items-center space-x-2 px-3 py-1 border border-[#3a2c1d] bg-black/40 rounded-sm">
-        <Sparkles className="w-3.5 h-3.5 text-[#a88d61]" aria-hidden="true" />
-        {campaigns.length > 1 ? (
-          <>
-            <label htmlFor="topbar-active-campaign" className="sr-only">
-              Selecionar campanha ativa
-            </label>
-            <select
-              id="topbar-active-campaign"
-              value={activeCampaignId ?? ''}
-              onChange={(event) => setActiveCampaignId(event.target.value)}
-              className="max-w-[220px] bg-transparent text-xs font-serif italic text-[#c4b9a3] outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37]"
-            >
-              {campaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.id} className="bg-[#120f0d] not-italic">
-                  {campaign.nome}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : (
-          <span className="text-xs font-serif text-[#c4b9a3] italic">
-            {activeCampaign ? activeCampaign.nome : 'Nenhuma campanha'}
-          </span>
-        )}
-      </div>
+      {/* Centro: seletor de campanha ativa — só existe quando há mais de uma campanha. */}
+      {campaigns.length > 1 && (
+        <div className="hidden lg:flex items-center space-x-2 px-3 py-1 border border-[#3a2c1d] bg-black/40 rounded-sm">
+          <Sparkles className="w-3.5 h-3.5 text-[#a88d61]" aria-hidden="true" />
+          <label htmlFor="topbar-active-campaign" className="sr-only">
+            Selecionar campanha ativa
+          </label>
+          <select
+            id="topbar-active-campaign"
+            value={activeCampaignId ?? ''}
+            onChange={(event) => setActiveCampaignId(event.target.value)}
+            className="max-w-[220px] bg-transparent text-xs font-serif italic text-[#c4b9a3] outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37]"
+          >
+            {campaigns.map((campaign) => (
+              <option key={campaign.id} value={campaign.id} className="bg-[#120f0d] not-italic">
+                {campaign.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Direita: Perfil */}
       <div className="flex items-center space-x-2.5 sm:space-x-3">
