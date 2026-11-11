@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Award,
   Check,
@@ -20,7 +20,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { fichaService } from '../services/fichaService';
-import { cacheKeys } from '../services/cacheKeys';
+import { cacheKeyPrefixes, cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
 import type { FichaCompleta } from '../types';
@@ -34,10 +34,24 @@ type CharacterPermissions = {
 
 type PermissionMap = Record<string, CharacterPermissions>;
 
+type CharacterStatus = {
+  vidaAtual: number;
+  vidaMax: number;
+  vigorAtual: number;
+  vigorMax: number;
+  north: number;
+};
+
 type CharacterRow = {
   id: string;
   nome: string;
-  ficha: FichaCompleta;
+  nivel: number;
+  xp: number;
+  dinheiro: number;
+  edicaoLiberada: boolean;
+  acessoMercadoEpico: boolean;
+  /** Vitais do motor; quando ainda não chegaram, vêm do último salvamento. */
+  status: CharacterStatus | null;
 };
 
 export const PainelMestrePage: React.FC = () => {
@@ -58,54 +72,73 @@ export const PainelMestrePage: React.FC = () => {
   const [isSavingMoney, setIsSavingMoney] = useState(false);
   const [savingPermissionId, setSavingPermissionId] = useState<string | null>(null);
 
-  const charactersQuery = useAsyncData(async () => {
-    if (!tenantId) return [];
-    const list = await fichaService.getListaPersonagens();
-    const fichasPorPersonagem = await fichaService.getFichasDoAcervo();
-    const loadedRows = list.map((character) => {
-      try {
-        const ficha = fichasPorPersonagem.get(character.id) ?? fichaService.createBlankFicha(character.id, character.nome);
-        return {
-          id: character.id,
-          nome: ficha.identidade.nome_personagem?.trim() || character.nome || 'Aventureiro',
-          ficha: fichaService.calcularEngine(ficha),
-        } satisfies CharacterRow;
-      } catch {
-        return null;
-      }
-    });
-    return loadedRows.filter((row): row is CharacterRow => row !== null);
-  }, [tenantId], {
-    cacheKey: cacheKeys.mestreFichas(tenantId),
-    enabled: isMaster && Boolean(tenantId),
-  });
-  const characters = charactersQuery.data ?? [];
-  const isLoading = charactersQuery.isLoading;
-  const loadError = charactersQuery.error
+  const resumoQuery = useAsyncData(
+    () => (tenantId ? fichaService.getResumoDaMesa() : Promise.resolve([])),
+    [tenantId],
+    { cacheKey: cacheKeys.mestreResumo(tenantId), enabled: isMaster && Boolean(tenantId) }
+  );
+
+  const detalheQuery = useAsyncData(
+    () => (tenantId ? fichaService.getMesaCompleta() : Promise.resolve(new Map<string, FichaCompleta>())),
+    [tenantId],
+    { cacheKey: cacheKeys.mestreFichas(tenantId), enabled: isMaster && Boolean(tenantId) }
+  );
+
+  const mesaResumo = resumoQuery.data ?? [];
+  const mesaCompleta = detalheQuery.data;
+
+  const characters = useMemo<CharacterRow[]>(() => mesaResumo.map((item) => {
+    const ficha = mesaCompleta?.get(item.id) ?? null;
+    return {
+      id: item.id,
+      nome: ficha?.identidade.nome_personagem?.trim() || item.nome,
+      nivel: Number(ficha?.identidade.nivel ?? item.nivel) || 1,
+      xp: Number(ficha?.identidade.xp ?? item.xp) || 0,
+      dinheiro: Math.max(0, Number(ficha?.recursos.dinheiro ?? item.dinheiro) || 0),
+      edicaoLiberada: ficha?.identidade.edicao_liberada ?? item.edicaoLiberada,
+      acessoMercadoEpico: ficha?.identidade.acesso_mercado_epico ?? item.acessoMercadoEpico,
+      status: ficha
+        ? {
+            vidaAtual: Number(ficha.status.vida_atual) || 0,
+            vidaMax: Number(ficha.status.vida_max) || 0,
+            vigorAtual: Number(ficha.status.vigor_atual) || 0,
+            vigorMax: Number(ficha.status.vigor_max) || 0,
+            north: Number(ficha.status.north) || 0,
+          }
+        : item.status,
+    } satisfies CharacterRow;
+  }), [mesaResumo, mesaCompleta]);
+
+  // O esqueleto só aparece quando não há nada para mostrar (antes, qualquer carregamento cobria a tabela inteira).
+  const isLoading = resumoQuery.isLoading && detalheQuery.isLoading;
+  const loadError = resumoQuery.error || detalheQuery.error
     ? 'Não foi possível carregar as fichas da mesa. Verifique sua conexão e tente novamente.'
     : '';
 
-  useEffect(() => {
-    if (!charactersQuery.data) return;
-    setPermissions(Object.fromEntries(charactersQuery.data.map((row) => [row.id, {
-      edicaoLiberada: row.ficha.identidade.edicao_liberada ?? true,
-      acessoMercadoEpico: row.ficha.identidade.acesso_mercado_epico ?? false,
-    }])));
-  }, [charactersQuery.data]);
-
   const refreshCharacters = () => {
     setStatusMessage('');
-    charactersQuery.reload();
+    resumoQuery.reload();
+    detalheQuery.reload();
   };
 
   const invalidateCharacterCaches = () => {
-    invalidateAsyncDataCache(cacheKeys.mestreFichas(tenantId));
+    invalidateAsyncDataCache(cacheKeyPrefixes.mestreFichas);
     invalidateAsyncDataCache(cacheKeys.personagensResumo(tenantId));
   };
 
+  const seedPermissoes = characters.map((row) => `${row.id}:${row.edicaoLiberada}:${row.acessoMercadoEpico}`).join('|');
+
+  useEffect(() => {
+    setPermissions(Object.fromEntries(characters.map((row) => [row.id, {
+      edicaoLiberada: row.edicaoLiberada,
+      acessoMercadoEpico: row.acessoMercadoEpico,
+    }])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedPermissoes]);
+
   const getPermissions = (character: CharacterRow): CharacterPermissions => ({
-    edicaoLiberada: permissions[character.id]?.edicaoLiberada ?? character.ficha.identidade.edicao_liberada ?? true,
-    acessoMercadoEpico: permissions[character.id]?.acessoMercadoEpico ?? character.ficha.identidade.acesso_mercado_epico ?? false,
+    edicaoLiberada: permissions[character.id]?.edicaoLiberada ?? character.edicaoLiberada,
+    acessoMercadoEpico: permissions[character.id]?.acessoMercadoEpico ?? character.acessoMercadoEpico,
   });
 
   const updatePermission = (character: CharacterRow, field: PermissionField, value: boolean) => {
@@ -123,8 +156,8 @@ export const PainelMestrePage: React.FC = () => {
       await Promise.all(characters.map(async (character) => {
         const nextPermission = permissions[character.id] ?? getPermissions(character);
         const currentPermission = {
-          edicaoLiberada: character.ficha.identidade.edicao_liberada ?? true,
-          acessoMercadoEpico: character.ficha.identidade.acesso_mercado_epico ?? false,
+          edicaoLiberada: character.edicaoLiberada,
+          acessoMercadoEpico: character.acessoMercadoEpico,
         };
         if (
           currentPermission.edicaoLiberada === nextPermission.edicaoLiberada &&
@@ -343,23 +376,22 @@ export const PainelMestrePage: React.FC = () => {
                     </td>
                   </tr>
                 ) : characters.map((character) => {
-                  const { ficha } = character;
                   const characterPermissions = getPermissions(character);
                   return (
                     <tr key={character.id} className="transition-colors hover:bg-[#24180e]">
                       <th scope="row" className="px-4 py-3 font-semibold text-[#e6ddc5]">{character.nome}</th>
-                      <td className="whitespace-nowrap px-3 py-3 text-[#d2a85f]">{ficha.status.vida_atual} <span className="text-[#88745a]">/ {ficha.status.vida_max}</span></td>
-                      <td className="whitespace-nowrap px-3 py-3 text-[#d2a85f]">{ficha.status.vigor_atual} <span className="text-[#88745a]">/ {ficha.status.vigor_max}</span></td>
-                      <td className="px-3 py-3 text-[#e0c98e]">{ficha.status.north}</td>
-                      <td className="px-3 py-3 text-[#e0c98e]">{ficha.identidade.nivel}</td>
-                      <td className="px-3 py-3 text-[#c4b9a3]">{ficha.identidade.xp}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-[#d2a85f]">{character.status ? <>{character.status.vidaAtual} <span className="text-[#88745a]">/ {character.status.vidaMax}</span></> : <Skeleton className="h-4 w-16" />}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-[#d2a85f]">{character.status ? <>{character.status.vigorAtual} <span className="text-[#88745a]">/ {character.status.vigorMax}</span></> : <Skeleton className="h-4 w-16" />}</td>
+                      <td className="px-3 py-3 text-[#e0c98e]">{character.status ? character.status.north : <Skeleton className="h-4 w-10" />}</td>
+                      <td className="px-3 py-3 text-[#e0c98e]">{character.nivel}</td>
+                      <td className="px-3 py-3 text-[#c4b9a3]">{character.xp}</td>
                       <td className="px-3 py-3">
                         <span className={`inline-flex items-center gap-1.5 rounded-xs border px-2 py-1 text-[10px] font-cinzel uppercase ${characterPermissions.edicaoLiberada ? 'border-[#80652e] bg-[#33250f] text-[#e7c56d]' : 'border-[#52382b] bg-[#1a110d] text-[#9b8370]'}`}>
                           {characterPermissions.edicaoLiberada ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                           {characterPermissions.edicaoLiberada ? 'Sim' : 'Não'}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-[#d8b86b]">{Math.max(0, Number(ficha.recursos.dinheiro) || 0)} ◈</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-[#d8b86b]">{character.dinheiro} ◈</td>
                       <td className="px-3 py-3 text-right">
                         <button
                           type="button"
@@ -379,7 +411,11 @@ export const PainelMestrePage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#917b60]">
-            <span>{characters.length} {characters.length === 1 ? 'ficha disponível' : 'fichas disponíveis'} · dados locais da campanha</span>
+            <span>
+              {isLoading
+                ? 'Consultando os pergaminhos da mesa…'
+                : `${characters.length} ${characters.length === 1 ? 'ficha disponível' : 'fichas disponíveis'} · dados locais da campanha`}
+            </span>
             <button type="button" onClick={refreshCharacters} className="inline-flex items-center gap-1.5 rounded-xs border border-transparent px-2 py-1 font-cinzel uppercase tracking-wider transition-colors hover:border-[#5a4225] hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"><RefreshCw className="h-3.5 w-3.5" /> Atualizar tabela</button>
           </div>
         </div>
@@ -414,7 +450,7 @@ export const PainelMestrePage: React.FC = () => {
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <div>
                             <p className="font-cinzel text-sm uppercase text-[#e6ddc5]">{character.nome}</p>
-                            <p className="font-serif text-xs text-[#8f795e]">Nível {character.ficha.identidade.nivel}</p>
+                            <p className="font-serif text-xs text-[#8f795e]">Nível {character.nivel}</p>
                           </div>
                           {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-[#c6a66d]" aria-label="Salvando permissão" />}
                         </div>

@@ -9,6 +9,17 @@ export interface FichaScope {
   userId: string;
 }
 
+export interface MesaResumo {
+  id: string;
+  nome: string;
+  nivel: number;
+  xp: number;
+  dinheiro: number;
+  edicaoLiberada: boolean;
+  acessoMercadoEpico: boolean;
+  status: { vidaAtual: number; vidaMax: number; vigorAtual: number; vigorMax: number; north: number } | null;
+}
+
 function currentScope(): FichaScope | null {
   const session = useSessionStore.getState().session;
   if (!session?.user.tenant_id) return null;
@@ -56,7 +67,15 @@ interface FichaResumoRow {
   historia: string | null;
   raca: string | null;
   nivel: string | null;
+  xp: string | null;
   dinheiro: string | null;
+  edicao_liberada: boolean;
+  acesso_mercado_epico: boolean;
+  vida_atual: string | null;
+  vida_max: string | null;
+  vigor_atual: string | null;
+  vigor_max: string | null;
+  north: string | null;
 }
 
 interface AcervoResumo {
@@ -126,7 +145,7 @@ async function acervoResumoDoCliente(tenantId: string): Promise<AcervoResumo> {
       .order('id', { ascending: true }),
     supabase
       .from('fichas')
-      .select('character_id, nome_personagem:dados->identidade->>nome_personagem, imagem_url:dados->identidade->>imagem_url, historia:dados->identidade->>historia, raca:dados->identidade->>raca, nivel:dados->identidade->>nivel, dinheiro:dados->recursos->>dinheiro')
+      .select('character_id, edicao_liberada, acesso_mercado_epico, nome_personagem:dados->identidade->>nome_personagem, imagem_url:dados->identidade->>imagem_url, historia:dados->identidade->>historia, raca:dados->identidade->>raca, nivel:dados->identidade->>nivel, xp:dados->identidade->>xp, dinheiro:dados->recursos->>dinheiro, vida_atual:dados->status->>vida_atual, vida_max:dados->status->>vida_max, vigor_atual:dados->status->>vigor_atual, vigor_max:dados->status->>vigor_max, north:dados->status->>north')
       .eq('tenant_id', tenantId),
   ]);
   if (charactersResult.error) throw new Error('Não foi possível carregar o acervo: ' + charactersResult.error.message);
@@ -239,6 +258,63 @@ export const fichaService = {
         dinheiro: Number(ficha?.dinheiro) || 0,
       };
     });
+  },
+
+  /** Resumo leve da mesa para o Painel do Mestre: uma consulta pequena, sem o jsonb completo. */
+  getResumoDaMesa: async (): Promise<MesaResumo[]> => {
+    const scope = currentScope();
+    if (!scope) return [];
+    const base = await acervoResumoDoCliente(scope.tenantId);
+    return base.characters.map((character) => {
+      const ficha = base.fichas.find((row) => row.character_id === character.id);
+      const nome = ficha?.nome_personagem?.trim() || character.nome || 'Aventureiro';
+      const numeros = [
+        ficha?.vida_atual ?? null,
+        ficha?.vida_max ?? null,
+        ficha?.vigor_atual ?? null,
+        ficha?.vigor_max ?? null,
+        ficha?.north ?? null,
+      ];
+      const temStatus = numeros.every((valor) => valor !== null);
+      return {
+        id: character.id,
+        nome,
+        nivel: Number(ficha?.nivel) || 1,
+        xp: Number(ficha?.xp) || 0,
+        dinheiro: Number(ficha?.dinheiro) || 0,
+        edicaoLiberada: ficha?.edicao_liberada ?? true,
+        acessoMercadoEpico: ficha?.acesso_mercado_epico ?? false,
+        status: temStatus
+          ? {
+              vidaAtual: Number(ficha?.vida_atual) || 0,
+              vidaMax: Number(ficha?.vida_max) || 0,
+              vigorAtual: Number(ficha?.vigor_atual) || 0,
+              vigorMax: Number(ficha?.vigor_max) || 0,
+              north: Number(ficha?.north) || 0,
+            }
+          : null,
+      } satisfies MesaResumo;
+    });
+  },
+
+  /**
+   * Mesa completa com o motor de cálculo aplicado — usado em segundo plano pelo
+   * Painel do Mestre para revalidar os vitais. Fica no serviço para o
+   * pré-aquecimento usar exatamente o mesmo caminho.
+   */
+  getMesaCompleta: async (): Promise<Map<string, FichaCompleta>> => {
+    const list = await fichaService.getListaPersonagens();
+    const fichasPorPersonagem = await fichaService.getFichasDoAcervo();
+    const resultado = new Map<string, FichaCompleta>();
+    list.forEach((character) => {
+      try {
+        const base = fichasPorPersonagem.get(character.id) ?? fichaService.createBlankFicha(character.id, character.nome);
+        resultado.set(character.id, fichaService.calcularEngine(base));
+      } catch {
+        // Ficha inválida é ignorada; a linha continua visível com os dados do resumo.
+      }
+    });
+    return resultado;
   },
 
   /** Fichas completas do cliente reaproveitando o acervo já carregado. */
@@ -498,7 +574,7 @@ export const fichaService = {
 
   // Motor de Automação Angarden (Engine de Cálculos)
   calcularEngine: (ficha: FichaCompleta): FichaCompleta => {
-    const clone: FichaCompleta = JSON.parse(JSON.stringify(ficha));
+    const clone: FichaCompleta = structuredClone(ficha);
 
     const getVal = (attr: { valor_base: number; extra: number; perda: number }) =>
       (Number(attr.valor_base) || 0) + (Number(attr.extra) || 0) - (Number(attr.perda) || 0);
