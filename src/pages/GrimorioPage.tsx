@@ -51,6 +51,8 @@ import { fichaService } from '../services/fichaService';
 import { cacheKeys } from '../services/cacheKeys';
 import { withTimeout } from '../utils/withTimeout';
 import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
+import { agendarEmOciosidade } from '../utils/idleCallback';
+import { precarregarImagem } from '../utils/precarregarImagem';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
@@ -1023,6 +1025,14 @@ interface BookViewProps {
 const BookView = ({ school, volume, spells, allBookSpells, page, totalPages, onPageChange, learnedIds, canManageCatalog, canManageVisibility, hiddenSpellIds, onOpenSpell, onToggleLearned, onEdit, onToggleHidden, onDelete }: BookViewProps) => {
   const leftPageSpells = spells.slice(0, 5);
   const rightPageSpells = spells.slice(5, 10);
+  // As primeiras magias do fólio ficam com a arte pronta para quem abre sem passar o mouse (toque/teclado).
+  const alvosPreCarregamento = spells.slice(0, 3).map((spell) => spell.image ?? '').filter(Boolean).join('|');
+
+  useEffect(() => {
+    const urls = alvosPreCarregamento.split('|').filter(Boolean);
+    if (!urls.length) return;
+    return agendarEmOciosidade(() => urls.forEach((url) => precarregarImagem(url)));
+  }, [alvosPreCarregamento]);
 
   const renderPage = (pageSpells: GrimorioSpell[], pageLabel: string, pageNumber: string, headingId: string) => (
     <section aria-labelledby={headingId} className="relative flex min-w-0 flex-col bg-gradient-to-br from-[#e1cc9a] via-[#d4bb84] to-[#b89862] p-4 text-[#382313] sm:p-5 lg:p-6">

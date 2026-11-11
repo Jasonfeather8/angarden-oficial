@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BookMarked,
   BookOpen,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { grimorioSchools, grimorioVolumes, GrimorioSpell } from '../mocks/grimorio';
 import { urlMiniatura } from '../services/mediaService';
+import { precarregarImagem } from '../utils/precarregarImagem';
 import { Portal } from './ui/Portal';
 
 type VisualKind = GrimorioSpell['visual'];
@@ -52,19 +53,38 @@ const visualTone: Record<VisualKind, string> = {
   death: 'from-zinc-950 via-rose-950/60 to-[#1b1017] text-rose-300',
 };
 
-export const MagicVisual = ({ spell, large = false }: { spell: GrimorioSpell; large?: boolean }) => (
-  <div
-    className={`relative ${large ? 'mx-auto h-[214px] w-full max-w-[174px] sm:h-[250px] sm:max-w-[196px] lg:h-[286px] lg:max-w-[220px]' : 'h-20 w-20'} flex shrink-0 items-center justify-center ${large ? 'border-2' : 'overflow-hidden border'} border-[#765b36] bg-gradient-to-br ${visualTone[spell.visual]}`}
-    role="img"
-    aria-label={`Visual arcano de ${spell.name || '-'}`}
-  >
-    {spell.image && <img src={large ? spell.image : urlMiniatura(spell.image)} alt={`Imagem da magia ${spell.name || '-'}`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" />}
-    {large && <div className="pointer-events-none absolute inset-1.5 border border-current opacity-30 sm:inset-2.5" aria-hidden="true" />}
-    {!spell.image && <CircleDot className="absolute h-[78%] w-[78%] opacity-20" strokeWidth={1} />}
-    {!spell.image && <div className="absolute h-[55%] w-[55%] rotate-45 border border-current opacity-30" />}
-    {!spell.image && <div className="relative">{visualIcon(spell.visual, large ? 48 : 28)}</div>}
-  </div>
-);
+export const MagicVisual = ({ spell, large = false }: { spell: GrimorioSpell; large?: boolean }) => {
+  // Guarda a URL já carregada (e não um booleano) para o estado não vazar
+  // quando o mesmo modal passa a exibir outra magia.
+  const [urlCarregada, setUrlCarregada] = useState<string | null>(null);
+  const arteGrandeCarregada = Boolean(large && spell.image) && urlCarregada === spell.image;
+
+  return (
+    <div
+      className={`relative ${large ? 'mx-auto h-[214px] w-full max-w-[174px] sm:h-[250px] sm:max-w-[196px] lg:h-[286px] lg:max-w-[220px]' : 'h-20 w-20'} flex shrink-0 items-center justify-center ${large ? 'border-2' : 'overflow-hidden border'} border-[#765b36] bg-gradient-to-br ${visualTone[spell.visual]}`}
+      role="img"
+      aria-label={`Visual arcano de ${spell.name || '-'}`}
+    >
+      {/* Miniatura já em cache pela lista: preenche a moldura enquanto a arte grande chega. */}
+      {large && spell.image && <img src={urlMiniatura(spell.image)} alt="" className="absolute inset-0 h-full w-full object-cover" loading="eager" decoding="async" />}
+      {spell.image && (
+        <img
+          src={large ? spell.image : urlMiniatura(spell.image)}
+          alt={`Imagem da magia ${spell.name || '-'}`}
+          className={`absolute inset-0 h-full w-full object-cover ${large ? `transition-opacity duration-300 ${arteGrandeCarregada ? 'opacity-100' : 'opacity-0'}` : ''}`}
+          loading={large ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={large ? 'high' : undefined}
+          onLoad={large ? () => setUrlCarregada(spell.image ?? null) : undefined}
+        />
+      )}
+      {large && <div className="pointer-events-none absolute inset-1.5 border border-current opacity-30 sm:inset-2.5" aria-hidden="true" />}
+      {!spell.image && <CircleDot className="absolute h-[78%] w-[78%] opacity-20" strokeWidth={1} />}
+      {!spell.image && <div className="absolute h-[55%] w-[55%] rotate-45 border border-current opacity-30" />}
+      {!spell.image && <div className="relative">{visualIcon(spell.visual, large ? 48 : 28)}</div>}
+    </div>
+  );
+};
 
 export interface SpellCardProps {
   key?: React.Key;
@@ -80,13 +100,19 @@ export interface SpellCardProps {
   onDelete?: () => void;
 }
 
-export const SpellCard = ({ spell, learned, hidden = false, canManage = false, canToggleHidden = false, onOpen, onToggleLearned, onEdit, onToggleHidden, onDelete }: SpellCardProps) => (
-  <article className={`group relative border bg-[#17100b]/90 transition hover:border-[#9d7745] ${learned ? 'border-[#9b7c43]' : 'border-[#3f2e1c]'}`}>
+export const SpellCard = ({ spell, learned, hidden = false, canManage = false, canToggleHidden = false, onOpen, onToggleLearned, onEdit, onToggleHidden, onDelete }: SpellCardProps) => {
+  // O modal mostra a arte original; pedir já no hover/foco evita a moldura vazia ao abrir.
+  const precarregarArte = () => precarregarImagem(spell.image);
+
+  return (
+  <article onMouseEnter={precarregarArte} className={`group relative border bg-[#17100b]/90 transition hover:border-[#9d7745] ${learned ? 'border-[#9b7c43]' : 'border-[#3f2e1c]'}`}>
     <div className="flex w-full gap-3 p-3 sm:gap-4 sm:p-4">
       <div className="flex w-20 shrink-0 flex-col gap-2">
         <button
           type="button"
           onClick={onOpen}
+          onFocus={precarregarArte}
+          onPointerDown={precarregarArte}
           aria-label={`Abrir detalhes de ${spell.name || '-'}`}
           className="rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] focus-visible:outline-offset-2"
         >
@@ -110,7 +136,7 @@ export const SpellCard = ({ spell, learned, hidden = false, canManage = false, c
           {canToggleHidden && <button type="button" onClick={onToggleHidden} aria-label={hidden ? `Mostrar ${spell.name || 'magia'}` : `Ocultar ${spell.name || 'magia'}`} title={hidden ? 'Mostrar magia' : 'Ocultar magia'} className="border border-[#49351f] p-1 text-[#b49768] transition hover:border-[#c6a15b] hover:text-[#f1d994] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</button>}
         </div>}
       </div>
-      <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] focus-visible:outline-offset-[-2px]">
+      <button type="button" onClick={onOpen} onFocus={precarregarArte} onPointerDown={precarregarArte} className="min-w-0 flex-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] focus-visible:outline-offset-[-2px]">
         <span className="mb-1 flex flex-wrap items-start justify-between gap-2">
           <span className="font-cinzel text-sm font-bold tracking-wide text-[#eadfc8] group-hover:text-[#f3d98b]">{spell.name || '-'}</span>
           <span className="flex flex-wrap items-center justify-end gap-1"><span className="border border-[#80643c] bg-[#2c2114] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#d3b56f]">{spell.level || '-'}</span>{canToggleHidden && hidden && <span className="border border-[#9b7c43] bg-[#5a4225]/40 px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#f1d994]">Oculta</span>}</span>
@@ -124,7 +150,8 @@ export const SpellCard = ({ spell, learned, hidden = false, canManage = false, c
       </button>
     </div>
   </article>
-);
+  );
+};
 
 interface SpellDetailsModalProps {
   spell: GrimorioSpell;
@@ -158,7 +185,7 @@ export const SpellDetailsModal = ({ spell, learned, canManage = false, canToggle
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050403]/90 p-2 backdrop-blur-sm sm:p-5 text-[#dcd1ba]" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050403]/90 p-2 sm:p-5 text-[#dcd1ba]" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="spell-details-title" className="relative flex max-h-[calc(100dvh-0.75rem)] w-full max-w-[820px] flex-col overflow-visible border-2 border-[#76552f] bg-[#b8945c] p-1 text-[#3b2715] shadow-[0_0_50px_rgba(0,0,0,0.95)] sm:max-h-[calc(100dvh-2rem)] sm:p-1.5" onClick={(event) => event.stopPropagation()}>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(246,220,157,0.44)_0%,transparent_58%),repeating-linear-gradient(115deg,rgba(90,54,23,0.11)_0px,rgba(90,54,23,0.11)_1px,transparent_1px,transparent_7px),repeating-linear-gradient(8deg,rgba(255,244,196,0.12)_0px,rgba(255,244,196,0.12)_2px,transparent_2px,transparent_13px)] opacity-90" aria-hidden="true" />
         <div className="pointer-events-none absolute -left-3 top-5 bottom-6 w-5 bg-[#d7b979] shadow-[2px_2px_5px_rgba(52,31,14,0.4)] [clip-path:polygon(0_0,100%_4%,72%_11%,100%_20%,66%_29%,100%_39%,70%_49%,100%_59%,64%_69%,100%_80%,68%_90%,100%_100%,0_94%)]" aria-hidden="true" />
