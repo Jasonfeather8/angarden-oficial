@@ -25,6 +25,7 @@ import {
   Trophy,
   UserPlus,
   Users,
+  Wand2,
 } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
 import { CardAventureiroMesa } from '../components/CardAventureiroMesa';
@@ -36,6 +37,8 @@ import { ToolbarButton } from '../components/ui/ToolbarButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
+import { BarraProgresso } from '../components/ui/BarraProgresso';
+import { grimorioAllSchools } from '../mocks/grimorio';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthorization } from '../hooks/useAuthorization';
@@ -45,7 +48,7 @@ import { scheduleService } from '../services/scheduleService';
 import { tenantService } from '../services/tenantService';
 import { fichaService } from '../services/fichaService';
 import { profileService } from '../services/profileService';
-import { contarMagias } from '../services/grimorioService';
+import { contarMagias, listarProgressoArcano } from '../services/grimorioService';
 import { mercadoService } from '../services/mercadoService';
 import { grimorioBloqueioService } from '../services/grimorioBloqueioService';
 import type { PerfilConta } from '../types';
@@ -235,6 +238,26 @@ export const DashboardPage: React.FC = () => {
   const fichasVisiveis = useMemo(
     () => papelMestre ? mesaResumo : mesaResumo.filter((item) => item.ownerId === userId),
     [mesaResumo, papelMestre, userId]
+  );
+  const idsArcanos = useMemo(() => fichasVisiveis.map((ficha) => ficha.id).join(','), [fichasVisiveis]);
+  const arcanoQuery = useAsyncData(
+    () => listarProgressoArcano(papelMestre ? undefined : fichasVisiveis.map((ficha) => ficha.id)),
+    [tenantId, papelMestre, idsArcanos],
+    {
+      cacheKey: cacheKeys.progressoArcano(`${tenantId ?? ''}:${userId ?? ''}`),
+      enabled: Boolean(tenantId) && (papelMestre || fichasVisiveis.length > 0),
+    }
+  );
+  const progressoPorFicha = useMemo(() => {
+    const progressoMap = new Map((arcanoQuery.data ?? []).map((progresso) => [progresso.characterId, progresso]));
+    return fichasVisiveis.map((ficha) => ({
+      ...ficha,
+      progresso: progressoMap.get(ficha.id) ?? { characterId: ficha.id, aprendidas: 0, porEscola: {} as Record<string, number> },
+    })).sort((a, b) => b.progresso.aprendidas - a.progresso.aprendidas || a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [fichasVisiveis, arcanoQuery.data]);
+  const nomesPorEscola = useMemo(
+    () => new Map(grimorioAllSchools.map((escola) => [escola.id, escola.name])),
+    []
   );
   const jogadores = useMemo(
     () => (limitesQuery.data?.perfis ?? []).filter((perfil) => perfil.role !== 'admin'),
@@ -598,6 +621,58 @@ export const DashboardPage: React.FC = () => {
                       />
                     ))}
                   </div>
+                )}
+              </PainelSecao>
+
+              <PainelSecao
+                id="progresso-arcano-titulo"
+                icon={<Wand2 className="h-4 w-4" aria-hidden="true" />}
+                title="Progresso arcano"
+                hint={papelMestre ? 'magias aprendidas na mesa' : 'suas magias aprendidas'}
+                contentClassName="p-4"
+              >
+                {arcanoQuery.isLoading || resumoQuery.isLoading || catalogoQuery.isLoading ? (
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando o progresso arcano…</span>
+                    <div className="space-y-2">
+                      <Skeleton className="h-[68px] w-full" />
+                      <Skeleton className="h-[68px] w-full" />
+                    </div>
+                  </div>
+                ) : arcanoQuery.error || resumoQuery.error || catalogoQuery.error ? (
+                  <ErrorState
+                    description={arcanoQuery.error ?? resumoQuery.error ?? catalogoQuery.error ?? ''}
+                    onRetry={() => {
+                      arcanoQuery.reload();
+                      resumoQuery.reload();
+                      catalogoQuery.reload();
+                    }}
+                  />
+                ) : fichasVisiveis.length === 0 ? (
+                  <EmptyState
+                    variant="plano"
+                    icon={<Wand2 className="h-8 w-8" aria-hidden="true" />}
+                    title="Sem progresso arcano"
+                    description={papelMestre ? 'As magias aprendidas de cada ficha aparecerão aqui.' : 'Aprenda magias no Grimório para acompanhar sua evolução aqui.'}
+                  />
+                ) : (
+                  <ul className="space-y-2">
+                    {progressoPorFicha.map((ficha) => {
+                      const escolas = (Object.entries(ficha.progresso.porEscola) as Array<[string, number]>)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([id, quantidade]) => ({ nome: nomesPorEscola.get(id) ?? id, quantidade }));
+                      const textoEscolas = escolas.length === 0
+                        ? 'Nenhuma magia aprendida ainda'
+                        : `${escolas.slice(0, 3).map((escola) => `${escola.nome} ${escola.quantidade}`).join(' · ')}${escolas.length > 3 ? ` · +${escolas.length - 3} ${escolas.length - 3 === 1 ? 'escola' : 'escolas'}` : ''}`;
+                      return (
+                        <li key={ficha.id} className="rounded-xs border border-[#3e2d1d] bg-[#160f0a] px-3 py-2.5">
+                          <p className="truncate font-cinzel text-[11px] font-bold uppercase tracking-[0.12em] text-[#dcd1ba]">{ficha.nome}</p>
+                          <BarraProgresso className="mt-1.5" rotulo="Magias aprendidas" atual={ficha.progresso.aprendidas} max={catalogoQuery.data?.magias ?? 0} limiarCritico={0} />
+                          <span className="mt-1.5 block font-serif text-[11px] italic text-[#8f795e]">{textoEscolas}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
               </PainelSecao>
             </div>

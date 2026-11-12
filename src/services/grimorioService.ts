@@ -8,6 +8,57 @@ import { cacheKeyPrefixes } from './cacheKeys';
 
 const invalidarContagemCatalogo = () => invalidateAsyncDataCache(cacheKeyPrefixes.catalogoDoReino);
 
+export interface ProgressoArcanoFicha {
+  characterId: string;
+  /** Conta só magias visíveis para quem consulta; porEscola é schoolId → quantidade. */
+  aprendidas: number;
+  porEscola: Record<string, number>;
+}
+
+export const listarProgressoArcano = async (characterIds?: string[]): Promise<ProgressoArcanoFicha[]> => {
+  const tenantId = useSessionStore.getState().session?.user.tenant_id ?? null;
+  if (!tenantId || characterIds?.length === 0) return [];
+
+  const consulta = supabase.from('spell_progress').select('character_id, spell_id')
+    .eq('tenant_id', tenantId).eq('learned', true);
+  const { data, error } = await withTimeout(Promise.resolve(
+    characterIds ? consulta.in('character_id', characterIds) : consulta
+  ));
+  if (error) throw new Error('Não foi possível carregar o progresso arcano: ' + error.message);
+
+  const registros = (data ?? []) as unknown as Array<{ character_id: string; spell_id: string }>;
+  if (!registros.length) return [];
+
+  const spellIds = [...new Set(registros.map((registro) => registro.spell_id))];
+  const escolasPorMagia = new Map<string, string | null>();
+  for (let index = 0; index < spellIds.length; index += 200) {
+    const lote = spellIds.slice(index, index + 200);
+    const { data: magias, error: erroMagias } = await withTimeout(Promise.resolve(
+      supabase.from('grimorio_spells').select('id, escola').in('id', lote)
+    ));
+    if (erroMagias) throw new Error('Não foi possível carregar o progresso arcano: ' + erroMagias.message);
+    for (const magia of (magias ?? []) as unknown as Array<{ id: string; escola: string | null }>) {
+      escolasPorMagia.set(magia.id, magia.escola);
+    }
+  }
+
+  const progressoPorFicha = new Map<string, ProgressoArcanoFicha>();
+  for (const registro of registros) {
+    if (!escolasPorMagia.has(registro.spell_id)) continue;
+    const progresso = progressoPorFicha.get(registro.character_id) ?? {
+      characterId: registro.character_id,
+      aprendidas: 0,
+      porEscola: {},
+    };
+    progresso.aprendidas += 1;
+    const escola = escolasPorMagia.get(registro.spell_id);
+    if (escola) progresso.porEscola[escola] = (progresso.porEscola[escola] ?? 0) + 1;
+    progressoPorFicha.set(registro.character_id, progresso);
+  }
+  // O Mestre consulta a mesa inteira; o Jogador passa apenas as próprias fichas.
+  return [...progressoPorFicha.values()];
+};
+
 async function resolveTenantId(characterId: string): Promise<string> {
   const sessionTenantId = useSessionStore.getState().session?.user.tenant_id;
   if (sessionTenantId) return sessionTenantId;
@@ -62,6 +113,7 @@ export const setLearnedSpell = async (characterId: string, spellId: string, lear
       ));
     if (error) throw new Error(error.message);
     invalidarCacheMagiasAprendidas(characterId);
+    invalidateAsyncDataCache(cacheKeyPrefixes.progressoArcano);
   } catch (error) {
     throw new Error('Não foi possível atualizar a magia aprendida: ' + (error instanceof Error ? error.message : String(error)));
   }
