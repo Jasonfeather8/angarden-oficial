@@ -1,0 +1,1 @@
+create index if not exists library_items_busca_idx on public.library_items using btree (busca)

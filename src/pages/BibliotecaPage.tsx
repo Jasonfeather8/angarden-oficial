@@ -87,7 +87,7 @@ export const BibliotecaPage: React.FC = () => {
           <div className="flex flex-col gap-3 border-b border-[#3a2c1d] pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">
-                Acervo da campanha
+                Acervo de Angarden
               </p>
               <p className="mt-1 max-w-2xl font-serif text-sm text-[#a99c84]">
                 Escolha um tomo para consultar suas regras e referências durante a aventura.
@@ -106,7 +106,7 @@ export const BibliotecaPage: React.FC = () => {
             <EmptyState
               variant="plano"
               title="Acervo vazio"
-              description="Nenhum manual foi catalogado para esta campanha até o momento."
+              description="Nenhum manual foi catalogado no acervo até o momento."
             />
           ) : (
             <>

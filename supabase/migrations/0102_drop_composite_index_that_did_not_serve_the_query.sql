@@ -1,0 +1,1 @@
+drop index if exists public.library_items_categoria_busca_idx
