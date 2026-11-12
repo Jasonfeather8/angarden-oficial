@@ -17,6 +17,7 @@ export const cacheKeys = {
   cliente: (tenantId?: string | null) => `cliente:${tenantId ?? ''}`,
   proximaSessao: (tenantId?: string | null) => `proxima-sessao:${tenantId ?? ''}`,
   catalogoDoReino: (escopo?: string | null) => `catalogo-reino:${escopo ?? ''}`,
+  mercadoNovidades: () => 'mercado-novidades',
   historicoXp: (escopo?: string | null) => `historico-xp:${escopo ?? ''}`,
   progressoArcano: (escopo?: string | null) => `progresso-arcano:${escopo ?? ''}`,
 };
@@ -27,6 +28,7 @@ export const cacheKeyPrefixes = {
   mestreFichas: 'mestre-fichas:',
   grimorioBloqueios: 'grimorio-bloqueios:',
   catalogoDoReino: 'catalogo-reino:',
+  mercadoNovidades: 'mercado-novidades',
   historicoXp: 'historico-xp:',
   progressoArcano: 'progresso-arcano:',
 };

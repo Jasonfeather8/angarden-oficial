@@ -27,6 +27,13 @@ type MarketRow = {
   dados: Record<string, unknown> | null;
 };
 
+type NovidadeRow = MarketRow & { created_at: string };
+
+export interface NovidadeMercado {
+  item: MercadoItem;
+  criadoEm: string;
+}
+
 function toRow(item: MercadoItem) {
   const dados = Object.fromEntries(
     CAMPOS_EXTRA.flatMap((campo) => item[campo] !== undefined ? [[campo, item[campo]]] : [])
@@ -99,10 +106,25 @@ export async function contarItens(): Promise<number> {
   return count ?? 0;
 }
 
+export async function listarNovidades(limite = 6): Promise<NovidadeMercado[]> {
+  const { data, error } = await supabase
+    .from('market_items')
+    .select(`${COLUNAS_LISTAGEM}, created_at`)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: true })
+    .limit(limite);
+  if (error) throw new Error('Não foi possível carregar as novidades do mercado: ' + error.message);
+  return ((data ?? []) as unknown as NovidadeRow[]).map((row) => ({
+    item: fromRow(row),
+    criadoEm: row.created_at,
+  }));
+}
+
 function limparCaches(): void {
   lookupItens.clear();
   catalogoPorCategoria.clear();
   invalidateAsyncDataCache(cacheKeyPrefixes.catalogoDoReino);
+  invalidateAsyncDataCache(cacheKeyPrefixes.mercadoNovidades);
 }
 
 function valorPostgrest(value: string): string {
@@ -278,6 +300,7 @@ async function upsertMercadoria(item: MercadoItem, operation: 'criar' | 'atualiz
 
 export const mercadoService = {
   listarItens,
+  listarNovidades,
   contarItens,
   getItensPorCategoria,
   limparCaches,

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS market_items_created_idx ON public.market_items (created_at DESC, id)
