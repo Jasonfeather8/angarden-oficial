@@ -130,7 +130,7 @@ const formatCountdown = (milliseconds: number) => {
 const CountdownUnit: React.FC<{ value: number; label: string }> = ({ value, label }) => (
   <div className="min-w-[62px] rounded-xs border border-[#5a4225] bg-[#100a06] px-2.5 py-2.5 text-center">
     <div className="font-cinzel text-2xl font-bold leading-none text-[#f0c265]">{String(value).padStart(2, '0')}</div>
-    <div className="mt-1 font-cinzel text-[8px] uppercase tracking-wider text-[#a88d61]">{label}</div>
+    <div className="mt-1 font-cinzel text-[9px] uppercase tracking-wider text-[#a88d61]">{label}</div>
   </div>
 );
 
@@ -138,15 +138,22 @@ const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    const alvo = Date.parse(dataHora);
+    if (alvo <= Date.now()) return;
+
+    const intervalId = window.setInterval(() => {
+      if (alvo <= Date.now()) window.clearInterval(intervalId);
+      setNow(Date.now());
+    }, 1000);
     return () => window.clearInterval(intervalId);
-  }, []);
+  }, [dataHora]);
 
   const countdown = formatCountdown(Date.parse(dataHora) - now);
   const hasSessionStarted = Date.parse(dataHora) <= now;
 
   return (
     <div
+      role="timer"
       aria-label="Contagem regressiva para a próxima sessão"
       className="rounded-xs border border-[#70552f] bg-[#1b120b] p-3 xl:min-w-[320px]"
     >
@@ -557,6 +564,7 @@ export const DashboardPage: React.FC = () => {
                           className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
                         >
                           <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual
+                          <span className="sr-only"> (abre em nova aba)</span>
                           <ExternalLink className="h-3 w-3" aria-hidden="true" />
                         </a>
                       )}
@@ -750,7 +758,10 @@ export const DashboardPage: React.FC = () => {
                 contentClassName="p-3.5"
               >
                 {resumoQuery.isLoading ? (
-                  <Skeleton className="h-20 w-full" />
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando o último personagem…</span>
+                    <Skeleton className="h-20 w-full" />
+                  </div>
                 ) : resumoQuery.error ? (
                   <ErrorState description={resumoQuery.error} onRetry={resumoQuery.reload} />
                 ) : continuar ? (
@@ -784,10 +795,13 @@ export const DashboardPage: React.FC = () => {
                 contentClassName="p-3.5"
               >
                 {resumoQuery.isLoading || (papelMestre ? limitesQuery.isLoading : limiteQuery.isLoading || bloqueiosQuery.isLoading) ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando as pendências…</span>
+                    <div className="space-y-2">
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
                   </div>
                 ) : erroPendencias ? (
                   <ErrorState description={erroPendencias} onRetry={recarregarPendencias} />
@@ -873,7 +887,7 @@ export const DashboardPage: React.FC = () => {
                 )}
               </PainelSecao>
 
-              <PainelSecao icon={<ScrollText className="h-4 w-4" />} title="Atalhos" contentClassName="p-2.5">
+              <PainelSecao id="atalhos-titulo" icon={<ScrollText className="h-4 w-4" />} title="Atalhos" contentClassName="p-2.5">
                 <ul className="space-y-1">
                   {atalhos.map((atalho) => (
                     <li key={atalho.id}>
