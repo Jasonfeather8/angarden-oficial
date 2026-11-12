@@ -3,6 +3,10 @@ import { GrimorioSpell } from '../mocks/grimorio';
 import { useSessionStore } from '../store/useSessionStore';
 import { withTimeout } from '../utils/withTimeout';
 import { normalizarBusca } from '../utils/normalizarBusca';
+import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
+import { cacheKeyPrefixes } from './cacheKeys';
+
+const invalidarContagemCatalogo = () => invalidateAsyncDataCache(cacheKeyPrefixes.catalogoDoReino);
 
 async function resolveTenantId(characterId: string): Promise<string> {
   const sessionTenantId = useSessionStore.getState().session?.user.tenant_id;
@@ -111,6 +115,14 @@ export const buscarMagias = async (
   };
 };
 
+export const contarMagias = async (): Promise<number> => {
+  const { count, error } = await withTimeout(Promise.resolve(
+    supabase.from('grimorio_spells').select('id', { count: 'exact', head: true })
+  ));
+  if (error) throw new Error('Não foi possível contar as magias do grimório: ' + error.message);
+  return count ?? 0;
+};
+
 export const listarMagiasPorIds = async (
   ids: string[],
 ): Promise<{ magias: GrimorioSpell[]; ocultas: string[] }> => {
@@ -163,6 +175,7 @@ export const criarMagia = async (spell: GrimorioSpell): Promise<void> => {
       created_by: useSessionStore.getState().session?.user.id ?? null,
     })));
     if (error) throw new Error(error.message);
+    invalidarContagemCatalogo();
   } catch (error) {
     throw new Error('Não foi possível criar a magia: ' + errorMessage(error));
   }
@@ -257,6 +270,7 @@ export const importarMagias = async (
   }
 
   await inserirLote();
+  invalidarContagemCatalogo();
   return { importadas, falhas };
 };
 
@@ -277,6 +291,7 @@ export const alternarOculta = async (spellId: string, oculta: boolean): Promise<
       supabase.from('grimorio_spells').update({ oculta }).eq('id', spellId)
     ));
     if (error) throw new Error(error.message);
+    invalidarContagemCatalogo();
   } catch (error) {
     throw new Error('Não foi possível alterar a visibilidade da magia: ' + errorMessage(error));
   }
@@ -288,6 +303,7 @@ export const excluirMagia = async (spellId: string): Promise<void> => {
       supabase.from('grimorio_spells').delete().eq('id', spellId)
     ));
     if (error) throw new Error(error.message);
+    invalidarContagemCatalogo();
   } catch (error) {
     throw new Error('Não foi possível excluir a magia: ' + errorMessage(error));
   }

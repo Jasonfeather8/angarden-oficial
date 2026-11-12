@@ -77,15 +77,13 @@ export async function prewarmTelasPrioritarias(tenantId: string, userId: string)
       return characters;
     });
     if (!isSessionCurrent()) return;
-    // O Painel do Mestre é restrito ao mestre; o resumo leve reaproveita o acervo já quente.
-    if (useSessionStore.getState().session?.user.role === 'mestre') {
-      await prewarmAsyncDataCache(cacheKeys.mestreResumo(tenantId), async () => {
-        if (!isSessionCurrent()) throw new Error('Escopo do acervo alterado.');
-        const resumo = await fichaService.getResumoDaMesa();
-        if (!isSessionCurrent()) throw new Error('Escopo do acervo alterado.');
-        return resumo;
-      });
-    }
+    // O resumo da mesa também atende ao dashboard; o acervo por trás já é compartilhado com personagensResumo.
+    await prewarmAsyncDataCache(cacheKeys.mestreResumo(tenantId), async () => {
+      if (!isSessionCurrent()) throw new Error('Escopo do acervo alterado.');
+      const resumo = await fichaService.getResumoDaMesa();
+      if (!isSessionCurrent()) throw new Error('Escopo do acervo alterado.');
+      return resumo;
+    });
     const characters = await fichaService.getTenantCharacters();
     if (!isSessionCurrent()) return;
     if (characters.length > 0) {

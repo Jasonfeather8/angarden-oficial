@@ -1,34 +1,53 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
+  Bookmark,
   CalendarClock,
+  CheckCircle2,
   ChevronRight,
   Clock3,
+  Coins,
   Crown,
   ExternalLink,
   FileText,
   LayoutDashboard,
   Link2,
+  ListChecks,
+  Lock,
   Pencil,
   ScrollText,
   Store,
+  Swords,
+  TrendingUp,
+  Trophy,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import { GothicButton } from '../components/GothicButton';
+import { CardAventureiroMesa } from '../components/CardAventureiroMesa';
 import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
 import { PainelSecao } from '../components/ui/PainelSecao';
+import { PlacaMetrica } from '../components/ui/PlacaMetrica';
 import { ToolbarButton } from '../components/ui/ToolbarButton';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useSessionStore } from '../store/useSessionStore';
+import { useAppStore } from '../store/useAppStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { cacheKeys } from '../services/cacheKeys';
 import { scheduleService } from '../services/scheduleService';
 import { tenantService } from '../services/tenantService';
-import { ROUTES } from '../routes/paths';
+import { fichaService } from '../services/fichaService';
+import { profileService } from '../services/profileService';
+import { contarMagias } from '../services/grimorioService';
+import { mercadoService } from '../services/mercadoService';
+import { grimorioBloqueioService } from '../services/grimorioBloqueioService';
+import type { PerfilConta } from '../types';
+import { fichaPath, ROUTES } from '../routes/paths';
 
 type SessionForm = {
   dataHora: string;
@@ -46,6 +65,9 @@ type Atalho = {
   icon: React.ReactNode;
   to: string;
 };
+
+const contar = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
+const formatarNumero = (valor: number) => new Intl.NumberFormat('pt-BR').format(valor);
 
 const fieldClassName =
   'w-full border border-[#4b3823] bg-[#0d0906] px-3 py-2.5 text-sm text-[#e6ddc5] outline-none transition-colors focus:border-[#b89558] focus:ring-1 focus:ring-[#b89558]/50';
@@ -154,12 +176,114 @@ const SessaoSkeleton: React.FC = () => (
 
 export const DashboardPage: React.FC = () => {
   const user = useSessionStore((state) => state.session?.user ?? null);
-  const { isMestre, tenantId } = useAuthorization();
+  const { isMestre, tenantId, userId, role } = useAuthorization();
+  const navigate = useNavigate();
+  const lastCharacterId = useAppStore((state) => state.lastCharacterId);
+  const papelMestre = isMestre || role === 'admin';
+
+  const resumoQuery = useAsyncData(
+    () => fichaService.getResumoDaMesa(),
+    [tenantId],
+    { cacheKey: cacheKeys.mestreResumo(tenantId), enabled: Boolean(tenantId) }
+  );
+  const limitesQuery = useAsyncData<{ perfis: PerfilConta[]; contagens: Record<string, number> }>(
+    async () => {
+      const [perfis, contagens] = await Promise.all([
+        profileService.listarDoCliente(tenantId as string),
+        fichaService.contarFichasPorJogador(),
+      ]);
+      return { perfis, contagens };
+    },
+    [tenantId],
+    { cacheKey: cacheKeys.limitesDeFichas(tenantId), enabled: papelMestre && Boolean(tenantId) }
+  );
+  const limiteQuery = useAsyncData(
+    () => userId ? profileService.getLimiteFichas(userId) : Promise.resolve(10),
+    [userId],
+    { cacheKey: cacheKeys.limiteFichasDoJogador(userId), enabled: !papelMestre && Boolean(userId) }
+  );
+  const bloqueiosQuery = useAsyncData(
+    () => grimorioBloqueioService.listar(),
+    [tenantId],
+    { cacheKey: cacheKeys.grimorioBloqueios(tenantId), enabled: Boolean(tenantId) }
+  );
+  const catalogoQuery = useAsyncData(
+    async () => {
+      const [magias, mercadorias] = await Promise.all([contarMagias(), mercadoService.contarItens()]);
+      return { magias, mercadorias };
+    },
+    [tenantId, role],
+    { cacheKey: cacheKeys.catalogoDoReino(`${tenantId ?? ''}:${role ?? ''}`), enabled: Boolean(tenantId) }
+  );
+
+  const mesaResumo = useMemo(() => resumoQuery.data ?? [], [resumoQuery.data]);
+  const fichasVisiveis = useMemo(
+    () => papelMestre ? mesaResumo : mesaResumo.filter((item) => item.ownerId === userId),
+    [mesaResumo, papelMestre, userId]
+  );
+  const jogadores = useMemo(
+    () => (limitesQuery.data?.perfis ?? []).filter((perfil) => perfil.role !== 'admin'),
+    [limitesQuery.data?.perfis]
+  );
+  const contagens = useMemo(() => limitesQuery.data?.contagens ?? {}, [limitesQuery.data?.contagens]);
+  const nomesPorJogador = useMemo(
+    () => new Map(jogadores.map((perfil) => [perfil.id, perfil.nome_completo])),
+    [jogadores]
+  );
+  const continuar = useMemo(
+    () => fichasVisiveis.find((item) => item.id === lastCharacterId) ?? (fichasVisiveis.length === 1 ? fichasVisiveis[0] : null),
+    [fichasVisiveis, lastCharacterId]
+  );
+  const partesSeladas = useMemo(() => {
+    const escolas = bloqueiosQuery.data?.escolas.length ?? 0;
+    const tomos = bloqueiosQuery.data?.volumes.length ?? 0;
+    return [escolas ? contar(escolas, 'escola', 'escolas') : '', tomos ? contar(tomos, 'tomo', 'tomos') : ''].filter(Boolean);
+  }, [bloqueiosQuery.data]);
+  const nivelMaisAlto = useMemo(() => Math.max(0, ...fichasVisiveis.map((ficha) => ficha.nivel)), [fichasVisiveis]);
+  const tesouroTotal = useMemo(() => fichasVisiveis.reduce((total, ficha) => total + ficha.dinheiro, 0), [fichasVisiveis]);
+  const pendencias = useMemo(() => {
+    const itens: Array<{ id: string; texto: string; icon: React.ReactNode; acao: string; to: string }> = [];
+    const semEdicao = fichasVisiveis.filter((ficha) => !ficha.edicaoLiberada).length;
+    if (semEdicao > 0) {
+      itens.push({
+        id: 'sem-edicao',
+        texto: papelMestre ? `${contar(semEdicao, 'ficha', 'fichas')} sem edição liberada` : `${contar(semEdicao, 'ficha sua', 'fichas suas')} sem edição liberada`,
+        icon: <Pencil className="h-3.5 w-3.5" />,
+        acao: papelMestre ? 'Ajustar permissões' : 'Ver fichas',
+        to: papelMestre ? ROUTES.painelMestre : ROUTES.personagens,
+      });
+    }
+    if (papelMestre) {
+      const noTeto = jogadores.filter((perfil) => (contagens[perfil.id] ?? 0) >= (perfil.limite_fichas ?? 10)).length;
+      const semFicha = jogadores.filter((perfil) => (contagens[perfil.id] ?? 0) === 0).length;
+      if (noTeto > 0) itens.push({ id: 'teto-fichas', texto: `${contar(noTeto, 'jogador', 'jogadores')} no teto de fichas`, icon: <Users className="h-3.5 w-3.5" />, acao: 'Ajustar limites', to: ROUTES.painelMestre });
+      if (semFicha > 0) itens.push({ id: 'sem-ficha', texto: `${contar(semFicha, 'jogador', 'jogadores')} ainda sem ficha criada`, icon: <UserPlus className="h-3.5 w-3.5" />, acao: 'Ver jogadores', to: ROUTES.painelMestre });
+    } else {
+      if (limiteQuery.data !== null && fichasVisiveis.length >= (limiteQuery.data ?? 10)) {
+        itens.push({ id: 'limite-atingido', texto: `Limite de ${contar(limiteQuery.data ?? 10, 'ficha', 'fichas')} atingido`, icon: <Users className="h-3.5 w-3.5" />, acao: 'Ver fichas', to: ROUTES.personagens });
+      }
+      if (partesSeladas.length) {
+        itens.push({ id: 'grimorio-selado', texto: `O Mestre selou ${partesSeladas.join(' e ')} do Grimório`, icon: <Lock className="h-3.5 w-3.5" />, acao: 'Ver Grimório', to: ROUTES.grimorio });
+      }
+    }
+    return itens;
+  }, [fichasVisiveis, papelMestre, jogadores, contagens, limiteQuery.data, partesSeladas]);
+  const erroPendencias = papelMestre
+    ? resumoQuery.error || limitesQuery.error
+    : resumoQuery.error || limiteQuery.error || bloqueiosQuery.error;
+  const recarregarPendencias = () => {
+    resumoQuery.reload();
+    if (papelMestre) limitesQuery.reload();
+    else {
+      limiteQuery.reload();
+      bloqueiosQuery.reload();
+    }
+  };
 
   const { data: session, isLoading: isLoadingSessao, error: erroSessao, reload: reloadSessao } = useAsyncData(
     () => scheduleService.getProximaSessao(),
-    [],
-    { cacheKey: cacheKeys.proximaSessao(user?.tenant_id) }
+    [tenantId],
+    { cacheKey: cacheKeys.proximaSessao(tenantId), enabled: Boolean(tenantId) }
   );
 
   const { data: cliente } = useAsyncData(
@@ -330,109 +454,241 @@ export const DashboardPage: React.FC = () => {
             <p className="font-serif text-xs capitalize italic text-[#8f795e]">{hoje}</p>
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <PainelSecao
-              id="proxima-sessao-titulo"
-              icon={<CalendarClock className="h-4 w-4" />}
-              title="Próxima sessão"
-              extra={
-                isMestre && session && !isLoadingSessao ? (
-                  <ToolbarButton icon={<Pencil className="h-3.5 w-3.5" />} onClick={openEditModal}>
-                    Editar sessão
-                  </ToolbarButton>
-                ) : undefined
-              }
-              contentClassName="p-4 sm:p-5"
-            >
-              {isLoadingSessao ? (
-                <div role="status" aria-live="polite">
-                  <span className="sr-only">Carregando a sessão agendada…</span>
-                  <SessaoSkeleton />
-                </div>
-              ) : erroSessao ? (
-                <ErrorState description={erroSessao} onRetry={reloadSessao} />
-              ) : session ? (
-                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-                  <div className="min-w-0">
-                    <h3 className="font-cinzel text-xl font-bold text-[#f0d79b] sm:text-2xl">{session.titulo}</h3>
-                    <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">
-                      {formatSessionDate(session.dataHora)}
-                    </p>
-                    <div className="mt-4">
-                      <p className="mb-1.5 flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
-                        <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Pauta da mesa
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+            <div className="space-y-4">
+              <PainelSecao
+                id="proxima-sessao-titulo"
+                icon={<CalendarClock className="h-4 w-4" />}
+                title="Próxima sessão"
+                extra={
+                  isMestre && session && !isLoadingSessao ? (
+                    <ToolbarButton icon={<Pencil className="h-3.5 w-3.5" />} onClick={openEditModal}>
+                      Editar sessão
+                    </ToolbarButton>
+                  ) : undefined
+                }
+                contentClassName="p-4 sm:p-5"
+              >
+                {isLoadingSessao ? (
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando a sessão agendada…</span>
+                    <SessaoSkeleton />
+                  </div>
+                ) : erroSessao ? (
+                  <ErrorState description={erroSessao} onRetry={reloadSessao} />
+                ) : session ? (
+                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                    <div className="min-w-0">
+                      <h3 className="font-cinzel text-xl font-bold text-[#f0d79b] sm:text-2xl">{session.titulo}</h3>
+                      <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">
+                        {formatSessionDate(session.dataHora)}
                       </p>
-                      <p className="font-serif text-base leading-relaxed text-[#d6c4ae]">{session.pauta}</p>
+                      <div className="mt-4">
+                        <p className="mb-1.5 flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
+                          <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Pauta da mesa
+                        </p>
+                        <p className="font-serif text-base leading-relaxed text-[#d6c4ae]">{session.pauta}</p>
+                      </div>
+                      {session.linkVtt && (
+                        <a
+                          href={session.linkVtt}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
+                        >
+                          <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      )}
                     </div>
-                    {session.linkVtt && (
-                      <a
-                        href={session.linkVtt}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
+                    <SessionCountdown dataHora={session.dataHora} />
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="min-w-0 font-serif text-sm text-[#a88d61]">
+                      {isMestre
+                        ? 'Nenhuma sessão agendada — a mesa ainda não tem contagem regressiva nem pauta.'
+                        : 'O Mestre ainda não agendou a próxima sessão. A pauta e a contagem regressiva aparecerão aqui.'}
+                    </p>
+                    {isMestre && (
+                      <ToolbarButton
+                        id="btn-agendar-nova-sessao"
+                        variant="primary"
+                        icon={<CalendarClock className="h-3.5 w-3.5" />}
+                        onClick={openScheduleModal}
                       >
-                        <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual
-                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                      </a>
+                        Agendar sessão
+                      </ToolbarButton>
                     )}
                   </div>
-                  <SessionCountdown dataHora={session.dataHora} />
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="min-w-0 font-serif text-sm text-[#a88d61]">
-                    {isMestre
-                      ? 'Nenhuma sessão agendada — a mesa ainda não tem contagem regressiva nem pauta.'
-                      : 'O Mestre ainda não agendou a próxima sessão. A pauta e a contagem regressiva aparecerão aqui.'}
-                  </p>
-                  {isMestre && (
-                    <ToolbarButton
-                      id="btn-agendar-nova-sessao"
-                      variant="primary"
-                      icon={<CalendarClock className="h-3.5 w-3.5" />}
-                      onClick={openScheduleModal}
-                    >
-                      Agendar sessão
-                    </ToolbarButton>
-                  )}
-                </div>
-              )}
-            </PainelSecao>
+                )}
+              </PainelSecao>
 
-            <PainelSecao
-              icon={<ScrollText className="h-4 w-4" />}
-              title="Atalhos"
-              contentClassName="p-2.5"
-            >
-              <ul className="space-y-1">
-                {atalhos.map((atalho) => (
-                  <li key={atalho.id}>
-                    <Link
-                      to={atalho.to}
-                      className="group flex items-center gap-3 rounded-xs border border-transparent px-2.5 py-2.5 transition-colors hover:border-[#4b3823] hover:bg-[#1b120b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xs border border-[#4b3823] bg-[#1d140c] text-[#c6a66d] transition-colors group-hover:border-[#8c6b41] group-hover:text-[#f3dfaa]"
-                      >
-                        {atalho.icon}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-cinzel text-[11px] font-bold uppercase tracking-[0.12em] text-[#dcd1ba] group-hover:text-[#f3dfaa]">
-                          {atalho.label}
-                        </span>
-                        <span className="block truncate font-serif text-[11px] italic text-[#8f795e]">{atalho.hint}</span>
-                      </span>
-                      <ChevronRight
-                        aria-hidden="true"
-                        className="h-4 w-4 shrink-0 text-[#7d6a56] transition-colors group-hover:text-[#d1a85a]"
+              <PainelSecao
+                id="companhia-titulo"
+                icon={<Users className="h-4 w-4" />}
+                title="A companhia"
+                hint={papelMestre ? `${contar(fichasVisiveis.length, 'ficha', 'fichas')} na mesa` : `${contar(fichasVisiveis.length, 'ficha sua', 'fichas suas')}`}
+                contentClassName="p-4"
+              >
+                {resumoQuery.isLoading ? (
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando a companhia…</span>
+                    <div className="grid gap-3 xl:grid-cols-2">
+                      <Skeleton className="h-[190px] w-full" />
+                      <Skeleton className="h-[190px] w-full" />
+                    </div>
+                  </div>
+                ) : resumoQuery.error ? (
+                  <ErrorState description={resumoQuery.error} onRetry={resumoQuery.reload} />
+                ) : fichasVisiveis.length === 0 ? (
+                  <EmptyState
+                    variant="plano"
+                    icon={<Users className="h-8 w-8" />}
+                    title={papelMestre ? 'Nenhuma ficha na mesa' : 'Você ainda não tem ficha'}
+                    description={papelMestre ? 'Quando os jogadores criarem personagens, eles aparecerão aqui.' : 'Crie seu primeiro aventureiro para começar a jornada.'}
+                    action={
+                      <ToolbarButton variant="primary" onClick={() => navigate(ROUTES.personagens)}>
+                        {papelMestre ? 'Ir para Personagens' : 'Criar ficha'}
+                      </ToolbarButton>
+                    }
+                  />
+                ) : (
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    {fichasVisiveis.map((item) => (
+                      <CardAventureiroMesa
+                        key={item.id}
+                        aventureiro={{
+                          ...item,
+                          jogador: nomesPorJogador.get(item.ownerId ?? '') ?? null,
+                          status: item.status ?? { vidaAtual: 0, vidaMax: 0, vigorAtual: 0, vigorMax: 0, north: 0 },
+                        }}
+                        onAbrirFicha={(id) => navigate(fichaPath(id))}
                       />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </PainelSecao>
+                    ))}
+                  </div>
+                )}
+              </PainelSecao>
+            </div>
+
+            <div className="space-y-4">
+              <PainelSecao
+                id="continuar-titulo"
+                icon={<Bookmark className="h-4 w-4" />}
+                title="Continuar de onde parei"
+                contentClassName="p-3.5"
+              >
+                {resumoQuery.isLoading ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : resumoQuery.error ? (
+                  <ErrorState description={resumoQuery.error} onRetry={resumoQuery.reload} />
+                ) : continuar ? (
+                  <div className="space-y-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xs border border-[#5a4225] bg-[#241a11]">
+                        {continuar.imagemUrl ? (
+                          <img src={continuar.imagemUrl} alt={`Retrato de ${continuar.nome}`} className="h-full w-full object-cover" />
+                        ) : (
+                          <span aria-hidden="true" className="font-cinzel text-lg font-bold text-[#c6a66d]">{continuar.nome.trim().charAt(0).toUpperCase() || '?'}</span>
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-cinzel text-sm font-bold text-[#e6ddc5]">{continuar.nome}</p>
+                        <p className="font-serif text-[11px] text-[#a88d61]">Nível {continuar.nivel} · {formatarNumero(continuar.xp)} XP</p>
+                      </div>
+                    </div>
+                    <ToolbarButton variant="primary" className="w-full justify-center" icon={<ScrollText className="h-3.5 w-3.5" />} onClick={() => navigate(fichaPath(continuar.id))} aria-label={`Abrir ficha de ${continuar.nome}`}>
+                      Abrir ficha
+                    </ToolbarButton>
+                  </div>
+                ) : (
+                  <p className="font-serif text-xs text-[#8f795e]">Abra uma ficha e ela ficará aqui para retomar a jornada.</p>
+                )}
+              </PainelSecao>
+
+              <PainelSecao
+                id="pendencias-titulo"
+                icon={<ListChecks className="h-4 w-4" />}
+                title="Pendências"
+                contentClassName="p-3.5"
+              >
+                {resumoQuery.isLoading || (papelMestre ? limitesQuery.isLoading : limiteQuery.isLoading || bloqueiosQuery.isLoading) ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : erroPendencias ? (
+                  <ErrorState description={erroPendencias} onRetry={recarregarPendencias} />
+                ) : pendencias.length ? (
+                  <ul className="space-y-2">
+                    {pendencias.map((pendencia) => (
+                      <li key={pendencia.id} className="flex items-start gap-2.5 rounded-xs border border-[#3e2d1d] bg-[#160f0a] px-2.5 py-2.5">
+                        <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-xs border border-[#4b3823] bg-[#1d140c] text-[#d1a85a]">{pendencia.icon}</span>
+                        <div className="min-w-0">
+                          <p className="font-serif text-[13px] leading-snug text-[#d6c4ae]">{pendencia.texto}</p>
+                          <Link to={pendencia.to} className="mt-1 inline-flex items-center gap-1 font-cinzel text-[9px] uppercase tracking-[0.14em] text-[#d1a85a] hover:text-[#f0d79b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]">
+                            {pendencia.acao}
+                            <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                          </Link>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState variant="plano" icon={<CheckCircle2 className="h-8 w-8" />} title="Nada pendente" description={papelMestre ? 'A mesa está em ordem.' : 'Suas fichas estão em ordem.'} />
+                )}
+              </PainelSecao>
+
+              <PainelSecao icon={<ScrollText className="h-4 w-4" />} title="Atalhos" contentClassName="p-2.5">
+                <ul className="space-y-1">
+                  {atalhos.map((atalho) => (
+                    <li key={atalho.id}>
+                      <Link
+                        to={atalho.to}
+                        className="group flex items-center gap-3 rounded-xs border border-transparent px-2.5 py-2.5 transition-colors hover:border-[#4b3823] hover:bg-[#1b120b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                      >
+                        <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xs border border-[#4b3823] bg-[#1d140c] text-[#c6a66d] transition-colors group-hover:border-[#8c6b41] group-hover:text-[#f3dfaa]">
+                          {atalho.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-cinzel text-[11px] font-bold uppercase tracking-[0.12em] text-[#dcd1ba] group-hover:text-[#f3dfaa]">{atalho.label}</span>
+                          <span className="block truncate font-serif text-[11px] italic text-[#8f795e]">{atalho.hint}</span>
+                        </span>
+                        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#7d6a56] transition-colors group-hover:text-[#d1a85a]" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </PainelSecao>
+            </div>
           </div>
+
+          <PainelSecao id="metricas-titulo" icon={<TrendingUp className="h-4 w-4" />} title="O reino em números" hint="métricas do cliente" contentClassName="p-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {(papelMestre ? [
+                { rotulo: 'Fichas na mesa', icon: <Swords className="h-4 w-4" />, valor: fichasVisiveis.length, hint: 'no cliente', loading: resumoQuery.isLoading, error: resumoQuery.error },
+                { rotulo: 'Jogadores', icon: <Users className="h-4 w-4" />, valor: jogadores.length, hint: 'contas no cliente', loading: limitesQuery.isLoading, error: limitesQuery.error },
+                { rotulo: 'Magias no Grimório', icon: <BookOpen className="h-4 w-4" />, valor: catalogoQuery.data?.magias ?? 0, hint: 'catalogadas', loading: catalogoQuery.isLoading, error: catalogoQuery.error },
+                { rotulo: 'Mercadorias', icon: <Store className="h-4 w-4" />, valor: catalogoQuery.data?.mercadorias ?? 0, hint: 'no mercado global', loading: catalogoQuery.isLoading, error: catalogoQuery.error },
+                { rotulo: 'Conteúdo selado', icon: <Lock className="h-4 w-4" />, valor: (bloqueiosQuery.data?.escolas.length ?? 0) + (bloqueiosQuery.data?.volumes.length ?? 0), hint: partesSeladas.join(' · ') || 'nada selado', loading: bloqueiosQuery.isLoading, error: bloqueiosQuery.error },
+              ] : [
+                { rotulo: 'Suas fichas', icon: <Swords className="h-4 w-4" />, valor: fichasVisiveis.length, hint: limiteQuery.data !== null ? `limite de ${formatarNumero(limiteQuery.data ?? 10)} fichas` : '', loading: resumoQuery.isLoading, error: resumoQuery.error },
+                { rotulo: 'Nível mais alto', icon: <Trophy className="h-4 w-4" />, valor: nivelMaisAlto, hint: 'entre suas fichas', loading: resumoQuery.isLoading, error: resumoQuery.error },
+                { rotulo: 'Seu tesouro', icon: <Coins className="h-4 w-4" />, valor: tesouroTotal, hint: 'moedas somadas', loading: resumoQuery.isLoading, error: resumoQuery.error },
+                { rotulo: 'Magias no Grimório', icon: <BookOpen className="h-4 w-4" />, valor: catalogoQuery.data?.magias ?? 0, hint: 'visíveis a você', loading: catalogoQuery.isLoading, error: catalogoQuery.error },
+                { rotulo: 'Mercadorias', icon: <Store className="h-4 w-4" />, valor: catalogoQuery.data?.mercadorias ?? 0, hint: 'no mercado global', loading: catalogoQuery.isLoading, error: catalogoQuery.error },
+              ]).map((metrica) => (
+                <PlacaMetrica
+                  key={metrica.rotulo}
+                  icon={metrica.icon}
+                  rotulo={metrica.rotulo}
+                  valor={metrica.error ? '—' : metrica.loading ? <Skeleton className="h-5 w-10" /> : formatarNumero(metrica.valor)}
+                  hint={metrica.error ? 'indisponível agora' : metrica.hint}
+                />
+              ))}
+            </div>
+          </PainelSecao>
         </div>
       </PageShell>
 

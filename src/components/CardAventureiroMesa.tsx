@@ -24,8 +24,8 @@ export interface AventureiroMesa {
 export interface CardAventureiroMesaProps {
   aventureiro: AventureiroMesa;
   onAbrirFicha: (characterId: string) => void;
-  onAjustarTesouro: (characterId: string) => void;
-  onPermissoes: (characterId: string) => void;
+  onAjustarTesouro?: (characterId: string) => void;
+  onPermissoes?: (characterId: string) => void;
 }
 
 const SeloPermissao: React.FC<{ ativo: boolean; rotulo: string; icon: React.ReactNode }> = ({ ativo, rotulo, icon }) => (
@@ -46,7 +46,7 @@ const SeloPermissao: React.FC<{ ativo: boolean; rotulo: string; icon: React.Reac
 
 /**
  * Cartão de um personagem da mesa: retrato, vitais em barras, as cinco permissões
- * em selos de leitura e as ações do Mestre com rótulo.
+ * em selos de leitura e ações opcionais do Mestre (cartão de leitura quando as ações do Mestre não são passadas).
  */
 export const CardAventureiroMesa: React.FC<CardAventureiroMesaProps> = ({
   aventureiro,
@@ -127,22 +127,26 @@ export const CardAventureiroMesa: React.FC<CardAventureiroMesaProps> = ({
         >
           Abrir ficha
         </ToolbarButton>
-        <ToolbarButton
-          icon={<Coins className="h-3.5 w-3.5" />}
-          onClick={() => onAjustarTesouro(aventureiro.id)}
-          aria-label={`Ajustar tesouro de ${aventureiro.nome}`}
-        >
-          Tesouro
-        </ToolbarButton>
-        <ToolbarButton
-          variant="primary"
-          className="ml-auto"
-          icon={<UserCog className="h-3.5 w-3.5" />}
-          onClick={() => onPermissoes(aventureiro.id)}
-          aria-label={`Permissões de ${aventureiro.nome}`}
-        >
-          Permissões
-        </ToolbarButton>
+        {onAjustarTesouro && (
+          <ToolbarButton
+            icon={<Coins className="h-3.5 w-3.5" />}
+            onClick={() => onAjustarTesouro(aventureiro.id)}
+            aria-label={`Ajustar tesouro de ${aventureiro.nome}`}
+          >
+            Tesouro
+          </ToolbarButton>
+        )}
+        {onPermissoes && (
+          <ToolbarButton
+            variant="primary"
+            className="ml-auto"
+            icon={<UserCog className="h-3.5 w-3.5" />}
+            onClick={() => onPermissoes(aventureiro.id)}
+            aria-label={`Permissões de ${aventureiro.nome}`}
+          >
+            Permissões
+          </ToolbarButton>
+        )}
       </div>
     </article>
   );
