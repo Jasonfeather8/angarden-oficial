@@ -1,39 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BookOpen,
   CalendarClock,
+  ChevronRight,
   Clock3,
+  Crown,
   ExternalLink,
   FileText,
-  Link2,
   LayoutDashboard,
+  Link2,
+  Pencil,
   ScrollText,
-  Shield,
+  Store,
   Users,
 } from 'lucide-react';
-import { clsx } from 'clsx';
 import { GothicButton } from '../components/GothicButton';
 import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
-import { EmptyState } from '../components/ui/EmptyState';
+import { PainelSecao } from '../components/ui/PainelSecao';
+import { ToolbarButton } from '../components/ui/ToolbarButton';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
-import { ROLE_LABELS } from '../auth/policies';
 import { cacheKeys } from '../services/cacheKeys';
 import { scheduleService } from '../services/scheduleService';
+import { tenantService } from '../services/tenantService';
 import { ROUTES } from '../routes/paths';
-
-type Chronicle = {
-  id: string;
-  titulo: string;
-  dataSessao: string;
-  capa: string;
-  relato: string;
-};
 
 type SessionForm = {
   dataHora: string;
@@ -42,8 +37,15 @@ type SessionForm = {
   linkVtt: string;
 };
 
-// O mural fica vazio até existirem crônicas oficiais; o conteúdo anterior era material de demonstração.
-const chronicles: Chronicle[] = [];
+type SessionFormMode = 'agendar' | 'editar';
+
+type Atalho = {
+  id: string;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+  to: string;
+};
 
 const fieldClassName =
   'w-full border border-[#4b3823] bg-[#0d0906] px-3 py-2.5 text-sm text-[#e6ddc5] outline-none transition-colors focus:border-[#b89558] focus:ring-1 focus:ring-[#b89558]/50';
@@ -72,13 +74,8 @@ const formatSessionDate = (value: string) =>
     minute: '2-digit',
   }).format(new Date(value));
 
-const formatChronicleDate = (value: string) =>
-  new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${value}T12:00:00Z`));
+const formatToday = (date: Date) =>
+  new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }).format(date);
 
 const formatCountdown = (milliseconds: number) => {
   const totalSeconds = Math.floor(Math.max(0, milliseconds) / 1000);
@@ -90,9 +87,9 @@ const formatCountdown = (milliseconds: number) => {
 };
 
 const CountdownUnit: React.FC<{ value: number; label: string }> = ({ value, label }) => (
-  <div className="min-w-[52px] border border-[#5a4225] bg-[#100a06] px-2 py-2 text-center">
-    <div className="font-cinzel text-lg font-bold text-[#f0c265]">{String(value).padStart(2, '0')}</div>
-    <div className="font-cinzel text-[8px] uppercase tracking-wider text-[#a88d61]">{label}</div>
+  <div className="min-w-[62px] rounded-xs border border-[#5a4225] bg-[#100a06] px-2.5 py-2.5 text-center">
+    <div className="font-cinzel text-2xl font-bold leading-none text-[#f0c265]">{String(value).padStart(2, '0')}</div>
+    <div className="mt-1 font-cinzel text-[8px] uppercase tracking-wider text-[#a88d61]">{label}</div>
   </div>
 );
 
@@ -108,15 +105,20 @@ const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
   const hasSessionStarted = Date.parse(dataHora) <= now;
 
   return (
-    <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]" aria-label="Contagem regressiva para a próxima sessão">
+    <div
+      aria-label="Contagem regressiva para a próxima sessão"
+      className="rounded-xs border border-[#70552f] bg-[#1b120b] p-3 xl:min-w-[320px]"
+    >
       <p className="mb-2 flex items-center justify-center gap-1.5 font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#b89558]">
         <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
         {hasSessionStarted ? 'Sessão em andamento' : 'A mesa começa em'}
       </p>
       {hasSessionStarted ? (
-        <p className="text-center font-serif text-sm italic text-[#e0bd71]">Confira os registros da campanha após a aventura.</p>
+        <p className="text-center font-serif text-sm italic text-[#e0bd71]">
+          Confira os registros da campanha após a aventura.
+        </p>
       ) : (
-        <div className="flex justify-center gap-1.5 sm:gap-2">
+        <div className="flex justify-center gap-2">
           <CountdownUnit value={countdown.days} label="dias" />
           <CountdownUnit value={countdown.hours} label="horas" />
           <CountdownUnit value={countdown.minutes} label="min" />
@@ -127,68 +129,48 @@ const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
   );
 });
 
-/**
- * Cartão do mural. A capa vem de um CDN externo e só é buscada quando o mural
- * se aproxima da tela, então o cartão mostra a silhueta no lugar da moldura
- * vazia e revela a imagem quando ela chega.
- */
-const ChronicleCard: React.FC<{ chronicle: Chronicle; onOpen: (chronicle: Chronicle) => void }> = ({
-  chronicle,
-  onOpen,
-}) => {
-  const [capaCarregada, setCapaCarregada] = useState(false);
-
-  const revelarCapa = () => setCapaCarregada(true);
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(chronicle)}
-      className="group overflow-hidden border border-[#4b3823] bg-[#120d09] text-left transition-all hover:border-[#b89558] hover:shadow-[0_0_16px_rgba(184,149,88,0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
-      aria-label={`Abrir crônica ${chronicle.titulo}`}
-    >
-      <div className="relative aspect-[16/9] overflow-hidden border-b border-[#4b3823] bg-[#21130b]">
-        {!capaCarregada && <Skeleton className="absolute inset-0 h-full w-full" />}
-        <img
-          ref={(node) => {
-            // Imagem já em cache pode completar antes do evento de load.
-            if (node?.complete) revelarCapa();
-          }}
-          src={chronicle.capa}
-          alt={`Capa da crônica ${chronicle.titulo}`}
-          loading="lazy"
-          decoding="async"
-          onLoad={revelarCapa}
-          onError={revelarCapa}
-          className={clsx(
-            'h-full w-full object-cover transition-all duration-300 group-hover:scale-105',
-            capaCarregada ? 'opacity-75' : 'opacity-0'
-          )}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#090403] via-transparent to-[#1b0d05]/20" />
-        <span className="absolute bottom-2 left-3 font-cinzel text-[10px] uppercase tracking-wider text-[#f0d79b]">Ler capítulo</span>
+const SessaoSkeleton: React.FC = () => (
+  <div aria-hidden="true" className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+    <div>
+      <Skeleton className="h-7 w-64 max-w-full" />
+      <Skeleton className="mt-2 h-4 w-52 max-w-full" />
+      <div className="mt-4 space-y-2">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-11/12" />
       </div>
-      <div className="p-3">
-        <h3 className="font-cinzel text-sm font-bold uppercase leading-tight text-[#e0c787]">{chronicle.titulo}</h3>
-        <p className="mt-1 font-serif text-xs italic text-[#927754]">{formatChronicleDate(chronicle.dataSessao)}</p>
-        <p className="mt-2 line-clamp-2 font-serif text-sm leading-relaxed text-[#c4b9a3]">{chronicle.relato}</p>
+    </div>
+    <div className="rounded-xs border border-[#70552f] bg-[#1b120b] p-3 xl:min-w-[320px]">
+      <Skeleton className="mx-auto mb-2 h-3 w-28" />
+      <div className="flex justify-center gap-2">
+        <Skeleton className="h-14 w-[62px]" />
+        <Skeleton className="h-14 w-[62px]" />
+        <Skeleton className="h-14 w-[62px]" />
+        <Skeleton className="h-14 w-[62px]" />
       </div>
-    </button>
-  );
-};
+    </div>
+  </div>
+);
 
 export const DashboardPage: React.FC = () => {
   const user = useSessionStore((state) => state.session?.user ?? null);
-  const { role, isMestre } = useAuthorization();
-  const navigate = useNavigate();
+  const { isMestre, tenantId } = useAuthorization();
+
   const { data: session, isLoading: isLoadingSessao, error: erroSessao, reload: reloadSessao } = useAsyncData(
     () => scheduleService.getProximaSessao(),
     [],
     { cacheKey: cacheKeys.proximaSessao(user?.tenant_id) }
   );
+
+  const { data: cliente } = useAsyncData(
+    () => (tenantId ? tenantService.getTenant(tenantId) : Promise.resolve(null)),
+    [tenantId],
+    { cacheKey: cacheKeys.cliente(tenantId), enabled: Boolean(tenantId) }
+  );
+
   const [isScheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [sessionFormMode, setSessionFormMode] = useState<SessionFormMode>('agendar');
   const [isSavingSessao, setIsSavingSessao] = useState(false);
-  const [selectedChronicle, setSelectedChronicle] = useState<Chronicle | null>(null);
   const [sessionForm, setSessionForm] = useState<SessionForm>({
     dataHora: '',
     titulo: '',
@@ -197,8 +179,74 @@ export const DashboardPage: React.FC = () => {
   });
   const [formError, setFormError] = useState('');
 
+  const primeiroNome = useMemo(() => {
+    const nome = user?.nome_completo?.trim();
+    return nome ? nome.split(/\s+/)[0] : '';
+  }, [user?.nome_completo]);
+
+  const hoje = useMemo(() => formatToday(new Date()), []);
+
+  const atalhos = useMemo<Atalho[]>(() => {
+    const lista: Atalho[] = [
+      {
+        id: 'personagens',
+        label: 'Personagens',
+        hint: isMestre ? 'Todas as fichas da mesa' : 'Suas fichas e sua evolução',
+        icon: <Users className="h-4 w-4" />,
+        to: ROUTES.personagens,
+      },
+      {
+        id: 'mercado',
+        label: 'Mercado Global',
+        hint: 'Mercadorias, preços e compras',
+        icon: <Store className="h-4 w-4" />,
+        to: ROUTES.mercado,
+      },
+      {
+        id: 'grimorio',
+        label: 'Grimório',
+        hint: 'Escolas, tomos e magias',
+        icon: <BookOpen className="h-4 w-4" />,
+        to: ROUTES.grimorio,
+      },
+      {
+        id: 'cronicas',
+        label: 'Crônicas',
+        hint: 'Relatos das sessões',
+        icon: <ScrollText className="h-4 w-4" />,
+        to: ROUTES.cronicas,
+      },
+    ];
+
+    if (isMestre) {
+      lista.push({
+        id: 'painel-mestre',
+        label: 'Painel do Mestre',
+        hint: 'Permissões, limites e selos',
+        icon: <Crown className="h-4 w-4" />,
+        to: ROUTES.painelMestre,
+      });
+    }
+
+    return lista;
+  }, [isMestre]);
+
   const openScheduleModal = () => {
+    setSessionFormMode('agendar');
     setSessionForm({ dataHora: '', titulo: '', pauta: '', linkVtt: '' });
+    setFormError('');
+    setScheduleModalOpen(true);
+  };
+
+  const openEditModal = () => {
+    if (!session) return;
+    setSessionFormMode('editar');
+    setSessionForm({
+      dataHora: toDatetimeLocal(new Date(session.dataHora)),
+      titulo: session.titulo,
+      pauta: session.pauta,
+      linkVtt: session.linkVtt ?? '',
+    });
     setFormError('');
     setScheduleModalOpen(true);
   };
@@ -251,8 +299,13 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const modoEdicao = sessionFormMode === 'editar';
+
   return (
-      <PageShell id="page-dashboard" variant="padrao"
+    <>
+      <PageShell
+        id="page-dashboard"
+        variant="amplo"
         title={
           <h2 className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
@@ -260,162 +313,135 @@ export const DashboardPage: React.FC = () => {
           </h2>
         }
         subtitle="Visão panorâmica da campanha e status do reino"
-        headerRight={<div className="text-xs text-[#8c6b41] italic font-serif">Reino de Angarden</div>}
+        headerRight={
+          cliente ? (
+            <div className="text-xs italic font-serif text-[#8c6b41]">Cliente · {cliente.nome}</div>
+          ) : undefined
+        }
       >
-        <div className="space-y-6">
-          <section aria-labelledby="quick-status-title" className="border border-[#5a4225] bg-gradient-to-r from-[#1c130c] via-[#120c08] to-[#1c130c] p-4 sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#8c6b41] bg-[#0d0906] shadow-[0_0_14px_rgba(168,141,97,0.2)]">
-                  {user?.avatar_url ? (
-                    <img src={user.avatar_url} alt={`Retrato de ${user.nome_completo}`} className="h-full w-full object-cover" />
-                  ) : (
-                    <Users className="h-6 w-6 text-[#a88d61]" aria-hidden="true" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p id="quick-status-title" className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Status rápido</p>
-                  <h3 className="truncate font-cinzel text-lg font-bold text-[#f0e2c0]">{user?.nome_completo ?? 'Aventureiro'}</h3>
-                  <p className="flex items-center gap-1.5 font-serif text-sm italic text-[#a89071]">
-                    <Shield className="h-3.5 w-3.5 text-[#c6a35e]" aria-hidden="true" />
-                    Papel: {role ? ROLE_LABELS[role] : '—'}
-                  </p>
-                </div>
-              </div>
-              <GothicButton
-                id="btn-ver-meus-personagens"
-                type="button"
-                size="sm"
-                width={220}
-                height={40}
-                icon={<Users className="h-4 w-4" aria-hidden="true" />}
-                onClick={() => navigate(ROUTES.personagens)}
-                aria-label="Ver meus personagens"
-                className="max-w-full focus-visible:ring-2 focus-visible:ring-[#f0c265] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120c08]"
-              >
-                Ver Meus Personagens
-              </GothicButton>
-            </div>
+        <div className="space-y-5">
+          <section
+            aria-label="Contexto da mesa"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-[#3a2c1d] bg-gradient-to-r from-[#1c130c] via-[#120c08] to-[#1c130c] px-4 py-3"
+          >
+            <p className="min-w-0 truncate font-cinzel text-base font-bold text-[#f0e2c0]">
+              {primeiroNome ? `Bem-vindo de volta, ${primeiroNome}` : 'Bem-vindo de volta'}
+            </p>
+            <p className="font-serif text-xs capitalize italic text-[#8f795e]">{hoje}</p>
           </section>
 
-          <section aria-labelledby="next-session-title" className="border border-[#4b3823] bg-[#100b07]/90 p-4 sm:p-5">
-            <div className="mb-4 flex flex-col gap-3 border-b border-[#3a2c1d] pb-3 sm:flex-row sm:items-start sm:justify-between">
-              <div aria-live="polite">
-                <p className="flex items-center gap-2 font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">
-                  <CalendarClock className="h-4 w-4" aria-hidden="true" />
-                  Próxima sessão
-                </p>
-                {isLoadingSessao ? (
-                  <div aria-hidden="true" className="mt-1 space-y-1">
-                    <Skeleton className="h-6 w-52 max-w-full" />
-                    <Skeleton className="h-4 w-60 max-w-full" />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <PainelSecao
+              id="proxima-sessao-titulo"
+              icon={<CalendarClock className="h-4 w-4" />}
+              title="Próxima sessão"
+              extra={
+                isMestre && session && !isLoadingSessao ? (
+                  <ToolbarButton icon={<Pencil className="h-3.5 w-3.5" />} onClick={openEditModal}>
+                    Editar sessão
+                  </ToolbarButton>
+                ) : undefined
+              }
+              contentClassName="p-4 sm:p-5"
+            >
+              {isLoadingSessao ? (
+                <div role="status" aria-live="polite">
+                  <span className="sr-only">Carregando a sessão agendada…</span>
+                  <SessaoSkeleton />
+                </div>
+              ) : erroSessao ? (
+                <ErrorState description={erroSessao} onRetry={reloadSessao} />
+              ) : session ? (
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                  <div className="min-w-0">
+                    <h3 className="font-cinzel text-xl font-bold text-[#f0d79b] sm:text-2xl">{session.titulo}</h3>
+                    <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">
+                      {formatSessionDate(session.dataHora)}
+                    </p>
+                    <div className="mt-4">
+                      <p className="mb-1.5 flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
+                        <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Pauta da mesa
+                      </p>
+                      <p className="font-serif text-base leading-relaxed text-[#d6c4ae]">{session.pauta}</p>
+                    </div>
+                    {session.linkVtt && (
+                      <a
+                        href={session.linkVtt}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
+                      >
+                        <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                      </a>
+                    )}
                   </div>
-                ) : session ? (
-                  <>
-                    <h3 id="next-session-title" className="mt-1 font-cinzel text-xl font-bold text-[#f0d79b]">{session.titulo}</h3>
-                    <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">{formatSessionDate(session.dataHora)}</p>
-                  </>
-                ) : !isLoadingSessao && !erroSessao ? (
-                  <h3 id="next-session-title" className="mt-1 font-cinzel text-xl font-bold text-[#a88d61]">
-                    Nenhuma sessão agendada
-                  </h3>
-                ) : null}
-              </div>
-              {isMestre && (
-                <GothicButton
-                  id="btn-agendar-nova-sessao"
-                  type="button"
-                  size="sm"
-                  width={205}
-                  height={38}
-                  icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
-                  onClick={openScheduleModal}
-                  aria-label="Agendar nova sessão"
-                  className="max-w-full focus-visible:ring-2 focus-visible:ring-[#f0c265] focus-visible:ring-offset-2 focus-visible:ring-offset-[#100b07]"
-                >
-                  Agendar Nova Sessão
-                </GothicButton>
-              )}
-            </div>
-
-            {isLoadingSessao ? (
-              <div role="status" aria-live="polite">
-                <span className="sr-only">Carregando a sessão agendada…</span>
-                <SessaoSkeleton />
-              </div>
-            ) : erroSessao ? (
-              <ErrorState description={erroSessao} onRetry={reloadSessao} />
-            ) : session ? (
-              <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-                <div>
-                  <p className="mb-2 flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
-                    <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Pauta da mesa
+                  <SessionCountdown dataHora={session.dataHora} />
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="min-w-0 font-serif text-sm text-[#a88d61]">
+                    {isMestre
+                      ? 'Nenhuma sessão agendada — a mesa ainda não tem contagem regressiva nem pauta.'
+                      : 'O Mestre ainda não agendou a próxima sessão. A pauta e a contagem regressiva aparecerão aqui.'}
                   </p>
-                  <p className="font-serif text-base leading-relaxed text-[#d6c4ae]">{session.pauta}</p>
-                  {session.linkVtt && (
-                    <a
-                      href={session.linkVtt}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
+                  {isMestre && (
+                    <ToolbarButton
+                      id="btn-agendar-nova-sessao"
+                      variant="primary"
+                      icon={<CalendarClock className="h-3.5 w-3.5" />}
+                      onClick={openScheduleModal}
                     >
-                      <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                    </a>
+                      Agendar sessão
+                    </ToolbarButton>
                   )}
                 </div>
-                <SessionCountdown dataHora={session.dataHora} />
-              </div>
-            ) : (
-              <EmptyState
-                variant="plano"
-                icon={<CalendarClock className="h-8 w-8" aria-hidden="true" />}
-                title="Nenhuma sessão agendada"
-                description={
-                  isMestre
-                    ? 'Agende a próxima sessão para que a mesa acompanhe a contagem regressiva, a pauta e a sala virtual.'
-                    : 'Aguarde o Mestre agendar a próxima sessão. A pauta e a contagem regressiva aparecerão aqui.'
-                }
-              />
-            )}
-          </section>
+              )}
+            </PainelSecao>
 
-          <section aria-labelledby="chronicles-title">
-            <div className="mb-3 flex items-end justify-between border-b border-[#3a2c1d] pb-2">
-              <div>
-                <p id="chronicles-title" className="flex items-center gap-2 font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">
-                  <ScrollText className="h-4 w-4" aria-hidden="true" />
-                  Mural de Crônicas
-                </p>
-                <p className="mt-1 font-serif text-xs italic text-[#80613d]">Os capítulos mais recentes da campanha</p>
-              </div>
-              <BookOpen className="h-5 w-5 text-[#8c6b41]" aria-hidden="true" />
-            </div>
-            {chronicles.length === 0 ? (
-              <EmptyState
-                variant="plano"
-                title="Nenhuma crônica publicada"
-                description={
-                  isMestre
-                    ? 'Escreva o primeiro relato na tela de Crônicas.'
-                    : 'Quando a primeira sessão for narrada, os capítulos aparecerão aqui.'
-                }
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                {chronicles.slice(0, 3).map((chronicle) => (
-                  <ChronicleCard key={chronicle.id} chronicle={chronicle} onOpen={setSelectedChronicle} />
+            <PainelSecao
+              icon={<ScrollText className="h-4 w-4" />}
+              title="Atalhos"
+              contentClassName="p-2.5"
+            >
+              <ul className="space-y-1">
+                {atalhos.map((atalho) => (
+                  <li key={atalho.id}>
+                    <Link
+                      to={atalho.to}
+                      className="group flex items-center gap-3 rounded-xs border border-transparent px-2.5 py-2.5 transition-colors hover:border-[#4b3823] hover:bg-[#1b120b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xs border border-[#4b3823] bg-[#1d140c] text-[#c6a66d] transition-colors group-hover:border-[#8c6b41] group-hover:text-[#f3dfaa]"
+                      >
+                        {atalho.icon}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-cinzel text-[11px] font-bold uppercase tracking-[0.12em] text-[#dcd1ba] group-hover:text-[#f3dfaa]">
+                          {atalho.label}
+                        </span>
+                        <span className="block truncate font-serif text-[11px] italic text-[#8f795e]">{atalho.hint}</span>
+                      </span>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 text-[#7d6a56] transition-colors group-hover:text-[#d1a85a]"
+                      />
+                    </Link>
+                  </li>
                 ))}
-              </div>
-            )}
-          </section>
+              </ul>
+            </PainelSecao>
+          </div>
         </div>
+      </PageShell>
 
       {isMestre && (
         <Modal
           isOpen={isScheduleModalOpen}
           onClose={() => { if (!isSavingSessao) closeScheduleModal(); }}
-          title="Agendar Nova Sessão"
-          subtitle="Convide a companhia para o próximo capítulo"
+          title={modoEdicao ? 'Editar Sessão' : 'Agendar Nova Sessão'}
+          subtitle={modoEdicao ? 'Ajuste a data, a pauta ou a sala virtual' : 'Convide a companhia para o próximo capítulo'}
           maxWidth="max-w-[680px]"
         >
           <form onSubmit={handleScheduleSubmit} className="space-y-4" noValidate>
@@ -487,66 +513,14 @@ export const DashboardPage: React.FC = () => {
                 icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
                 className="max-w-full focus-visible:ring-2 focus-visible:ring-[#f0c265]"
               >
-                Agendar Sessão
+                {isSavingSessao ? 'Salvando...' : modoEdicao ? 'Salvar Alterações' : 'Agendar Sessão'}
               </GothicButton>
             </div>
           </form>
         </Modal>
       )}
-
-      <Modal
-        isOpen={Boolean(selectedChronicle)}
-        onClose={() => setSelectedChronicle(null)}
-        title={selectedChronicle?.titulo}
-        subtitle={selectedChronicle ? formatChronicleDate(selectedChronicle.dataSessao) : undefined}
-        maxWidth="max-w-[760px]"
-      >
-        {selectedChronicle && (
-          <article aria-labelledby="chronicle-modal-title" className="space-y-4">
-            <div className="overflow-hidden border border-[#8c6b41] bg-[#1b120b]">
-              <img
-                src={selectedChronicle.capa}
-                alt={`Capa da crônica ${selectedChronicle.titulo}`}
-                loading="lazy"
-                decoding="async"
-                className="max-h-[260px] w-full object-cover opacity-80"
-              />
-            </div>
-            <div className="border-[6px] border-[#6e4b2b] bg-[#d3b47b] p-1 shadow-[inset_0_0_22px_rgba(76,42,16,0.55),0_8px_18px_rgba(0,0,0,0.45)]">
-              <div className="border border-[#8d6539] bg-[#e2c995] px-5 py-5 text-[#3d2717] shadow-[inset_0_0_16px_rgba(105,63,24,0.3)] sm:px-8 sm:py-7">
-                <h3 id="chronicle-modal-title" className="mb-4 border-b border-[#8d6539]/70 pb-3 text-center font-cinzel text-lg font-bold uppercase tracking-wider text-[#4b2e18]">{selectedChronicle.titulo}</h3>
-                {selectedChronicle.relato.split('\n\n').map((paragraph, index) => (
-                  <p key={`${selectedChronicle.id}-paragraph-${index}`} className="mb-4 last:mb-0 font-garamond text-lg leading-relaxed first-letter:float-left first-letter:mr-1 first-letter:font-cinzel first-letter:text-4xl first-letter:font-bold first-letter:text-[#70431f]">{paragraph}</p>
-                ))}
-              </div>
-            </div>
-          </article>
-        )}
-      </Modal>
-      </PageShell>
+    </>
   );
 };
-
-const SessaoSkeleton: React.FC = () => (
-  <div aria-hidden="true" className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-    <div>
-      <Skeleton className="mb-2 h-3 w-32" />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-11/12" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-    </div>
-    <div className="border border-[#70552f] bg-[#1b120b] p-3 lg:min-w-[300px]">
-      <Skeleton className="mx-auto mb-2 h-3 w-28" />
-      <div className="flex justify-center gap-1.5 sm:gap-2">
-        <Skeleton className="h-12 w-[52px]" />
-        <Skeleton className="h-12 w-[52px]" />
-        <Skeleton className="h-12 w-[52px]" />
-        <Skeleton className="h-12 w-[52px]" />
-      </div>
-    </div>
-  </div>
-);
 
 export default DashboardPage;

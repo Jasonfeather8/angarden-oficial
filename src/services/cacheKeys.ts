@@ -14,6 +14,7 @@ export const cacheKeys = {
   grimorioBloqueios: (tenantId?: string | null) => `grimorio-bloqueios:${tenantId ?? ''}`,
   limitesDeFichas: (tenantId?: string | null) => `limites-fichas:${tenantId ?? ''}`,
   perfisDoCliente: (tenantId?: string | null) => `perfis-cliente:${tenantId ?? ''}`,
+  cliente: (tenantId?: string | null) => `cliente:${tenantId ?? ''}`,
   proximaSessao: (tenantId?: string | null) => `proxima-sessao:${tenantId ?? ''}`,
 };
 

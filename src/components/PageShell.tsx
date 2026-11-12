@@ -15,7 +15,8 @@ export function larguraDaPagina(variant: PageShellVariant): string {
 }
 
 export function variantDaRota(pathname: string): PageShellVariant {
-  return pathname === '/personagens' || pathname.startsWith('/ficha') ? 'amplo' : 'padrao';
+  const telasAmplas = pathname === '/' || pathname === '/dashboard' || pathname === '/personagens';
+  return telasAmplas || pathname.startsWith('/ficha') ? 'amplo' : 'padrao';
 }
 
 /**

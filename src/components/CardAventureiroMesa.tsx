@@ -1,6 +1,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { Coins, Pencil, ScrollText, ShoppingCart, Sparkles, Store, UserCog, Wand2 } from 'lucide-react';
+import { BarraProgresso } from './ui/BarraProgresso';
 import { Skeleton } from './ui/Skeleton';
 import { ToolbarButton } from './ui/ToolbarButton';
 
@@ -26,31 +27,6 @@ export interface CardAventureiroMesaProps {
   onAjustarTesouro: (characterId: string) => void;
   onPermissoes: (characterId: string) => void;
 }
-
-/** Barra de vital com leitura rápida: abaixo de 25% o preenchimento vira bronze-avermelhado. */
-const BarraVital: React.FC<{ rotulo: string; atual: number; max: number }> = ({ rotulo, atual, max }) => {
-  const proporcao = max > 0 ? Math.min(100, Math.max(0, (atual / max) * 100)) : 0;
-  const critico = proporcao <= 25;
-  return (
-    <div className="min-w-0">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-cinzel text-[9px] uppercase tracking-[0.14em] text-[#a88d61]">{rotulo}</span>
-        <span className="font-serif text-xs text-[#dcd1ba]">
-          {atual} <span className="text-[#88745a]">/ {max}</span>
-        </span>
-      </div>
-      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full border border-[#3a2c1d] bg-[#221609]">
-        <div
-          className={clsx(
-            'h-full rounded-full',
-            critico ? 'bg-gradient-to-r from-[#7a2f1f] to-[#c9704a]' : 'bg-gradient-to-r from-[#735126] to-[#d1a85a]'
-          )}
-          style={{ width: `${proporcao}%` }}
-        />
-      </div>
-    </div>
-  );
-};
 
 const SeloPermissao: React.FC<{ ativo: boolean; rotulo: string; icon: React.ReactNode }> = ({ ativo, rotulo, icon }) => (
   <span
@@ -119,8 +95,8 @@ export const CardAventureiroMesa: React.FC<CardAventureiroMesaProps> = ({
       <div className="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-[1fr_1fr_auto]">
         {aventureiro.status ? (
           <>
-            <BarraVital rotulo="Vida" atual={aventureiro.status.vidaAtual} max={aventureiro.status.vidaMax} />
-            <BarraVital rotulo="Vigor" atual={aventureiro.status.vigorAtual} max={aventureiro.status.vigorMax} />
+            <BarraProgresso rotulo="Vida" atual={aventureiro.status.vidaAtual} max={aventureiro.status.vidaMax} />
+            <BarraProgresso rotulo="Vigor" atual={aventureiro.status.vigorAtual} max={aventureiro.status.vigorMax} />
             <div className="flex flex-col items-center justify-center rounded-xs border border-[#3a2c1d] bg-[#1b120b] px-3 py-1.5">
               <span className="font-cinzel text-[9px] uppercase tracking-[0.14em] text-[#a88d61]">North</span>
               <span className="font-cinzel text-base font-bold text-[#e0c98e]">{aventureiro.status.north}</span>

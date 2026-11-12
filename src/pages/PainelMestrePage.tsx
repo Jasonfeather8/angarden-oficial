@@ -25,6 +25,7 @@ import { GothicButton } from '../components/GothicButton';
 import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
 import { CardAventureiroMesa, type AventureiroMesa } from '../components/CardAventureiroMesa';
+import { PlacaMetrica } from '../components/ui/PlacaMetrica';
 import { ToolbarButton } from '../components/ui/ToolbarButton';
 import { GrimorioBloqueiosModal } from '../components/GrimorioBloqueiosModal';
 import { LimiteFichasModal } from '../components/LimiteFichasModal';
@@ -75,18 +76,6 @@ type CharacterRow = {
   /** Vitais do motor; quando ainda não chegaram, vêm do último salvamento. */
   status: CharacterStatus | null;
 };
-
-const MetricaMesa: React.FC<{ icon: React.ReactNode; valor: string; rotulo: string }> = ({ icon, valor, rotulo }) => (
-  <div className="flex items-center gap-3 rounded-sm border border-[#3a2c1d] bg-[#160f0a] px-3.5 py-3">
-    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xs border border-[#4b3823] bg-[#1d140c] text-[#c6a66d]">
-      {icon}
-    </span>
-    <span className="min-w-0">
-      <span className="block font-cinzel text-lg font-bold leading-tight text-[#e6ddc5]">{valor}</span>
-      <span className="block truncate font-cinzel text-[9px] uppercase tracking-[0.16em] text-[#a88d61]">{rotulo}</span>
-    </span>
-  </div>
-);
 
 const TituloSecao: React.FC<{ children: React.ReactNode; extra?: React.ReactNode }> = ({ children, extra }) => (
   <div className="flex items-center gap-3">
@@ -489,10 +478,10 @@ export const PainelMestrePage: React.FC = () => {
               Resumo da mesa
             </TituloSecao>
             <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-              <MetricaMesa icon={<Users className="h-4 w-4" />} valor={String(resumoDaMesa.fichas)} rotulo={resumoDaMesa.fichas === 1 ? 'Ficha na mesa' : 'Fichas na mesa'} />
-              <MetricaMesa icon={<Pencil className="h-4 w-4" />} valor={`${resumoDaMesa.edicao}/${resumoDaMesa.fichas}`} rotulo="Edição liberada" />
-              <MetricaMesa icon={<ShoppingCart className="h-4 w-4" />} valor={`${resumoDaMesa.compra}/${resumoDaMesa.fichas}`} rotulo="Compra liberada" />
-              <MetricaMesa icon={<Coins className="h-4 w-4" />} valor={`${resumoDaMesa.tesouro} ◈`} rotulo="Tesouro da mesa" />
+              <PlacaMetrica icon={<Users className="h-4 w-4" />} valor={String(resumoDaMesa.fichas)} rotulo={resumoDaMesa.fichas === 1 ? 'Ficha na mesa' : 'Fichas na mesa'} />
+              <PlacaMetrica icon={<Pencil className="h-4 w-4" />} valor={`${resumoDaMesa.edicao}/${resumoDaMesa.fichas}`} rotulo="Edição liberada" />
+              <PlacaMetrica icon={<ShoppingCart className="h-4 w-4" />} valor={`${resumoDaMesa.compra}/${resumoDaMesa.fichas}`} rotulo="Compra liberada" />
+              <PlacaMetrica icon={<Coins className="h-4 w-4" />} valor={`${resumoDaMesa.tesouro} ◈`} rotulo="Tesouro da mesa" />
             </div>
           </section>
 
