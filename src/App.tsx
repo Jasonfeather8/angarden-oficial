@@ -7,6 +7,7 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { ROUTES } from './routes/paths';
 import {
   AcessoNegadoPage,
+  AdminBibliotecaPage,
   AdminCampaignsPage,
   AdminClientsPage,
   AdminImportarMagiasPage,
@@ -82,6 +83,7 @@ export default function App() {
           <Route path={ROUTES.admin.campanhas} element={<AdminCampaignsPage />} />
           <Route path={ROUTES.admin.midia} element={<AdminMediaPage />} />
           <Route path={ROUTES.admin.importarMagias} element={<AdminImportarMagiasPage />} />
+          <Route path={ROUTES.admin.biblioteca} element={<AdminBibliotecaPage />} />
         </Route>
 
         {/* Área do cliente */}

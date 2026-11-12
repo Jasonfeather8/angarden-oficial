@@ -24,6 +24,7 @@ export const ROUTES = {
     campanhas: '/admin/campanhas',
     midia: '/admin/midia',
     importarMagias: '/admin/importar-magias',
+    biblioteca: '/admin/biblioteca',
   },
 } as const;
 

@@ -1,0 +1,1 @@
+grant select, insert, update, delete on table public.library_items to service_role;

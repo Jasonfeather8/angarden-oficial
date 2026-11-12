@@ -24,6 +24,8 @@ export const cacheKeys = {
   mercadoNovidades: () => 'mercado-novidades',
   historicoXp: (escopo?: string | null) => `historico-xp:${escopo ?? ''}`,
   progressoArcano: (escopo?: string | null) => `progresso-arcano:${escopo ?? ''}`,
+  /** O acervo é global, mas o Administrador enxerga também o que está oculto. */
+  biblioteca: (papel?: string | null) => `biblioteca:${papel ?? ''}`,
 };
 
 /** Prefixos para descartar de uma vez todas as entradas de uma família de chaves. */
@@ -39,4 +41,5 @@ export const cacheKeyPrefixes = {
   mercadoNovidades: 'mercado-novidades',
   historicoXp: 'historico-xp:',
   progressoArcano: 'progresso-arcano:',
+  biblioteca: 'biblioteca:',
 };

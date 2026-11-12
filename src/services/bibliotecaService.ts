@@ -1,0 +1,211 @@
+import { formatarTamanhoArquivo, LIMITE_UPLOAD_PDF_BYTES } from '../config/biblioteca';
+import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
+import { supabase } from '../integrations/supabase/client';
+import { useSessionStore } from '../store/useSessionStore';
+import type { EntradaIndiceBiblioteca, ItemBiblioteca, NovoItemBiblioteca } from '../types';
+import { cacheKeyPrefixes } from './cacheKeys';
+
+/** Bucket PRIVADO do acervo: guarda só PDF e é lido por URL assinada. */
+const BUCKET_ACERVO = 'biblioteca';
+
+/** Validade da URL assinada, suficiente para uma sessão inteira de leitura. */
+const VALIDADE_URL_ASSINADA_SEGUNDOS = 60 * 60;
+
+const COLUNAS_ITEM =
+  'id, tipo, categoria, titulo, subtitulo, descricao, capa_url, arquivo_caminho, arquivo_url, arquivo_bytes, indice, conteudo, oculto, created_at, updated_at';
+
+interface ItemRow {
+  id: string;
+  tipo: string;
+  categoria: string;
+  titulo: string;
+  subtitulo: string | null;
+  descricao: string | null;
+  capa_url: string | null;
+  arquivo_caminho: string | null;
+  arquivo_url: string | null;
+  arquivo_bytes: number | null;
+  indice: unknown;
+  conteudo: string | null;
+  oculto: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** O `indice` é jsonb livre no banco: o formato é validado aqui, na fronteira. */
+function mapearIndice(valor: unknown): EntradaIndiceBiblioteca[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.flatMap((entrada) => {
+    if (!entrada || typeof entrada !== 'object') return [];
+    const { titulo, pagina } = entrada as { titulo?: unknown; pagina?: unknown };
+    if (typeof titulo !== 'string' || !titulo.trim()) return [];
+    const numero = typeof pagina === 'number' ? pagina : Number(pagina);
+    if (!Number.isFinite(numero) || numero < 1) return [];
+    return [{ titulo: titulo.trim(), pagina: Math.floor(numero) }];
+  });
+}
+
+function mapearItem(row: ItemRow): ItemBiblioteca {
+  return {
+    id: row.id,
+    tipo: row.tipo === 'pergaminho' ? 'pergaminho' : 'pdf',
+    categoria: row.categoria,
+    titulo: row.titulo,
+    subtitulo: row.subtitulo ?? undefined,
+    descricao: row.descricao ?? undefined,
+    capaUrl: row.capa_url ?? undefined,
+    arquivoCaminho: row.arquivo_caminho ?? undefined,
+    arquivoUrl: row.arquivo_url ?? undefined,
+    arquivoBytes: row.arquivo_bytes ?? undefined,
+    indice: mapearIndice(row.indice),
+    conteudo: row.conteudo ?? undefined,
+    oculto: row.oculto,
+    criadoEm: row.created_at,
+    atualizadoEm: row.updated_at,
+  };
+}
+
+/** Campos comuns à publicação e à edição. */
+function paraColunas(dados: NovoItemBiblioteca) {
+  return {
+    tipo: dados.tipo,
+    categoria: dados.categoria,
+    titulo: dados.titulo.trim(),
+    subtitulo: dados.subtitulo?.trim() || null,
+    descricao: dados.descricao?.trim() || null,
+    capa_url: dados.capaUrl ?? null,
+    arquivo_caminho: dados.arquivoCaminho ?? null,
+    arquivo_url: dados.arquivoUrl ?? null,
+    arquivo_bytes: dados.arquivoBytes ?? null,
+    indice: dados.indice,
+    conteudo: dados.conteudo ?? null,
+    oculto: dados.oculto,
+  };
+}
+
+function invalidarCache(): void {
+  invalidateAsyncDataCache(cacheKeyPrefixes.biblioteca);
+}
+
+export const bibliotecaService = {
+  /**
+   * Todo o acervo visível, em ordem alfabética (pela coluna normalizada, para
+   * acento não deslocar a ordem). A RLS decide o que cada conta enxerga — o
+   * Administrador também recebe o que está oculto — e a tela filtra por
+   * categoria em memória: o acervo oficial é pequeno por natureza e não cresce
+   * sem limite como os catálogos do Mercado e do Grimório.
+   */
+  listarAcervo: async (): Promise<ItemBiblioteca[]> => {
+    const { data, error } = await supabase
+      .from('library_items')
+      .select(COLUNAS_ITEM)
+      .order('busca', { ascending: true });
+    if (error) throw new Error('Não foi possível carregar o acervo da Biblioteca: ' + error.message);
+    return ((data ?? []) as ItemRow[]).map(mapearItem);
+  },
+
+  /** Publica um material novo no acervo. */
+  publicar: async (dados: NovoItemBiblioteca): Promise<ItemBiblioteca> => {
+    const usuario = useSessionStore.getState().session?.user;
+    if (!usuario) throw new Error('Sessão expirada. Entre novamente na plataforma.');
+
+    const { data, error } = await supabase
+      .from('library_items')
+      .insert({ ...paraColunas(dados), created_by: usuario.id })
+      .select(COLUNAS_ITEM)
+      .single();
+    if (error) throw new Error('Não foi possível publicar o material: ' + error.message);
+    invalidarCache();
+    return mapearItem(data as ItemRow);
+  },
+
+  /** Substitui os dados de um material já publicado. */
+  atualizar: async (id: string, dados: NovoItemBiblioteca): Promise<ItemBiblioteca> => {
+    const { data, error } = await supabase
+      .from('library_items')
+      .update(paraColunas(dados))
+      .eq('id', id)
+      .select(COLUNAS_ITEM)
+      .single();
+    if (error) throw new Error('Não foi possível salvar as alterações: ' + error.message);
+    invalidarCache();
+    return mapearItem(data as ItemRow);
+  },
+
+  /** Oculta ou reexibe um material. A RLS esconde o oculto de quem não é Administrador. */
+  definirVisibilidade: async (id: string, oculto: boolean): Promise<void> => {
+    const { error } = await supabase.from('library_items').update({ oculto }).eq('id', id);
+    if (error) throw new Error('Não foi possível alterar a visibilidade do material: ' + error.message);
+    invalidarCache();
+  },
+
+  excluir: async (item: ItemBiblioteca): Promise<void> => {
+    const { error } = await supabase.from('library_items').delete().eq('id', item.id);
+    if (error) throw new Error('Não foi possível excluir o material: ' + error.message);
+
+    // A linha sai primeiro: se o Storage falhar, sobra um objeto órfão no
+    // bucket, mas o acervo continua coerente para quem lê.
+    if (item.arquivoCaminho) {
+      const { error: erroArmazenamento } = await supabase.storage.from(BUCKET_ACERVO).remove([item.arquivoCaminho]);
+      if (erroArmazenamento) {
+        console.warn('[bibliotecaService] Material excluído do acervo, mas o arquivo permaneceu no armazenamento.', {
+          caminho: item.arquivoCaminho,
+          detalhe: erroArmazenamento.message,
+        });
+      }
+    }
+    invalidarCache();
+  },
+
+  /**
+   * Envia o PDF direto ao bucket, sem passar pela função de borda de mídia:
+   * aquela limita a 5 MB e trafega base64, o que não serve para um manual. Aqui
+   * o arquivo vai como corpo binário e o próprio Storage aplica o teto e o MIME.
+   */
+  enviarPdf: async (arquivo: File): Promise<{ caminho: string; bytes: number }> => {
+    if (arquivo.type && arquivo.type !== 'application/pdf') {
+      throw new Error('O acervo aceita apenas arquivos PDF.');
+    }
+    if (arquivo.size > LIMITE_UPLOAD_PDF_BYTES) {
+      throw new Error(
+        `O arquivo tem ${formatarTamanhoArquivo(arquivo.size)} e o limite do acervo é ${formatarTamanhoArquivo(LIMITE_UPLOAD_PDF_BYTES)}. Otimize o PDF ou use o campo de link externo.`,
+      );
+    }
+
+    const caminho = `${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage.from(BUCKET_ACERVO).upload(caminho, arquivo, {
+      contentType: 'application/pdf',
+      upsert: false,
+    });
+    if (error) throw new Error('Não foi possível enviar o PDF: ' + error.message);
+    return { caminho, bytes: arquivo.size };
+  },
+
+  /** Descarta um PDF que subiu mas cujo material não chegou a ser publicado. */
+  descartarArquivo: async (caminho: string): Promise<void> => {
+    const { error } = await supabase.storage.from(BUCKET_ACERVO).remove([caminho]);
+    if (error) {
+      console.warn('[bibliotecaService] Não foi possível descartar o arquivo enviado.', {
+        caminho,
+        detalhe: error.message,
+      });
+    }
+  },
+
+  /** URL assinada de leitura: o bucket é privado e a URL expira. */
+  assinarArquivo: async (caminho: string): Promise<string> => {
+    const { data, error } = await supabase.storage
+      .from(BUCKET_ACERVO)
+      .createSignedUrl(caminho, VALIDADE_URL_ASSINADA_SEGUNDOS);
+    if (error || !data?.signedUrl) {
+      throw new Error(
+        'Não foi possível liberar o arquivo para leitura: ' + (error?.message ?? 'o armazenamento não devolveu a URL.'),
+      );
+    }
+    return data.signedUrl;
+  },
+
+  invalidarCache,
+};
+
+export default bibliotecaService;

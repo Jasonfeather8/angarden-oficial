@@ -1,0 +1,1 @@
+create index library_items_categoria_busca_idx on public.library_items (categoria, busca);

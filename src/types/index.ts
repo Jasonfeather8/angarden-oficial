@@ -389,11 +389,36 @@ export interface Sessao {
   status: 'AGENDADA' | 'EM_ANDAMENTO' | 'FINALIZADA' | 'CANCELADA';
 }
 
-export interface BibliotecaLivro {
-  id: string;
+export type TipoItemBiblioteca = 'pdf' | 'pergaminho';
+
+/** Entrada do índice lateral do leitor: título e página. */
+export interface EntradaIndiceBiblioteca {
   titulo: string;
-  descricao: string;
-  categoria: string;
-  capa_url?: string;
-  arquivo_url?: string;
+  pagina: number;
 }
+
+export interface ItemBiblioteca {
+  id: string;
+  tipo: TipoItemBiblioteca;
+  /** Um dos ids de `GRUPOS_BIBLIOTECA` (`src/config/biblioteca.ts`). */
+  categoria: string;
+  titulo: string;
+  subtitulo?: string;
+  descricao?: string;
+  capaUrl?: string;
+  /** Caminho no bucket privado `biblioteca`; ausente quando o PDF é link externo. */
+  arquivoCaminho?: string;
+  /** Link externo do PDF; ausente quando o arquivo vive no bucket. */
+  arquivoUrl?: string;
+  arquivoBytes?: number;
+  /** Reserva para PDFs sem sumário próprio: o leitor prefere o índice do arquivo. */
+  indice: EntradaIndiceBiblioteca[];
+  /** Markdown do pergaminho. */
+  conteudo?: string;
+  oculto: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/** Material ainda não gravado: id e carimbos vêm do banco. */
+export type NovoItemBiblioteca = Omit<ItemBiblioteca, 'id' | 'criadoEm' | 'atualizadoEm'>;

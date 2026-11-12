@@ -1,0 +1,1 @@
+alter table public.library_items enable row level security;

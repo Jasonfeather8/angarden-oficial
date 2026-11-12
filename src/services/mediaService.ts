@@ -5,7 +5,7 @@ import { fichaService } from './fichaService';
 import { mercadoService } from './mercadoService';
 import { atualizarMagia, mapearMagiaDoRow } from './grimorioService';
 
-export type PastaMidia = 'fichas' | 'personagens' | 'cronicas' | 'mercado' | 'perfis' | 'grimorio';
+export type PastaMidia = 'fichas' | 'personagens' | 'cronicas' | 'mercado' | 'perfis' | 'grimorio' | 'biblioteca-capas';
 export interface OpcoesImagem { maxWidth?: number; maxHeight?: number; quality?: number; escopo?: string; }
 
 /**
@@ -123,7 +123,10 @@ function totalImagemFicha(dados: DadosImagem | null): number {
 }
 
 function obterCaminhoStorage(pasta: PastaMidia, extensao: string, opcoes?: OpcoesImagem): string {
-  if (pasta === 'mercado' || pasta === 'grimorio') {
+  // Mercado, grimório e as capas da Biblioteca ficam em pastas da raiz do
+  // bucket. As capas vivem no `midia` público porque aparecem na estante e não
+  // têm o sigilo dos PDFs, que ficam no bucket privado `biblioteca`.
+  if (pasta === 'mercado' || pasta === 'grimorio' || pasta === 'biblioteca-capas') {
     return `${pasta}/${crypto.randomUUID()}.${extensao}`;
   }
 

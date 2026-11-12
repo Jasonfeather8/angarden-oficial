@@ -25,6 +25,7 @@ export const AdminClientsPage = React.lazy(() => import('../pages/admin/AdminCli
 export const AdminCampaignsPage = React.lazy(() => import('../pages/admin/AdminCampaignsPage').then((module) => ({ default: module.AdminCampaignsPage })));
 export const AdminMediaPage = React.lazy(() => import('../pages/admin/AdminMediaPage').then((module) => ({ default: module.AdminMediaPage })));
 export const AdminImportarMagiasPage = React.lazy(() => import('../pages/admin/AdminImportarMagiasPage').then((module) => ({ default: module.AdminImportarMagiasPage })));
+export const AdminBibliotecaPage = React.lazy(() => import('../pages/admin/AdminBibliotecaPage').then((module) => ({ default: module.AdminBibliotecaPage })));
 
 const pageImports = new Map<string, () => Promise<unknown>>([
   [ROUTES.dashboard, () => import('../pages/DashboardPage')],
@@ -49,6 +50,7 @@ const pageImports = new Map<string, () => Promise<unknown>>([
   [ROUTES.admin.campanhas, () => import('../pages/admin/AdminCampaignsPage')],
   [ROUTES.admin.midia, () => import('../pages/admin/AdminMediaPage')],
   [ROUTES.admin.importarMagias, () => import('../pages/admin/AdminImportarMagiasPage')],
+  [ROUTES.admin.biblioteca, () => import('../pages/admin/AdminBibliotecaPage')],
 ]);
 
 /**
@@ -58,7 +60,7 @@ const pageImports = new Map<string, () => Promise<unknown>>([
  */
 const routeGroups: string[][] = [
   [ROUTES.dashboard, ROUTES.personagens, ROUTES.ficha, ROUTES.mercado],
-  [ROUTES.admin.root, ROUTES.admin.solicitacoes, ROUTES.admin.clientes, ROUTES.admin.campanhas, ROUTES.admin.midia, ROUTES.admin.importarMagias],
+  [ROUTES.admin.root, ROUTES.admin.solicitacoes, ROUTES.admin.clientes, ROUTES.admin.campanhas, ROUTES.admin.midia, ROUTES.admin.importarMagias, ROUTES.admin.biblioteca],
   [ROUTES.login, ROUTES.cadastro, ROUTES.recuperarSenha, ROUTES.redefinirSenha, ROUTES.authCallback],
 ];
 

@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Coins, HardDrive, LayoutDashboard, LogOut, ScrollText, Shield, Users } from 'lucide-react';
+import { BookOpen, Coins, HardDrive, LayoutDashboard, LogOut, Scroll, ScrollText, Shield, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { LoadingState } from '../components/ui/Skeleton';
 import { preloadRoute, scheduleSiblingRoutePreload } from '../routes/lazyPages';
@@ -15,6 +15,7 @@ const ADMIN_NAV = [
   { to: ROUTES.admin.campanhas, label: 'Campanhas', icon: Coins, end: false },
   { to: ROUTES.admin.midia, label: 'Mídia', icon: HardDrive, end: false },
   { to: ROUTES.admin.importarMagias, label: 'Importar magias', icon: BookOpen, end: false },
+  { to: ROUTES.admin.biblioteca, label: 'Biblioteca', icon: Scroll, end: false },
 ];
 
 /**

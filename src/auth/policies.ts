@@ -17,6 +17,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
  * | canAccessAdminPanel        | `EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')`                |
  * | canManageCatalog           | `role = 'admin'`                                                                       |
  * | canManageSpellVisibility   | `role IN ('admin','mestre')`                                                           |
+ * | canManageLibrary           | `role = 'admin'`                                                                       |
  * | canAccessEpicMarket        | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_epico`                  |
  * | canAccessArcanoMarket      | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_arcano`                |
  * | canAccessLegendaryMarket   | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_lendario`              |
@@ -49,6 +50,9 @@ export const policies = {
 
   /** Ver e alternar as magias ocultas dos jogadores. */
   canManageSpellVisibility: (session: Session | null): boolean => isAdmin(session) || isMestre(session),
+
+  /** Catálogo da Biblioteca (manuais oficiais e pergaminhos), exclusivo do administrador da plataforma. */
+  canManageLibrary: isAdmin,
 
   /** Acesso ao Arsenal Épico do Mercado. */
   canAccessEpicMarket: (session: Session | null, ficha?: FichaCompleta | null): boolean =>

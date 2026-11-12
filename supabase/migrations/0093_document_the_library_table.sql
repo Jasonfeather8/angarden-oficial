@@ -1,0 +1,1 @@
+comment on table public.library_items is 'Acervo da Biblioteca: manuais oficiais de Angarden em PDF e pergaminhos em Markdown. Catálogo global da plataforma (sem tenant_id): todo cliente autenticado e ativo lê, e apenas o Administrador publica.';

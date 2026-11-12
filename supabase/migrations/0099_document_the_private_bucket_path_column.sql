@@ -1,0 +1,1 @@
+comment on column public.library_items.arquivo_caminho is 'Caminho do objeto no bucket PRIVADO biblioteca. A URL de exibição é assinada na hora da leitura (createSignedUrl), porque URL assinada expira e não pode ser gravada.';

@@ -14,6 +14,7 @@ export interface Authorization {
     accessAdminPanel: boolean;
     manageCatalog: boolean;
     manageSpellVisibility: boolean;
+    manageLibrary: boolean;
     accessEpicMarket: (ficha?: FichaCompleta | null) => boolean;
     accessArcanoMarket: (ficha?: FichaCompleta | null) => boolean;
     accessLegendaryMarket: (ficha?: FichaCompleta | null) => boolean;
@@ -42,6 +43,7 @@ export function useAuthorization(): Authorization {
         accessAdminPanel: policies.canAccessAdminPanel(session),
         manageCatalog: policies.canManageCatalog(session),
         manageSpellVisibility: policies.canManageSpellVisibility(session),
+        manageLibrary: policies.canManageLibrary(session),
         accessEpicMarket: (ficha) => policies.canAccessEpicMarket(session, ficha),
         accessArcanoMarket: (ficha) => policies.canAccessArcanoMarket(session, ficha),
         accessLegendaryMarket: (ficha) => policies.canAccessLegendaryMarket(session, ficha),
