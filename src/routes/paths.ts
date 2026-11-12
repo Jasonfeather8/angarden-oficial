@@ -31,6 +31,10 @@ export const ROUTES = {
 export const fichaPath = (characterId: string): string =>
   `/ficha/${encodeURIComponent(characterId)}`;
 
+/** Monta a URL da tela de Crônicas já com um relato selecionado. */
+export const cronicaPath = (cronicaId: string): string =>
+  `${ROUTES.cronicas}?cronica=${encodeURIComponent(cronicaId)}`;
+
 /** Monta a URL pública de aceite de convite de campanha. */
 export const convitePath = (token: string): string => `/convites/${encodeURIComponent(token)}`;
 

@@ -5,7 +5,7 @@ import { fichaService } from './fichaService';
 import { mercadoService } from './mercadoService';
 import { atualizarMagia, mapearMagiaDoRow } from './grimorioService';
 
-export type PastaMidia = 'fichas' | 'personagens' | 'mercado' | 'perfis' | 'grimorio';
+export type PastaMidia = 'fichas' | 'personagens' | 'cronicas' | 'mercado' | 'perfis' | 'grimorio';
 export interface OpcoesImagem { maxWidth?: number; maxHeight?: number; quality?: number; escopo?: string; }
 
 /**
@@ -129,7 +129,7 @@ function obterCaminhoStorage(pasta: PastaMidia, extensao: string, opcoes?: Opcoe
 
   const usuario = useSessionStore.getState().session?.user;
   let segmento = opcoes?.escopo;
-  if (segmento === undefined && (pasta === 'fichas' || pasta === 'personagens')) {
+  if (segmento === undefined && (pasta === 'fichas' || pasta === 'personagens' || pasta === 'cronicas')) {
     if (!usuario?.tenant_id) throw new Error('Não foi possível identificar sua organização para enviar a imagem.');
     segmento = usuario.tenant_id;
   } else if (segmento === undefined && pasta === 'perfis') {

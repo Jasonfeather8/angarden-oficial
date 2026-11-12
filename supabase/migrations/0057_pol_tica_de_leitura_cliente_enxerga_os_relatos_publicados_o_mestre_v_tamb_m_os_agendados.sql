@@ -1,0 +1,1 @@
+CREATE POLICY chronicles_select ON public.chronicles FOR SELECT TO authenticated USING (is_admin() OR (tenant_id = current_tenant_id() AND (is_mestre() OR status = 'PUBLICADA' OR agendada_para <= now())))

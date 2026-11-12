@@ -1,0 +1,1 @@
+CREATE INDEX chronicles_tenant_data_idx ON public.chronicles (tenant_id, data_aventura DESC, created_at DESC)

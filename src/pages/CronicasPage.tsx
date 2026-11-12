@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CalendarDays,
   Check,
@@ -24,25 +25,10 @@ import { LoadingState } from '../components/ui/Skeleton';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { cacheKeys } from '../services/cacheKeys';
+import { cronicaService } from '../services/cronicaService';
+import { enviarImagem } from '../services/mediaService';
 import { fichaService } from '../services/fichaService';
-
-type ChronicleStatus = 'PUBLICADA' | 'AGENDADA';
-
-type Chronicle = {
-  id: string;
-  title: string;
-  date: string;
-  summary: string;
-  progress: number;
-  characters: string[];
-  location: string;
-  status: ChronicleStatus;
-  scheduledAt?: string;
-  cover?: string;
-};
-
-// O catálogo fica vazio de propósito: os relatos oficiais ainda não foram escritos; o conteúdo anterior era material de demonstração, com crônicas inventadas e nomes de personagens de terceiros. A linha do tempo, o leitor e o formulário de criação já estão prontos para receber o conteúdo oficial.
-const INITIAL_CHRONICLES: Chronicle[] = [];
+import type { Cronica, NovaCronica } from '../types';
 
 const inputClassName =
   'w-full border border-[#4b3823] bg-[#0d0906] px-3 py-2.5 text-sm text-[#e6ddc5] outline-none transition-colors placeholder:text-[#6f5c47] focus:border-[#b89558] focus:ring-1 focus:ring-[#b89558]/50';
@@ -63,10 +49,10 @@ const formatScheduledDate = (date: string) =>
     minute: '2-digit',
   }).format(new Date(date));
 
-const ChronicleArtwork: React.FC<{ title: string; cover?: string }> = ({ title, cover }) => (
+const ChronicleArtwork: React.FC<{ title: string; capaUrl?: string }> = ({ title, capaUrl }) => (
   <div className="relative aspect-[2/3] w-full overflow-hidden border border-[#70552f] bg-[#120b07] shadow-[0_14px_28px_rgba(0,0,0,0.65)]">
-    {cover ? (
-      <img src={cover} alt={`Capa da crônica ${title}`} className="absolute inset-0 h-full w-full object-cover opacity-75" />
+    {capaUrl ? (
+      <img src={capaUrl} alt={`Capa da crônica ${title}`} className="absolute inset-0 h-full w-full object-cover opacity-75" />
     ) : (
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_23%,#f0bb61_0%,#9e5520_25%,#32170d_58%,#090403_100%)]">
         <svg className="h-full w-full" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -106,9 +92,14 @@ const ChronicleArtwork: React.FC<{ title: string; cover?: string }> = ({ title, 
 export const CronicasPage: React.FC = () => {
   const { isAdmin, isMestre, tenantId } = useAuthorization();
   const isMaster = isAdmin || isMestre;
-  const [chronicles, setChronicles] = useState<Chronicle[]>(INITIAL_CHRONICLES);
-  const [selectedId, setSelectedId] = useState<string>(() => INITIAL_CHRONICLES[0]?.id ?? '');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const { data: cronicasData, isLoading, error, reload } = useAsyncData(
+    () => cronicaService.listar(),
+    [tenantId],
+    { cacheKey: cacheKeys.cronicas(tenantId), enabled: Boolean(tenantId) }
+  );
+  const cronicas = cronicasData ?? [];
   const {
     data: personagensData,
     isLoading: isLoadingPersonagens,
@@ -121,78 +112,103 @@ export const CronicasPage: React.FC = () => {
   const personagens = personagensData ?? [];
   const [expandedCharacters, setExpandedCharacters] = useState(true);
   const [publishMode, setPublishMode] = useState<'now' | 'schedule'>('now');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [arquivoCapa, setArquivoCapa] = useState<File | null>(null);
   const [form, setForm] = useState({
-    title: '',
-    date: '',
-    summary: '',
-    progress: '0',
-    location: '',
-    scheduledAt: '',
-    characters: [] as string[],
-    cover: undefined as string | undefined,
+    titulo: '',
+    dataAventura: '',
+    relato: '',
+    progresso: '0',
+    local: '',
+    agendadaPara: '',
+    personagens: [] as string[],
+    capaUrl: undefined as string | undefined,
   });
 
-  const orderedChronicles = useMemo(
-    () => [...chronicles].sort((a, b) => b.date.localeCompare(a.date)),
-    [chronicles]
-  );
-  const selectedChronicle = orderedChronicles.find((chronicle) => chronicle.id === selectedId) ?? orderedChronicles[0];
+  const selecionadaId = searchParams.get('cronica');
+  const selectedChronicle: Cronica | undefined =
+    cronicas.find((cronica) => cronica.id === selecionadaId) ?? cronicas[0];
 
   const resetForm = () => {
+    if (arquivoCapa && form.capaUrl) URL.revokeObjectURL(form.capaUrl);
+    setArquivoCapa(null);
     setForm({
-      title: '',
-      date: '',
-      summary: '',
-      progress: '0',
-      location: '',
-      scheduledAt: '',
-      characters: [],
-      cover: undefined,
+      titulo: '',
+      dataAventura: '',
+      relato: '',
+      progresso: '0',
+      local: '',
+      agendadaPara: '',
+      personagens: [],
+      capaUrl: undefined,
     });
     setPublishMode('now');
+    setSaveError(null);
   };
 
   const closeCreateModal = () => {
+    if (isSaving) return;
     setCreateModalOpen(false);
     resetForm();
   };
 
-  const updateForm = (field: 'title' | 'date' | 'summary' | 'progress' | 'location' | 'scheduledAt', value: string) => {
+  const updateForm = (field: 'titulo' | 'dataAventura' | 'relato' | 'progresso' | 'local' | 'agendadaPara', value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
   const toggleCharacter = (character: string) => {
     setForm((current) => ({
       ...current,
-      characters: current.characters.includes(character)
-        ? current.characters.filter((item) => item !== character)
-        : [...current.characters, character],
+      personagens: current.personagens.includes(character)
+        ? current.personagens.filter((item) => item !== character)
+        : [...current.personagens, character],
     }));
   };
 
   const handleCoverChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) setForm((current) => ({ ...current, cover: URL.createObjectURL(file) }));
+    if (!file) return;
+    if (arquivoCapa && form.capaUrl) URL.revokeObjectURL(form.capaUrl);
+    setArquivoCapa(file);
+    setForm((current) => ({ ...current, capaUrl: URL.createObjectURL(file) }));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const newChronicle: Chronicle = {
-      id: `cronica-${Date.now()}`,
-      title: form.title.trim(),
-      date: form.date,
-      summary: form.summary.trim(),
-      progress: Math.min(100, Math.max(0, Number(form.progress) || 0)),
-      characters: form.characters,
-      location: form.location.trim() || 'Local não registrado',
-      status: publishMode === 'now' ? 'PUBLICADA' : 'AGENDADA',
-      scheduledAt: publishMode === 'schedule' ? form.scheduledAt : undefined,
-      cover: form.cover,
-    };
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const dados: NovaCronica = {
+        titulo: form.titulo.trim(),
+        dataAventura: form.dataAventura,
+        relato: form.relato.trim(),
+        local: form.local.trim(),
+        progresso: Math.min(100, Math.max(0, Number(form.progresso) || 0)),
+        personagens: form.personagens,
+        status: publishMode === 'schedule' ? 'AGENDADA' : 'PUBLICADA',
+        agendadaPara: publishMode === 'schedule' ? new Date(form.agendadaPara).toISOString() : undefined,
+        capaUrl: form.capaUrl,
+      };
 
-    setChronicles((current) => [...current, newChronicle]);
-    setSelectedId(newChronicle.id);
-    closeCreateModal();
+      if (arquivoCapa) {
+        const capaUrl = await enviarImagem(arquivoCapa, 'cronicas');
+        if (form.capaUrl) URL.revokeObjectURL(form.capaUrl);
+        setArquivoCapa(null);
+        setForm((current) => ({ ...current, capaUrl }));
+        dados.capaUrl = capaUrl;
+      }
+
+      const criada = await cronicaService.criar(dados);
+      setCreateModalOpen(false);
+      resetForm();
+      reload();
+      setSearchParams({ cronica: criada.id }, { replace: true });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Não foi possível salvar a crônica.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -209,7 +225,7 @@ export const CronicasPage: React.FC = () => {
           <div className="flex w-full items-center justify-between gap-3 md:w-auto md:justify-end">
             <div className="hidden items-center gap-1.5 border border-[#5a4225] bg-[#1b120b] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[#b89558] sm:flex">
               <FileText className="h-3.5 w-3.5" />
-              {orderedChronicles.length} registros
+              {cronicas.length} registros
             </div>
             {isMaster && (
               <GothicButton
@@ -228,7 +244,11 @@ export const CronicasPage: React.FC = () => {
           </div>
         }
       >
-        {orderedChronicles.length === 0 || !selectedChronicle ? (
+        {isLoading ? (
+          <LoadingState variant="text" label="Carregando crônicas…" />
+        ) : error ? (
+          <ErrorState onRetry={reload} description={error} />
+        ) : cronicas.length === 0 || !selectedChronicle ? (
           <EmptyState
             variant="plano"
             title="Nenhuma crônica registrada"
@@ -250,13 +270,13 @@ export const CronicasPage: React.FC = () => {
               </div>
 
               <div className="relative space-y-2 pl-3 before:absolute before:bottom-3 before:left-[7px] before:top-3 before:w-px before:bg-[#5a4225]">
-                {orderedChronicles.map((chronicle) => {
+                {cronicas.map((chronicle) => {
                   const isSelected = chronicle.id === selectedChronicle.id;
                   return (
                     <button
                       key={chronicle.id}
                       type="button"
-                      onClick={() => setSelectedId(chronicle.id)}
+                      onClick={() => setSearchParams({ cronica: chronicle.id }, { replace: true })}
                       aria-current={isSelected ? 'true' : undefined}
                       className={`group relative w-full border p-3 text-left transition-all focus:outline-none focus:ring-1 focus:ring-[#d1a85a] ${
                         isSelected
@@ -266,15 +286,15 @@ export const CronicasPage: React.FC = () => {
                     >
                       <span className={`absolute -left-[18px] top-5 h-2.5 w-2.5 rounded-full border-2 ${isSelected ? 'border-[#f0c265] bg-[#8c6b41] shadow-[0_0_8px_#d1a85a]' : 'border-[#70552f] bg-[#120d09]'}`} />
                       <div className="absolute right-3 top-3 h-11 w-8 overflow-hidden border border-[#70552f] bg-[#21130b]">
-                        {chronicle.cover ? (
-                          <img src={chronicle.cover} alt={`Capa da crônica ${chronicle.title}`} className="h-full w-full object-cover opacity-80" />
+                        {chronicle.capaUrl ? (
+                          <img src={chronicle.capaUrl} alt={`Capa da crônica ${chronicle.titulo}`} className="h-full w-full object-cover opacity-80" />
                         ) : (
                           <div aria-hidden="true" className="h-full w-full bg-[radial-gradient(circle_at_65%_25%,#d59b4d_0%,#663317_42%,#160805_100%)]" />
                         )}
                       </div>
                       <div className="flex items-start justify-between gap-2">
                         <p className={`pr-10 font-cinzel text-[11px] font-bold uppercase leading-tight tracking-wide ${isSelected ? 'text-[#f0d79b]' : 'text-[#c2ae87]'}`}>
-                          {chronicle.title}
+                          {chronicle.titulo}
                         </p>
                         {chronicle.status === 'AGENDADA' && (
                           <span className="shrink-0 border border-[#8c6b41]/70 bg-[#2a1d10] px-1.5 py-0.5 font-cinzel text-[8px] uppercase tracking-wider text-[#e0bd71]">Agendada</span>
@@ -282,13 +302,13 @@ export const CronicasPage: React.FC = () => {
                       </div>
                       <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#806b53]">
                         <CalendarDays className="h-3 w-3" />
-                        {formatSessionDate(chronicle.date)}
+                        {formatSessionDate(chronicle.dataAventura)}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
                         <div className="h-1 flex-1 overflow-hidden bg-[#2b1d13]">
-                          <div className="h-full bg-gradient-to-r from-[#735126] to-[#d1a85a]" style={{ width: `${chronicle.progress}%` }} />
+                          <div className="h-full bg-gradient-to-r from-[#735126] to-[#d1a85a]" style={{ width: `${chronicle.progresso}%` }} />
                         </div>
-                        <span className="font-mono text-[10px] text-[#aa8a55]">{chronicle.progress}%</span>
+                        <span className="font-mono text-[10px] text-[#aa8a55]">{chronicle.progresso}%</span>
                       </div>
                     </button>
                   );
@@ -305,27 +325,27 @@ export const CronicasPage: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="font-cinzel text-[10px] uppercase tracking-[0.2em] text-[#9d7c4d]">Registro selecionado</p>
-                    <h3 id="chronicle-detail-title" className="mt-1 font-cinzel text-lg font-bold leading-tight tracking-wide text-[#f0c265]">{selectedChronicle.title}</h3>
-                    <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#a89071]"><CalendarDays className="h-3.5 w-3.5" />{formatSessionDate(selectedChronicle.date)}</p>
+                    <h3 id="chronicle-detail-title" className="mt-1 font-cinzel text-lg font-bold leading-tight tracking-wide text-[#f0c265]">{selectedChronicle.titulo}</h3>
+                    <p className="mt-1 flex items-center gap-1 font-serif text-xs italic text-[#a89071]"><CalendarDays className="h-3.5 w-3.5" />{formatSessionDate(selectedChronicle.dataAventura)}</p>
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-1/2 h-[2px] w-16 -translate-x-1/2 bg-[#d4a359]" />
               </div>
 
               <article className="font-garamond text-[16px] leading-relaxed tracking-wide text-[#d6c4ae]">
-                <p className="first-letter:mr-1 first-letter:font-cinzel first-letter:text-3xl first-letter:font-bold first-letter:text-[#f0c265]">{selectedChronicle.summary}</p>
+                <p className="first-letter:mr-1 first-letter:font-cinzel first-letter:text-3xl first-letter:font-bold first-letter:text-[#f0c265]">{selectedChronicle.relato}</p>
               </article>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="border border-[#3d2e20] bg-[#120d09]/80 p-3">
                   <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]"><MapPin className="h-3.5 w-3.5" /> Local da aventura</p>
-                  <p className="mt-1 font-serif text-sm text-[#d0b98d]">{selectedChronicle.location}</p>
+                  <p className="mt-1 font-serif text-sm text-[#d0b98d]">{selectedChronicle.local}</p>
                 </div>
                 <div className="border border-[#3d2e20] bg-[#120d09]/80 p-3">
                   <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]"><Clock3 className="h-3.5 w-3.5" /> Estado do registro</p>
                   <p className="mt-1 font-serif text-sm text-[#d0b98d]">
-                    {selectedChronicle.status === 'AGENDADA' && selectedChronicle.scheduledAt
-                      ? `Agendada para ${formatScheduledDate(selectedChronicle.scheduledAt)}`
+                    {selectedChronicle.status === 'AGENDADA' && selectedChronicle.agendadaPara
+                      ? `Agendada para ${formatScheduledDate(selectedChronicle.agendadaPara)}`
                       : 'Crônica publicada'}
                   </p>
                 </div>
@@ -338,12 +358,12 @@ export const CronicasPage: React.FC = () => {
                   aria-expanded={expandedCharacters}
                   className="flex w-full items-center justify-between text-left font-cinzel text-xs font-bold uppercase tracking-[0.16em] text-[#d1a85a] focus:outline-none focus:ring-1 focus:ring-[#d1a85a]"
                 >
-                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Personagens presentes ({selectedChronicle.characters.length})</span>
+                  <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Personagens presentes ({selectedChronicle.personagens.length})</span>
                   {expandedCharacters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
                 {expandedCharacters && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedChronicle.characters.map((character) => (
+                    {selectedChronicle.personagens.map((character) => (
                       <span key={character} className="inline-flex items-center gap-1.5 border border-[#5a4225] bg-[#1b120b] px-2.5 py-1 font-serif text-xs text-[#cdb887]"><Check className="h-3 w-3 text-[#c6a35e]" />{character}</span>
                     ))}
                   </div>
@@ -356,14 +376,14 @@ export const CronicasPage: React.FC = () => {
                 <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Capa da sessão</p>
                 <Sparkles className="h-4 w-4 text-[#8c6b41]" />
               </div>
-              <ChronicleArtwork title={selectedChronicle.title} cover={selectedChronicle.cover} />
+              <ChronicleArtwork title={selectedChronicle.titulo} capaUrl={selectedChronicle.capaUrl} />
               <div className="mt-4 border border-[#4b3823] bg-[#120d09] p-3">
                 <div className="flex items-center justify-between font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
                   <span>Progresso da campanha</span>
-                  <span className="text-[#e0bd71]">{selectedChronicle.progress}%</span>
+                  <span className="text-[#e0bd71]">{selectedChronicle.progresso}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden border border-[#3a2c1d] bg-[#0a0705] p-px">
-                  <div className="h-full bg-gradient-to-r from-[#735126] via-[#b89558] to-[#f0c265]" style={{ width: `${selectedChronicle.progress}%` }} />
+                  <div className="h-full bg-gradient-to-r from-[#735126] via-[#b89558] to-[#f0c265]" style={{ width: `${selectedChronicle.progresso}%` }} />
                 </div>
                 <p className="mt-2 font-serif text-xs italic text-[#806b53]">O destino da companhia ainda está sendo escrito.</p>
               </div>
@@ -384,28 +404,28 @@ export const CronicasPage: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Título da crônica</span>
-                <input required value={form.title} onChange={(event) => updateForm('title', event.target.value)} className={inputClassName} placeholder="Título do capítulo" />
+                <input required value={form.titulo} onChange={(event) => updateForm('titulo', event.target.value)} className={inputClassName} placeholder="Título do capítulo" />
               </label>
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Data da aventura</span>
-                <input required type="date" value={form.date} onChange={(event) => updateForm('date', event.target.value)} className={inputClassName} />
+                <input required type="date" value={form.dataAventura} onChange={(event) => updateForm('dataAventura', event.target.value)} className={inputClassName} />
               </label>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-[1fr_140px]">
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Local da aventura</span>
-                <input value={form.location} onChange={(event) => updateForm('location', event.target.value)} className={inputClassName} placeholder="Onde a aventura aconteceu" />
+                <input value={form.local} onChange={(event) => updateForm('local', event.target.value)} className={inputClassName} placeholder="Onde a aventura aconteceu" />
               </label>
               <label className="space-y-1.5">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Progresso (%)</span>
-                <input required type="number" min="0" max="100" value={form.progress} onChange={(event) => updateForm('progress', event.target.value)} className={inputClassName} />
+                <input required type="number" min="0" max="100" value={form.progresso} onChange={(event) => updateForm('progresso', event.target.value)} className={inputClassName} />
               </label>
             </div>
 
             <label className="block space-y-1.5">
               <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Relato narrativo</span>
-              <textarea required value={form.summary} onChange={(event) => updateForm('summary', event.target.value)} className={`${inputClassName} min-h-[150px] resize-y font-garamond text-base`} placeholder="Escreva o que aconteceu nesta sessão. Markdown é aceito." />
+              <textarea required value={form.relato} onChange={(event) => updateForm('relato', event.target.value)} className={`${inputClassName} min-h-[150px] resize-y font-garamond text-base`} placeholder="Escreva o que aconteceu nesta sessão. Markdown é aceito." />
               <span className="font-serif text-xs italic text-[#806b53]">Descreva os acontecimentos, decisões e consequências deixadas pela mesa.</span>
             </label>
 
@@ -414,10 +434,10 @@ export const CronicasPage: React.FC = () => {
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Imagem de capa</span>
                 <label className="flex min-h-[84px] cursor-pointer items-center justify-center gap-2 border border-dashed border-[#70552f] bg-[#0d0906] px-3 text-center font-serif text-sm text-[#b89558] transition-colors hover:border-[#d1a85a] hover:bg-[#1a110b]">
                   <ImagePlus className="h-5 w-5" />
-                  <span>{form.cover ? 'Capa selecionada' : 'Escolher imagem'}</span>
+                  <span>{form.capaUrl ? 'Capa selecionada' : 'Escolher imagem'}</span>
                   <input type="file" accept="image/*" onChange={handleCoverChange} className="sr-only" />
                 </label>
-                {form.cover && <img src={form.cover} alt="Prévia da capa selecionada" className="h-16 w-12 object-cover border border-[#70552f]" />}
+                {form.capaUrl && <img src={form.capaUrl} alt="Prévia da capa selecionada" className="h-16 w-12 object-cover border border-[#70552f]" />}
               </div>
               <div className="space-y-2">
                 <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Personagens presentes</span>
@@ -433,7 +453,7 @@ export const CronicasPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 border border-[#4b3823] bg-[#0d0906] p-2">
                     {personagens.map((personagem) => (
                       <label key={personagem.id} className="flex cursor-pointer items-center gap-2 font-serif text-xs text-[#c4b9a3]">
-                        <input type="checkbox" checked={form.characters.includes(personagem.nome)} onChange={() => toggleCharacter(personagem.nome)} className="accent-[#b89558]" />
+                        <input type="checkbox" checked={form.personagens.includes(personagem.nome)} onChange={() => toggleCharacter(personagem.nome)} className="accent-[#b89558]" />
                         <span>{personagem.nome}</span>
                       </label>
                     ))}
@@ -450,15 +470,16 @@ export const CronicasPage: React.FC = () => {
               {publishMode === 'schedule' && (
                 <label className="block space-y-1.5">
                   <span className="font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#c9aa68]">Data e hora da publicação</span>
-                  <input required type="datetime-local" value={form.scheduledAt} onChange={(event) => updateForm('scheduledAt', event.target.value)} className={inputClassName} />
+                  <input required type="datetime-local" value={form.agendadaPara} onChange={(event) => updateForm('agendadaPara', event.target.value)} className={inputClassName} />
                 </label>
               )}
             </div>
 
+            {saveError && <p role="alert" className="border border-[#7f3d2d] bg-[#2a110d] px-3 py-2 font-serif text-sm text-[#f0b09b]">{saveError}</p>}
             <div className="flex flex-col-reverse justify-end gap-2 border-t border-[#3a2c1d] pt-4 sm:flex-row">
-              <button type="button" onClick={closeCreateModal} className="border border-[#4b3823] bg-[#120d09] px-4 py-2 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61] transition-colors hover:border-[#8c6b41] hover:text-[#e6ddc5] focus:outline-none focus:ring-1 focus:ring-[#d1a85a]">Cancelar</button>
-              <GothicButton type="submit" size="sm" width={190} height={38} icon={publishMode === 'now' ? <Send className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}>
-                {publishMode === 'now' ? 'Publicar Crônica' : 'Agendar Crônica'}
+              <button type="button" onClick={closeCreateModal} disabled={isSaving} className="border border-[#4b3823] bg-[#120d09] px-4 py-2 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61] transition-colors hover:border-[#8c6b41] hover:text-[#e6ddc5] focus:outline-none focus:ring-1 focus:ring-[#d1a85a]">Cancelar</button>
+              <GothicButton type="submit" size="sm" width={190} height={38} disabled={isSaving} icon={publishMode === 'now' ? <Send className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}>
+                {isSaving ? (publishMode === 'now' ? 'Publicando…' : 'Agendando…') : (publishMode === 'now' ? 'Publicar Crônica' : 'Agendar Crônica')}
               </GothicButton>
             </div>
           </form>

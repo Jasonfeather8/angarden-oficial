@@ -1,0 +1,1 @@
+CREATE POLICY chronicles_update ON public.chronicles FOR UPDATE TO authenticated USING (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id())) WITH CHECK (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id()))

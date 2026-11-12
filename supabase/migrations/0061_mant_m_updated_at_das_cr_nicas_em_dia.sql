@@ -1,0 +1,1 @@
+CREATE TRIGGER chronicles_set_updated_at BEFORE UPDATE ON public.chronicles FOR EACH ROW EXECUTE FUNCTION set_updated_at()

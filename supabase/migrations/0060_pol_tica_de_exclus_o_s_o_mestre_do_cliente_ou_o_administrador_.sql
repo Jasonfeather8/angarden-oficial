@@ -1,0 +1,1 @@
+CREATE POLICY chronicles_delete ON public.chronicles FOR DELETE TO authenticated USING (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id()))
