@@ -20,6 +20,14 @@ const EXTENSOES_POR_MIME: Record<string, string> = {
 };
 
 /**
+ * Pastas da raiz do bucket `midia` que não pertencem a nenhum cliente: só o
+ * Administrador da plataforma escreve nelas. As capas da Biblioteca entram
+ * aqui porque a capa é pública e vive no `midia`, enquanto o PDF do manual fica
+ * no bucket privado `biblioteca`.
+ */
+const PASTAS_DO_ADMIN = new Set(['grimorio', 'mercado', 'biblioteca-capas']);
+
+/**
  * O navegador só envia o POST depois que o preflight (OPTIONS) é aceito, e a
  * resposta precisa declarar o método e todos os cabeçalhos que o cliente manda.
  * Faltava `Access-Control-Allow-Methods`, então o preflight era recusado, o POST
@@ -275,7 +283,7 @@ Deno.serve(async (request: Request) => {
     if (!bytes) return jsonResponse(400, { motivo: 'Conteúdo base64 inválido ou imagem maior que 5 MB.' });
 
     const pasta = segmentos[0];
-    const autorizado = (pasta === 'grimorio' || pasta === 'mercado')
+    const autorizado = PASTAS_DO_ADMIN.has(pasta)
       ? profile.role === 'admin'
       : pasta === profile.id || (typeof profile.tenant_id === 'string' && pasta === profile.tenant_id);
     if (!autorizado) return jsonResponse(403, { motivo: 'Você não tem autorização para enviar imagens nesta pasta.' });
