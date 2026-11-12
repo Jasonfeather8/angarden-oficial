@@ -58,6 +58,7 @@ export const FormularioMaterialBiblioteca: React.FC<FormularioMaterialBiblioteca
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [progressoEnvio, setProgressoEnvio] = useState<number | null>(null);
 
   // O endereço local da capa escolhida precisa ser liberado quando sai de cena.
   useEffect(() => {
@@ -126,6 +127,7 @@ export const FormularioMaterialBiblioteca: React.FC<FormularioMaterialBiblioteca
     }
 
     setSalvando(true);
+    setProgressoEnvio(null);
     let caminhoEnviado: string | null = null;
 
     try {
@@ -140,7 +142,7 @@ export const FormularioMaterialBiblioteca: React.FC<FormularioMaterialBiblioteca
       if (tipo === 'pdf') {
         if (origemPdf === 'upload') {
           if (arquivoPdf) {
-            const envio = await bibliotecaService.enviarPdf(arquivoPdf);
+            const envio = await bibliotecaService.enviarPdf(arquivoPdf, setProgressoEnvio);
             caminhoEnviado = envio.caminho;
             arquivoCaminho = envio.caminho;
             arquivoBytes = envio.bytes;
@@ -185,6 +187,7 @@ export const FormularioMaterialBiblioteca: React.FC<FormularioMaterialBiblioteca
       setErro(cause instanceof Error ? cause.message : 'Não foi possível salvar o material.');
     } finally {
       setSalvando(false);
+      setProgressoEnvio(null);
     }
   };
 
@@ -562,6 +565,11 @@ export const FormularioMaterialBiblioteca: React.FC<FormularioMaterialBiblioteca
         <ToolbarButton onClick={onCancelar} disabled={salvando}>
           Cancelar
         </ToolbarButton>
+        {progressoEnvio !== null && (
+          <span role="status" aria-live="polite" className="font-serif text-xs text-[#d4af37]">
+            Enviando o PDF… {progressoEnvio}%
+          </span>
+        )}
       </div>
     </form>
   );

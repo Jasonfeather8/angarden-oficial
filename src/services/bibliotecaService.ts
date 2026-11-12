@@ -12,6 +12,18 @@ const BUCKET_ACERVO = 'biblioteca';
 /** Validade da URL assinada, suficiente para uma sessão inteira de leitura. */
 const VALIDADE_URL_ASSINADA_SEGUNDOS = 60 * 60;
 
+/**
+ * Endpoint retomável (TUS) do Storage, no host direto do serviço — é o que a
+ * documentação exige para este caminho. O upload padrão do SDK manda o arquivo
+ * inteiro numa única requisição e falhava com um manual de 10 MB; aqui o envio
+ * é fatiado e retomado de onde parou.
+ */
+const URL_UPLOAD_RESUMIVEL =
+  'https://qmwrpcyzcmmjrjzsorgx.storage.supabase.co/storage/v1/upload/resumable';
+
+/** Tamanho da parte: o Storage exige exatamente 6 MB no envio retomável. */
+const TAMANHO_PEDACO_BYTES = 6 * 1024 * 1024;
+
 const COLUNAS_ITEM =
   'id, tipo, categoria, titulo, subtitulo, descricao, capa_url, arquivo_caminho, arquivo_url, arquivo_bytes, indice, conteudo, oculto, created_at, updated_at';
 
@@ -180,11 +192,16 @@ export const bibliotecaService = {
   },
 
   /**
-   * Envia o PDF direto ao bucket, sem passar pela função de borda de mídia:
-   * aquela limita a 5 MB e trafega base64, o que não serve para um manual. Aqui
-   * o arquivo vai como corpo binário e o próprio Storage aplica o teto e o MIME.
+   * Envia o PDF direto ao bucket pelo endpoint retomável (TUS), sem passar pela
+   * função de borda de mídia: aquela limita a 5 MB e trafega base64, o que não
+   * serve para um manual. O envio é fatiado em partes de 6 MB, retomado de onde
+   * parou, e o Storage devolve a causa real quando recusa. O `tus-js-client`
+   * entra por `import()` para não pesar a rota administrativa.
    */
-  enviarPdf: async (arquivo: File): Promise<{ caminho: string; bytes: number }> => {
+  enviarPdf: async (
+    arquivo: File,
+    aoProgredir?: (percentual: number) => void,
+  ): Promise<{ caminho: string; bytes: number }> => {
     if (arquivo.type && arquivo.type !== 'application/pdf') {
       throw new Error('O acervo aceita apenas arquivos PDF.');
     }
@@ -194,12 +211,45 @@ export const bibliotecaService = {
       );
     }
 
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('Sessão expirada. Entre novamente na plataforma.');
+
     const caminho = `${crypto.randomUUID()}.pdf`;
-    const { error } = await supabase.storage.from(BUCKET_ACERVO).upload(caminho, arquivo, {
-      contentType: 'application/pdf',
-      upsert: false,
+    const { Upload } = await import('tus-js-client');
+
+    await new Promise<void>((resolver, rejeitar) => {
+      const envio = new Upload(arquivo, {
+        endpoint: URL_UPLOAD_RESUMIVEL,
+        headers: { authorization: `Bearer ${token}`, 'x-upsert': 'true' },
+        chunkSize: TAMANHO_PEDACO_BYTES,
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        metadata: {
+          bucketName: BUCKET_ACERVO,
+          objectName: caminho,
+          contentType: 'application/pdf',
+          cacheControl: '3600',
+        },
+        onProgress: (enviados, total) => {
+          if (aoProgredir && total > 0) aoProgredir(Math.round((enviados / total) * 100));
+        },
+        onError: (erro) => {
+          // O corpo da resposta traz a causa (MIME, teto, política); sem ele a
+          // falha volta como a mensagem genérica do protocolo.
+          const detalhe = 'originalResponse' in erro ? erro.originalResponse?.getBody() : undefined;
+          rejeitar(
+            new Error(
+              `Não foi possível enviar o PDF: ${detalhe || erro.message || 'o envio retomável falhou.'}`,
+            ),
+          );
+        },
+        onSuccess: () => resolver(),
+      });
+      envio.start();
     });
-    if (error) throw new Error('Não foi possível enviar o PDF: ' + error.message);
+
     return { caminho, bytes: arquivo.size };
   },
 
