@@ -1,0 +1,1 @@
+CREATE POLICY sessions_update ON public.sessions FOR UPDATE TO authenticated USING (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id())) WITH CHECK (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id()))

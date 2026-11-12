@@ -1,0 +1,1 @@
+CREATE POLICY sessions_delete ON public.sessions FOR DELETE TO authenticated USING (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id()))

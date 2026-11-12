@@ -1,0 +1,1 @@
+CREATE POLICY sessions_insert ON public.sessions FOR INSERT TO authenticated WITH CHECK (is_admin() OR (is_mestre() AND tenant_id = current_tenant_id()))

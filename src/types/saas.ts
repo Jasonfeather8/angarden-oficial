@@ -20,14 +20,18 @@ export type CampaignMemberRole = 'mestre' | 'jogador';
 
 export type CampaignMemberStatus = 'convidado' | 'ativo';
 
-/** Próxima sessão agendada da mesa. Existe no máximo uma por cliente (tenant). */
-export interface ScheduledSession {
-  /** Instante do agendamento em ISO 8601 (UTC). */
+/** Sessão da mesa: a próxima agendada ou uma já realizada. */
+export interface SessaoDaMesa {
+  id: string;
+  /** Instante da sessão em ISO 8601 (UTC). */
   dataHora: string;
   titulo: string;
   pauta: string;
   linkVtt?: string;
 }
+
+/** Dados de uma sessão nova (ou da edição de uma existente). */
+export type DadosDaSessao = Omit<SessaoDaMesa, 'id'>;
 
 /** Fronteira de isolamento de dados. `individual` = tenant de uma pessoa. */
 export interface Tenant {

@@ -12,6 +12,7 @@ import {
   Crown,
   ExternalLink,
   FileText,
+  History,
   LayoutDashboard,
   Link2,
   ListChecks,
@@ -358,6 +359,11 @@ export const DashboardPage: React.FC = () => {
     [tenantId],
     { cacheKey: cacheKeys.proximaSessao(tenantId), enabled: Boolean(tenantId) }
   );
+  const historicoSessoesQuery = useAsyncData(
+    () => scheduleService.listarHistorico(5),
+    [tenantId],
+    { cacheKey: cacheKeys.historicoSessoes(tenantId), enabled: Boolean(tenantId) }
+  );
 
   const { data: cliente } = useAsyncData(
     () => (tenantId ? tenantService.getTenant(tenantId) : Promise.resolve(null)),
@@ -481,12 +487,12 @@ export const DashboardPage: React.FC = () => {
 
     setIsSavingSessao(true);
     try {
-      await scheduleService.salvarProximaSessao({
+      await scheduleService.salvarSessao({
         dataHora: new Date(sessionForm.dataHora).toISOString(),
         titulo: title,
         pauta: agenda,
         linkVtt: sessionForm.linkVtt.trim() || undefined,
-      });
+      }, sessionFormMode === 'editar' ? session?.id : undefined);
       reloadSessao();
       closeScheduleModal();
     } catch (error) {
@@ -595,6 +601,58 @@ export const DashboardPage: React.FC = () => {
                       </ToolbarButton>
                     )}
                   </div>
+                )}
+              </PainelSecao>
+
+              <PainelSecao
+                id="historico-sessoes-titulo"
+                icon={<History className="h-4 w-4" aria-hidden="true" />}
+                title="Histórico de sessões"
+                hint="aventuras já vividas pela mesa"
+                contentClassName="p-4"
+                extra={isMestre && session && !isLoadingSessao ? (
+                  <ToolbarButton icon={<CalendarClock className="h-3.5 w-3.5" />} onClick={openScheduleModal}>
+                    Agendar outra
+                  </ToolbarButton>
+                ) : undefined}
+              >
+                {historicoSessoesQuery.isLoading ? (
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando o histórico de sessões…</span>
+                    <div className="space-y-2">
+                      <Skeleton className="h-[68px] w-full" />
+                      <Skeleton className="h-[68px] w-full" />
+                      <Skeleton className="h-[68px] w-full" />
+                    </div>
+                  </div>
+                ) : historicoSessoesQuery.error ? (
+                  <ErrorState description={historicoSessoesQuery.error} onRetry={historicoSessoesQuery.reload} />
+                ) : (historicoSessoesQuery.data ?? []).length === 0 ? (
+                  <EmptyState
+                    variant="plano"
+                    icon={<History className="h-8 w-8" aria-hidden="true" />}
+                    title="Ainda não há sessões no histórico"
+                    description={isMestre
+                      ? 'A sessão entra aqui quando acontecer, com título e pauta.'
+                      : 'As sessões que a mesa jogou aparecerão aqui.'}
+                  />
+                ) : (
+                  <ul className="space-y-2">
+                    {(historicoSessoesQuery.data ?? []).map((sessao, index) => (
+                      <li key={sessao.id} className="rounded-xs border border-[#3e2d1d] bg-[#160f0a] px-3 py-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="min-w-0 truncate font-cinzel text-[11px] font-bold uppercase tracking-[0.12em] text-[#dcd1ba]">{sessao.titulo}</p>
+                          {index === 0 && (
+                            <span className="shrink-0 rounded-xs border border-[#5a4225] px-1.5 py-0.5 font-cinzel text-[9px] uppercase tracking-wider text-[#d8b86b]">
+                              Última sessão
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 font-serif text-[11px] text-[#d8b86b]">{formatarQuando(sessao.dataHora)}</p>
+                        <p className="mt-0.5 line-clamp-2 font-serif text-[11px] italic text-[#8f795e]">{sessao.pauta}</p>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </PainelSecao>
 

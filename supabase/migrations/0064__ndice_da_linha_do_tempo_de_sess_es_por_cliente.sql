@@ -1,0 +1,1 @@
+CREATE INDEX sessions_tenant_data_idx ON public.sessions (tenant_id, data_hora DESC)
