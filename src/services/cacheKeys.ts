@@ -13,6 +13,7 @@ export const cacheKeys = {
   mestreResumo: (tenantId?: string | null) => `mestre-fichas:resumo:${tenantId ?? ''}`,
   grimorioBloqueios: (tenantId?: string | null) => `grimorio-bloqueios:${tenantId ?? ''}`,
   limitesDeFichas: (tenantId?: string | null) => `limites-fichas:${tenantId ?? ''}`,
+  perfisDoCliente: (tenantId?: string | null) => `perfis-cliente:${tenantId ?? ''}`,
   proximaSessao: (tenantId?: string | null) => `proxima-sessao:${tenantId ?? ''}`,
 };
 

@@ -12,6 +12,7 @@ export interface FichaScope {
 export interface MesaResumo {
   id: string;
   nome: string;
+  imagemUrl?: string;
   nivel: number;
   xp: number;
   dinheiro: number;
@@ -297,6 +298,7 @@ export const fichaService = {
       return {
         id: character.id,
         nome,
+        imagemUrl: ficha?.imagem_url || character.imagem_url || undefined,
         nivel: Number(ficha?.nivel) || 1,
         xp: Number(ficha?.xp) || 0,
         dinheiro: Number(ficha?.dinheiro) || 0,

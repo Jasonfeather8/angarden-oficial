@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Award,
   Check,
@@ -19,16 +19,20 @@ import {
   Wand2,
   X,
 } from 'lucide-react';
+import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { GothicButton } from '../components/GothicButton';
 import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
+import { CardAventureiroMesa, type AventureiroMesa } from '../components/CardAventureiroMesa';
+import { ToolbarButton } from '../components/ui/ToolbarButton';
 import { GrimorioBloqueiosModal } from '../components/GrimorioBloqueiosModal';
 import { LimiteFichasModal } from '../components/LimiteFichasModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { fichaService } from '../services/fichaService';
+import { profileService } from '../services/profileService';
 import { cacheKeyPrefixes, cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
@@ -58,6 +62,8 @@ type CharacterStatus = {
 type CharacterRow = {
   id: string;
   nome: string;
+  ownerId: string | null;
+  imagemUrl?: string;
   nivel: number;
   xp: number;
   dinheiro: number;
@@ -70,11 +76,73 @@ type CharacterRow = {
   status: CharacterStatus | null;
 };
 
+const MetricaMesa: React.FC<{ icon: React.ReactNode; valor: string; rotulo: string }> = ({ icon, valor, rotulo }) => (
+  <div className="flex items-center gap-3 rounded-sm border border-[#3a2c1d] bg-[#160f0a] px-3.5 py-3">
+    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xs border border-[#4b3823] bg-[#1d140c] text-[#c6a66d]">
+      {icon}
+    </span>
+    <span className="min-w-0">
+      <span className="block font-cinzel text-lg font-bold leading-tight text-[#e6ddc5]">{valor}</span>
+      <span className="block truncate font-cinzel text-[9px] uppercase tracking-[0.16em] text-[#a88d61]">{rotulo}</span>
+    </span>
+  </div>
+);
+
+const TituloSecao: React.FC<{ children: React.ReactNode; extra?: React.ReactNode }> = ({ children, extra }) => (
+  <div className="flex items-center gap-3">
+    <h2 className="font-cinzel text-[10px] font-bold uppercase tracking-[0.2em] text-[#d1a85a]">{children}</h2>
+    <span aria-hidden="true" className="h-px flex-1 bg-[#3a2c1d]" />
+    {extra}
+  </div>
+);
+
+const InterruptorPermissao: React.FC<{
+  rotulo: string;
+  icon: React.ReactNode;
+  ativo: boolean;
+  disabled: boolean;
+  onToggle: (valor: boolean) => void;
+}> = ({ rotulo, icon, ativo, disabled, onToggle }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={ativo}
+    disabled={disabled}
+    onClick={() => onToggle(!ativo)}
+    className={clsx(
+      'flex w-full items-center justify-between gap-3 rounded-xs border px-3 py-2.5 text-left font-serif text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a] disabled:cursor-not-allowed disabled:opacity-60',
+      ativo
+        ? 'border-[#3e2d1d] bg-[#181008] text-[#dcd1ba] hover:border-[#80652e]'
+        : 'border-[#332619] bg-[#140d08] text-[#9b8370] hover:border-[#5a4225]'
+    )}
+  >
+    <span className="flex min-w-0 items-center gap-2">
+      <span aria-hidden="true" className={clsx('shrink-0', ativo ? 'text-[#d1a85a]' : 'text-[#7d6a56]')}>{icon}</span>
+      <span className="truncate">{rotulo}</span>
+    </span>
+    <span
+      aria-hidden="true"
+      className={clsx(
+        'relative h-5 w-9 shrink-0 rounded-full border transition-colors',
+        ativo ? 'border-[#a88d61] bg-[#5a3d16]' : 'border-[#3e2d1d] bg-[#1b120b]'
+      )}
+    >
+      <span
+        className={clsx(
+          'absolute top-[3px] h-3 w-3 rounded-full transition-all',
+          ativo ? 'left-[19px] bg-[#f3dfaa]' : 'left-[3px] bg-[#7d6a56]'
+        )}
+      />
+    </span>
+  </button>
+);
+
 export const PainelMestrePage: React.FC = () => {
   const { isMestre: isMaster, tenantId } = useAuthorization();
   const navigate = useNavigate();
   const [permissions, setPermissions] = useState<PermissionMap>({});
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [permissionsFocusId, setPermissionsFocusId] = useState<string | null>(null);
   const [isGrimorioOpen, setIsGrimorioOpen] = useState(false);
   const [isLimitesOpen, setIsLimitesOpen] = useState(false);
   const [isXpModalOpen, setIsXpModalOpen] = useState(false);
@@ -105,6 +173,22 @@ export const PainelMestrePage: React.FC = () => {
     { cacheKey: cacheKeys.mestreFichas(tenantId), enabled: isMaster && Boolean(tenantId) && precisaMotor }
   );
 
+  // Nomes dos jogadores do cliente: uma consulta leve, só para identificar o dono de cada ficha.
+  const perfisQuery = useAsyncData(
+    () => (tenantId ? profileService.listarDoCliente(tenantId) : Promise.resolve([])),
+    [tenantId],
+    { cacheKey: cacheKeys.perfisDoCliente(tenantId), enabled: isMaster && Boolean(tenantId) }
+  );
+
+  const nomesPorJogador = useMemo(() => {
+    const mapa = new Map<string, string>();
+    (perfisQuery.data ?? []).forEach((perfil) => {
+      const nome = perfil.nome_completo?.trim();
+      if (nome) mapa.set(perfil.id, nome);
+    });
+    return mapa;
+  }, [perfisQuery.data]);
+
   const mesaCompleta = detalheQuery.data;
 
   const characters = useMemo<CharacterRow[]>(() => mesaResumo.map((item) => {
@@ -112,6 +196,8 @@ export const PainelMestrePage: React.FC = () => {
     return {
       id: item.id,
       nome: ficha?.identidade.nome_personagem?.trim() || item.nome,
+      ownerId: item.ownerId,
+      imagemUrl: ficha?.identidade.imagem_url || item.imagemUrl,
       nivel: Number(ficha?.identidade.nivel ?? item.nivel) || 1,
       xp: Number(ficha?.identidade.xp ?? item.xp) || 0,
       dinheiro: Math.max(0, Number(ficha?.recursos.dinheiro ?? item.dinheiro) || 0),
@@ -132,8 +218,10 @@ export const PainelMestrePage: React.FC = () => {
     } satisfies CharacterRow;
   }), [mesaResumo, mesaCompleta]);
 
-  // O esqueleto só aparece quando não há nada para mostrar (antes, qualquer carregamento cobria a tabela inteira).
-  const isLoading = resumoQuery.isLoading && detalheQuery.isLoading;
+  // O esqueleto só aparece quando não há nada para mostrar; com fichas em tela, cada cartão
+  // mostra o próprio esqueleto enquanto os vitais do motor não chegam.
+  const isLoading = characters.length === 0 && (resumoQuery.isLoading || detalheQuery.isLoading);
+  const carregando = resumoQuery.isLoading || detalheQuery.isLoading;
   const loadError = resumoQuery.error || detalheQuery.error
     ? 'Não foi possível carregar as fichas da mesa. Verifique sua conexão e tente novamente.'
     : '';
@@ -142,6 +230,7 @@ export const PainelMestrePage: React.FC = () => {
     setStatusMessage('');
     resumoQuery.reload();
     detalheQuery.reload();
+    perfisQuery.reload();
   };
 
   const invalidateCharacterCaches = () => {
@@ -163,13 +252,48 @@ export const PainelMestrePage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedPermissoes]);
 
-  const getPermissions = (character: CharacterRow): CharacterPermissions => ({
+  const getPermissions = useCallback((character: CharacterRow): CharacterPermissions => ({
     edicaoLiberada: permissions[character.id]?.edicaoLiberada ?? character.edicaoLiberada,
     acessoMercadoEpico: permissions[character.id]?.acessoMercadoEpico ?? character.acessoMercadoEpico,
     acessoMercadoArcano: permissions[character.id]?.acessoMercadoArcano ?? character.acessoMercadoArcano,
     acessoMercadoLendario: permissions[character.id]?.acessoMercadoLendario ?? character.acessoMercadoLendario,
     podeComprar: permissions[character.id]?.podeComprar ?? character.podeComprar,
-  });
+  }), [permissions]);
+
+  const aventureiros = useMemo<AventureiroMesa[]>(() => characters.map((character) => {
+    const permissoes = getPermissions(character);
+    return {
+      id: character.id,
+      nome: character.nome,
+      jogador: character.ownerId ? nomesPorJogador.get(character.ownerId) ?? null : null,
+      imagemUrl: character.imagemUrl,
+      nivel: character.nivel,
+      xp: character.xp,
+      dinheiro: character.dinheiro,
+      edicaoLiberada: permissoes.edicaoLiberada,
+      podeComprar: permissoes.podeComprar,
+      acessoMercadoEpico: permissoes.acessoMercadoEpico,
+      acessoMercadoArcano: permissoes.acessoMercadoArcano,
+      acessoMercadoLendario: permissoes.acessoMercadoLendario,
+      status: character.status,
+    } satisfies AventureiroMesa;
+  }), [characters, getPermissions, nomesPorJogador]);
+
+  const resumoDaMesa = useMemo(() => ({
+    fichas: characters.length,
+    edicao: characters.filter((character) => getPermissions(character).edicaoLiberada).length,
+    compra: characters.filter((character) => getPermissions(character).podeComprar).length,
+    tesouro: characters.reduce((total, character) => total + character.dinheiro, 0),
+  }), [characters, getPermissions]);
+
+  const alteracoesPendentes = useMemo(() => characters.filter((character) => {
+    const atual = getPermissions(character);
+    return atual.edicaoLiberada !== character.edicaoLiberada
+      || atual.acessoMercadoEpico !== character.acessoMercadoEpico
+      || atual.acessoMercadoArcano !== character.acessoMercadoArcano
+      || atual.acessoMercadoLendario !== character.acessoMercadoLendario
+      || atual.podeComprar !== character.podeComprar;
+  }).length, [characters, getPermissions]);
 
   const updatePermission = (character: CharacterRow, field: PermissionField, value: boolean) => {
     const current = getPermissions(character);
@@ -219,6 +343,12 @@ export const PainelMestrePage: React.FC = () => {
     } finally {
       setSavingPermissionId(null);
     }
+  };
+
+  const openPermissions = (characterId?: string) => {
+    setStatusMessage('');
+    setPermissionsFocusId(characterId ?? null);
+    setIsPermissionsOpen(true);
   };
 
   const openXpModal = () => {
@@ -328,169 +458,140 @@ export const PainelMestrePage: React.FC = () => {
     );
   }
 
+  const aventureirosOrdenados = permissionsFocusId
+    ? [...aventureiros].sort((a, b) => (a.id === permissionsFocusId ? -1 : b.id === permissionsFocusId ? 1 : 0))
+    : aventureiros;
+
   return (
     <>
       <PageShell id="page-painel-mestre" variant="padrao"
         title={<h2 className="flex items-center gap-2"><Crown className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
         subtitle="Monitoramento consolidado da mesa e permissões da campanha"
-        headerRight={<div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>}
+        headerRight={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>
+            <ToolbarButton
+              id="btn-sincronizar-mesa"
+              icon={<RefreshCw className={clsx('h-3.5 w-3.5', carregando && 'animate-spin')} />}
+              disabled={carregando}
+              onClick={refreshCharacters}
+            >
+              Sincronizar
+            </ToolbarButton>
+          </div>
+        }
       >
         <div className="space-y-6">
-          <div className="flex flex-col gap-3 border-b border-[#3a2c1d] pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="font-cinzel text-xs font-bold uppercase tracking-[0.18em] text-[#d1a85a]">Tela 6 · Registro da mesa</p>
-              <p className="mt-1 font-serif text-sm text-[#c4b9a3]">Acompanhe os recursos vitais e intervenha nas fichas dos jogadores.</p>
+          <section aria-label="Resumo da mesa" className="space-y-3">
+            <TituloSecao
+              extra={<span className="font-cinzel text-[9px] uppercase tracking-[0.16em] text-[#8f795e]">Tela 6 · Registro da mesa</span>}
+            >
+              Resumo da mesa
+            </TituloSecao>
+            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+              <MetricaMesa icon={<Users className="h-4 w-4" />} valor={String(resumoDaMesa.fichas)} rotulo={resumoDaMesa.fichas === 1 ? 'Ficha na mesa' : 'Fichas na mesa'} />
+              <MetricaMesa icon={<Pencil className="h-4 w-4" />} valor={`${resumoDaMesa.edicao}/${resumoDaMesa.fichas}`} rotulo="Edição liberada" />
+              <MetricaMesa icon={<ShoppingCart className="h-4 w-4" />} valor={`${resumoDaMesa.compra}/${resumoDaMesa.fichas}`} rotulo="Compra liberada" />
+              <MetricaMesa icon={<Coins className="h-4 w-4" />} valor={`${resumoDaMesa.tesouro} ◈`} rotulo="Tesouro da mesa" />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <GothicButton
-                id="btn-gerenciar-jogadores-permissoes"
-                size="sm"
-                width={245}
-                height={42}
-                icon={<Users className="h-4 w-4" />}
-                className="focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
-                onClick={() => { setStatusMessage(''); setIsPermissionsOpen(true); }}
-              >
-                Gerenciar Jogadores &amp; Permissões
-              </GothicButton>
-              <GothicButton
+          </section>
+
+          <section aria-label="Ações do Mestre" className="space-y-3">
+            <TituloSecao>Ações do Mestre</TituloSecao>
+            <div className="flex flex-wrap items-center gap-2 rounded-sm border border-[#3a2c1d] bg-[#160f0a] p-2.5">
+              <ToolbarButton
                 id="btn-conceder-xp-conduta"
-                size="sm"
-                width={220}
-                height={42}
-                icon={<Award className="h-4 w-4" />}
-                className="focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                variant="primary"
+                icon={<Award className="h-3.5 w-3.5" />}
                 onClick={openXpModal}
               >
-                Conceder XP de Conduta
-              </GothicButton>
-              <GothicButton
+                Conceder XP
+              </ToolbarButton>
+              <span aria-hidden="true" className="mx-0.5 hidden h-6 w-px bg-[#3a2c1d] sm:block" />
+              <ToolbarButton
+                id="btn-gerenciar-jogadores-permissoes"
+                icon={<Users className="h-3.5 w-3.5" />}
+                onClick={() => openPermissions()}
+              >
+                Permissões
+                {alteracoesPendentes > 0 && (
+                  <>
+                    <span aria-hidden="true" className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#8a4a2f] px-1 text-[9px] text-[#f3dfaa]">
+                      {alteracoesPendentes}
+                    </span>
+                    <span className="sr-only">
+                      {alteracoesPendentes === 1 ? '1 alteração não salva' : `${alteracoesPendentes} alterações não salvas`}
+                    </span>
+                  </>
+                )}
+              </ToolbarButton>
+              <ToolbarButton
                 id="btn-bloqueios-grimorio"
-                size="sm"
-                width={190}
-                height={42}
-                icon={<Lock className="h-4 w-4" />}
-                className="focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                icon={<Lock className="h-3.5 w-3.5" />}
                 onClick={() => { setStatusMessage(''); setIsGrimorioOpen(true); }}
               >
-                Bloqueios do Grimório
-              </GothicButton>
-              <GothicButton
+                Grimório
+              </ToolbarButton>
+              <ToolbarButton
                 id="btn-limite-fichas"
-                size="sm"
-                width={175}
-                height={42}
-                icon={<UserCog className="h-4 w-4" />}
-                className="focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                icon={<UserCog className="h-3.5 w-3.5" />}
                 onClick={() => { setStatusMessage(''); setIsLimitesOpen(true); }}
               >
-                Limite de Fichas
-              </GothicButton>
+                Limites
+              </ToolbarButton>
             </div>
-          </div>
+          </section>
 
-          {statusMessage && <p role="status" aria-live="polite" className="border-l-2 border-[#a88d61] bg-[#20150c] px-3 py-2 font-serif text-sm text-[#d4c6aa]">{statusMessage}</p>}
+          {statusMessage && (
+            <p role="status" aria-live="polite" className="border-l-2 border-[#a88d61] bg-[#20150c] px-3 py-2 font-serif text-sm text-[#d4c6aa]">{statusMessage}</p>
+          )}
 
-          <div className="overflow-x-auto border border-[#4b3823] bg-black/30">
-            <table aria-busy={isLoading} className="w-full min-w-[920px] border-collapse text-left font-serif">
-              <caption className="sr-only">Monitoramento consolidado dos personagens disponíveis</caption>
-              <thead className="bg-[#21160d] font-cinzel text-[10px] uppercase tracking-wider text-[#c6a66d]">
-                <tr>
-                  <th scope="col" className="border-b border-[#4b3823] px-4 py-3">Nome / Personagem</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">Vida</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">Vigor</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">North</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">Nível</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">XP</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">Edição Liberada</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3">Tesouro</th>
-                  <th scope="col" className="border-b border-[#4b3823] px-3 py-3"><span className="sr-only">Ações</span></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#3a2c1d] text-[#dcd1ba]">
-                {isLoading ? (
-                  <>
-                    <tr className="sr-only"><td colSpan={9}>Consultando os pergaminhos das fichas…</td></tr>
-                    {Array.from({ length: 4 }).map((_, rowIndex) => (
-                      <tr key={`skeleton-row-${rowIndex}`} aria-hidden="true">
-                        {Array.from({ length: 9 }).map((__, cellIndex) => (
-                          <td key={cellIndex} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>
-                        ))}
-                      </tr>
-                    ))}
-                  </>
-                ) : characters.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-4">
-                      {loadError ? (
-                        <ErrorState
-                          title="Não foi possível carregar a mesa"
-                          description={loadError}
-                          onRetry={refreshCharacters}
-                        />
-                      ) : (
-                        <EmptyState
-                          variant="plano"
-                          title="Nenhuma ficha disponível"
-                          description="Nenhum personagem foi encontrado para monitoramento nesta campanha."
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ) : characters.map((character) => {
-                  const characterPermissions = getPermissions(character);
-                  return (
-                    <tr key={character.id} className="transition-colors hover:bg-[#24180e]">
-                      <th scope="row" className="px-4 py-3 font-semibold text-[#e6ddc5]">{character.nome}</th>
-                      <td className="whitespace-nowrap px-3 py-3 text-[#d2a85f]">{character.status ? <>{character.status.vidaAtual} <span className="text-[#88745a]">/ {character.status.vidaMax}</span></> : <Skeleton className="h-4 w-16" />}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-[#d2a85f]">{character.status ? <>{character.status.vigorAtual} <span className="text-[#88745a]">/ {character.status.vigorMax}</span></> : <Skeleton className="h-4 w-16" />}</td>
-                      <td className="px-3 py-3 text-[#e0c98e]">{character.status ? character.status.north : <Skeleton className="h-4 w-10" />}</td>
-                      <td className="px-3 py-3 text-[#e0c98e]">{character.nivel}</td>
-                      <td className="px-3 py-3 text-[#c4b9a3]">{character.xp}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex items-center gap-1.5 rounded-xs border px-2 py-1 text-[10px] font-cinzel uppercase ${characterPermissions.edicaoLiberada ? 'border-[#80652e] bg-[#33250f] text-[#e7c56d]' : 'border-[#52382b] bg-[#1a110d] text-[#9b8370]'}`}>
-                          {characterPermissions.edicaoLiberada ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                          {characterPermissions.edicaoLiberada ? 'Sim' : 'Não'}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-[#d8b86b]">{character.dinheiro} ◈</td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            type="button"
-                            aria-label={`Abrir a ficha de ${character.nome}`}
-                            title="Abrir ficha"
-                            className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-xs border border-[#5a4225] bg-[#1b120b] text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
-                            onClick={() => navigate(fichaPath(character.id))}
-                          >
-                            <ScrollText className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Ajustar tesouro de ${character.nome}`}
-                            title="Ajustar tesouro"
-                            className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-xs border border-[#5a4225] bg-[#1b120b] text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
-                            onClick={() => openMoneyModal(character.id)}
-                          >
-                            <Coins className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <section aria-label="Aventureiros da mesa" className="space-y-3">
+            <TituloSecao
+              extra={(
+                <span className="font-serif text-xs text-[#8f795e]">
+                  {isLoading
+                    ? 'Consultando a mesa…'
+                    : `${characters.length} ${characters.length === 1 ? 'ficha' : 'fichas'} · dados salvos no servidor`}
+                </span>
+              )}
+            >
+              Aventureiros
+            </TituloSecao>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#917b60]">
-            <span>
-              {isLoading
-                ? 'Consultando os pergaminhos da mesa…'
-                : `${characters.length} ${characters.length === 1 ? 'ficha disponível' : 'fichas disponíveis'} · dados salvos no servidor`}
-            </span>
-            <button type="button" onClick={refreshCharacters} className="inline-flex items-center gap-1.5 rounded-xs border border-transparent px-2 py-1 font-cinzel uppercase tracking-wider transition-colors hover:border-[#5a4225] hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"><RefreshCw className="h-3.5 w-3.5" /> Atualizar tabela</button>
-          </div>
+            {isLoading ? (
+              <div role="status" aria-live="polite" className="space-y-3">
+                <span className="sr-only">Consultando os pergaminhos das fichas…</span>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <Skeleton key={`skeleton-card-${index}`} className="h-[220px] w-full" />
+                  ))}
+                </div>
+              </div>
+            ) : loadError && characters.length === 0 ? (
+              <ErrorState title="Não foi possível carregar a mesa" description={loadError} onRetry={refreshCharacters} />
+            ) : characters.length === 0 ? (
+              <EmptyState
+                variant="plano"
+                icon={<Users className="h-8 w-8" aria-hidden="true" />}
+                title="Nenhuma ficha disponível"
+                description="Nenhum personagem foi encontrado para monitoramento nesta campanha."
+              />
+            ) : (
+              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {aventureirosOrdenados.map((aventureiro) => (
+                  <li key={aventureiro.id} className="min-w-0">
+                    <CardAventureiroMesa
+                      aventureiro={aventureiro}
+                      onAbrirFicha={(characterId) => navigate(fichaPath(characterId))}
+                      onAjustarTesouro={(characterId) => openMoneyModal(characterId)}
+                      onPermissoes={(characterId) => openPermissions(characterId)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
       </PageShell>
 
@@ -500,7 +601,7 @@ export const PainelMestrePage: React.FC = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="painel-permissoes-title"
-            className="absolute right-0 top-0 flex h-full w-full max-w-[430px] flex-col border-l-2 border-[#76552f] bg-[#120d09] shadow-[-12px_0_35px_rgba(0,0,0,0.8)]"
+            className="absolute right-0 top-0 flex h-full w-full max-w-[440px] flex-col border-l-2 border-[#76552f] bg-[#120d09] shadow-[-12px_0_35px_rgba(0,0,0,0.8)]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between border-b border-[#4b3823] bg-[#21160d] px-5 py-5">
@@ -515,43 +616,78 @@ export const PainelMestrePage: React.FC = () => {
                 <p className="font-serif text-sm text-[#a88d61]">Nenhum jogador disponível.</p>
               ) : (
                 <div className="space-y-4">
-                  {characters.map((character) => {
+                  {[...characters].sort((a, b) => (a.id === permissionsFocusId ? -1 : b.id === permissionsFocusId ? 1 : 0)).map((character) => {
                     const characterPermissions = getPermissions(character);
                     const isSaving = savingPermissionId === 'all' || savingPermissionId === character.id;
+                    const nomeJogador = character.ownerId ? nomesPorJogador.get(character.ownerId) ?? null : null;
                     return (
-                      <div key={character.id} className="border border-[#4b3823] bg-[#1b120b] p-4">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <div>
-                            <p className="font-cinzel text-sm uppercase text-[#e6ddc5]">{character.nome}</p>
-                            <p className="font-serif text-xs text-[#8f795e]">Nível {character.nivel}</p>
+                      <div
+                        key={character.id}
+                        className={clsx('rounded-sm border bg-[#150f0a] p-4', character.id === permissionsFocusId ? 'border-[#a88d61]' : 'border-[#3a2c1d]')}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-cinzel text-sm uppercase text-[#e6ddc5]">{character.nome}</p>
+                            <p className="truncate font-serif text-xs text-[#8f795e]">
+                              Nível {character.nivel}{nomeJogador ? ` · ${nomeJogador}` : ''}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button type="button" title="Abrir ficha" onClick={() => navigate(fichaPath(character.id))} className="rounded-xs border border-[#5a4225] px-2 py-1 font-cinzel text-[9px] uppercase tracking-wider text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]">Abrir ficha</button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <ToolbarButton
+                              icon={<ScrollText className="h-3.5 w-3.5" />}
+                              onClick={() => navigate(fichaPath(character.id))}
+                              aria-label={`Abrir ficha de ${character.nome}`}
+                            >
+                              Abrir ficha
+                            </ToolbarButton>
                             {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-[#c6a66d]" aria-label="Salvando permissão" />}
                           </div>
                         </div>
-                        <div className="space-y-2.5">
-                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
-                            <span className="flex items-center gap-2"><Pencil className="h-4 w-4 text-[#a88d61]" /> Edição Liberada</span>
-                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.edicaoLiberada} disabled={isSaving} onChange={(event) => updatePermission(character, 'edicaoLiberada', event.target.checked)} />
-                          </label>
-                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
-                            <span className="flex items-center gap-2"><Store className="h-4 w-4 text-[#a88d61]" /> Acesso ao Mercado Épico</span>
-                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.acessoMercadoEpico} disabled={isSaving} onChange={(event) => updatePermission(character, 'acessoMercadoEpico', event.target.checked)} />
-                          </label>
-                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
-                            <span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-[#a88d61]" /> Comprar no Mercado</span>
-                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.podeComprar} disabled={isSaving} onChange={(event) => updatePermission(character, 'podeComprar', event.target.checked)} />
-                          </label>
-                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
-                            <span className="flex items-center gap-2"><Wand2 className="h-4 w-4 text-[#a88d61]" /> Mercado Arcano</span>
-                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.acessoMercadoArcano} disabled={isSaving} onChange={(event) => updatePermission(character, 'acessoMercadoArcano', event.target.checked)} />
-                          </label>
-                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
-                            <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#a88d61]" /> Mercado Lendário</span>
-                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.acessoMercadoLendario} disabled={isSaving} onChange={(event) => updatePermission(character, 'acessoMercadoLendario', event.target.checked)} />
-                          </label>
-                        </div>
+
+                        <fieldset>
+                          <legend className="mb-2 font-cinzel text-[9px] uppercase tracking-[0.18em] text-[#a88d61]">Ficha</legend>
+                          <InterruptorPermissao
+                            rotulo="Edição liberada"
+                            icon={<Pencil className="h-4 w-4" />}
+                            ativo={characterPermissions.edicaoLiberada}
+                            disabled={isSaving}
+                            onToggle={(valor) => updatePermission(character, 'edicaoLiberada', valor)}
+                          />
+                        </fieldset>
+
+                        <fieldset className="mt-4">
+                          <legend className="mb-2 font-cinzel text-[9px] uppercase tracking-[0.18em] text-[#a88d61]">Mercado</legend>
+                          <div className="space-y-2">
+                            <InterruptorPermissao
+                              rotulo="Comprar no Mercado"
+                              icon={<ShoppingCart className="h-4 w-4" />}
+                              ativo={characterPermissions.podeComprar}
+                              disabled={isSaving}
+                              onToggle={(valor) => updatePermission(character, 'podeComprar', valor)}
+                            />
+                            <InterruptorPermissao
+                              rotulo="Mercado Épico"
+                              icon={<Store className="h-4 w-4" />}
+                              ativo={characterPermissions.acessoMercadoEpico}
+                              disabled={isSaving}
+                              onToggle={(valor) => updatePermission(character, 'acessoMercadoEpico', valor)}
+                            />
+                            <InterruptorPermissao
+                              rotulo="Mercado Arcano"
+                              icon={<Wand2 className="h-4 w-4" />}
+                              ativo={characterPermissions.acessoMercadoArcano}
+                              disabled={isSaving}
+                              onToggle={(valor) => updatePermission(character, 'acessoMercadoArcano', valor)}
+                            />
+                            <InterruptorPermissao
+                              rotulo="Mercado Lendário"
+                              icon={<Sparkles className="h-4 w-4" />}
+                              ativo={characterPermissions.acessoMercadoLendario}
+                              disabled={isSaving}
+                              onToggle={(valor) => updatePermission(character, 'acessoMercadoLendario', valor)}
+                            />
+                          </div>
+                        </fieldset>
                       </div>
                     );
                   })}
@@ -559,6 +695,15 @@ export const PainelMestrePage: React.FC = () => {
               )}
             </div>
             <div className="border-t border-[#4b3823] bg-[#21160d] p-5">
+              <p
+                role="status"
+                aria-live="polite"
+                className={clsx('mb-3 font-serif text-xs', alteracoesPendentes > 0 ? 'text-[#e7c56d]' : 'text-[#8f795e]')}
+              >
+                {alteracoesPendentes > 0
+                  ? `${alteracoesPendentes} ${alteracoesPendentes === 1 ? 'personagem com alteração não salva' : 'personagens com alterações não salvas'}`
+                  : 'Nenhuma alteração pendente.'}
+              </p>
               <GothicButton
                 id="btn-salvar-permissoes"
                 type="button"

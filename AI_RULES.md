@@ -29,6 +29,7 @@
 - Prefer the existing reusable components in `src/components/` before creating a new component. Keep new components focused and colocate feature-specific UI there.
 - Use Zustand for state shared by multiple components or pages. Keep local, short-lived interaction state in React hooks instead of adding it to a global store.
 - Use Lucide React icons for interface symbols. Do not add a new icon package or use emoji as a substitute for UI icons.
+- Ações de tela fora de modal usam `ToolbarButton` (`src/components/ui/ToolbarButton.tsx`), placa fina com variantes `primary`/`secondary`; `GothicButton` fica reservado às confirmações de modal. Telas de painel seguem o desenho do Painel do Mestre: faixa de resumo, barra de ações única e grade de cartões (`src/components/CardAventureiroMesa.tsx`).
 - Use Motion only for meaningful UI motion such as modal entrance, list transitions, or interaction feedback; prefer Tailwind/CSS transitions for simple hover and focus effects.
 - Use `clsx` for conditional class names and `tailwind-merge` when composed class strings may conflict. Do not concatenate long conditional class strings manually.
 - Keep data fetching and persistence in `src/services/`; pages and presentational components should call service functions rather than embedding storage or API logic.
