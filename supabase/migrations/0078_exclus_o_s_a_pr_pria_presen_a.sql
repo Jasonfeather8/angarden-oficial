@@ -1,0 +1,1 @@
+create policy session_attendance_delete on public.session_attendance for delete to authenticated using (user_id = auth.uid() and tenant_id = current_tenant_id())

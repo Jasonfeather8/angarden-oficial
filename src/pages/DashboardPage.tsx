@@ -5,6 +5,7 @@ import {
   BookOpen,
   Bookmark,
   CalendarClock,
+  Check,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -283,6 +284,10 @@ export const DashboardPage: React.FC = () => {
     () => (limitesQuery.data?.perfis ?? []).filter((perfil) => perfil.role !== 'admin'),
     [limitesQuery.data?.perfis]
   );
+  const totalJogadores = useMemo(
+    () => jogadores.filter((perfil) => perfil.role === 'jogador').length,
+    [jogadores]
+  );
   const contagens = useMemo(() => limitesQuery.data?.contagens ?? {}, [limitesQuery.data?.contagens]);
   const nomesPorJogador = useMemo(
     () => new Map(jogadores.map((perfil) => [perfil.id, perfil.nome_completo])),
@@ -359,6 +364,14 @@ export const DashboardPage: React.FC = () => {
     [tenantId],
     { cacheKey: cacheKeys.proximaSessao(tenantId), enabled: Boolean(tenantId) }
   );
+  const presencasQuery = useAsyncData(
+    () => scheduleService.listarPresencas(session!.id),
+    [session?.id],
+    {
+      cacheKey: session?.id ? cacheKeys.presencasDaSessao(session.id) : undefined,
+      enabled: Boolean(session?.id),
+    }
+  );
   const historicoSessoesQuery = useAsyncData(
     () => scheduleService.listarHistorico(5),
     [tenantId],
@@ -381,6 +394,23 @@ export const DashboardPage: React.FC = () => {
     linkVtt: '',
   });
   const [formError, setFormError] = useState('');
+  const [isSavingPresenca, setIsSavingPresenca] = useState(false);
+  const [erroPresenca, setErroPresenca] = useState('');
+
+  const alterarPresenca = async (confirmar: boolean) => {
+    if (!session) return;
+    setIsSavingPresenca(true);
+    setErroPresenca('');
+    try {
+      if (confirmar) await scheduleService.confirmarPresenca(session.id);
+      else await scheduleService.cancelarPresenca(session.id);
+      presencasQuery.reload();
+    } catch (error) {
+      setErroPresenca(error instanceof Error ? error.message : 'Não foi possível atualizar sua presença.');
+    } finally {
+      setIsSavingPresenca(false);
+    }
+  };
 
   const primeiroNome = useMemo(() => {
     const nome = user?.nome_completo?.trim();
@@ -556,33 +586,95 @@ export const DashboardPage: React.FC = () => {
                 ) : erroSessao ? (
                   <ErrorState description={erroSessao} onRetry={reloadSessao} />
                 ) : session ? (
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-                    <div className="min-w-0">
-                      <h3 className="font-cinzel text-xl font-bold text-[#f0d79b] sm:text-2xl">{session.titulo}</h3>
-                      <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">
-                        {formatSessionDate(session.dataHora)}
-                      </p>
-                      <div className="mt-4">
-                        <p className="mb-1.5 flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
-                          <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Pauta da mesa
+                  <>
+                    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                      <div className="min-w-0">
+                        <h3 className="font-cinzel text-xl font-bold text-[#f0d79b] sm:text-2xl">{session.titulo}</h3>
+                        <p className="mt-1 font-serif text-sm capitalize italic text-[#b39a78]">
+                          {formatSessionDate(session.dataHora)}
                         </p>
-                        <p className="font-serif text-base leading-relaxed text-[#d6c4ae]">{session.pauta}</p>
+                        <div className="mt-4">
+                          <p className="mb-1.5 flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
+                            <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Pauta da mesa
+                          </p>
+                          <p className="font-serif text-base leading-relaxed text-[#d6c4ae]">{session.pauta}</p>
+                        </div>
+                        {session.linkVtt && (
+                          <a
+                            href={session.linkVtt}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
+                          >
+                            <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual
+                            <span className="sr-only"> (abre em nova aba)</span>
+                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          </a>
+                        )}
                       </div>
-                      {session.linkVtt && (
-                        <a
-                          href={session.linkVtt}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#d1a85a] underline decoration-[#70552f] underline-offset-4 transition-colors hover:text-[#f0d79b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f0c265]"
-                        >
-                          <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Abrir sala virtual
-                          <span className="sr-only"> (abre em nova aba)</span>
-                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                        </a>
-                      )}
+                      <SessionCountdown dataHora={session.dataHora} />
                     </div>
-                    <SessionCountdown dataHora={session.dataHora} />
-                  </div>
+                    <div role="group" aria-label="Presença na próxima sessão" className="mt-5 border-t border-[#3a2c1d] pt-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="flex items-center gap-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#a88d61]">
+                          <Users className="h-3.5 w-3.5" aria-hidden="true" /> Presença
+                        </p>
+                        <p className="font-serif text-xs text-[#d6c4ae]">
+                          {papelMestre && limitesQuery.data
+                            ? `${contar(presencasQuery.data?.length ?? 0, 'confirmado', 'confirmados')} de ${totalJogadores} jogadores`
+                            : contar(presencasQuery.data?.length ?? 0, 'confirmado', 'confirmados')}
+                        </p>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          {presencasQuery.isLoading ? (
+                            <div role="status" aria-live="polite">
+                              <span className="sr-only">Carregando presenças…</span>
+                              <Skeleton className="h-6 w-40" />
+                            </div>
+                          ) : presencasQuery.error ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-serif text-xs text-[#d28a70]">Não foi possível carregar as presenças.</p>
+                              <ToolbarButton onClick={presencasQuery.reload}>Tentar de novo</ToolbarButton>
+                            </div>
+                          ) : presencasQuery.data?.length ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {presencasQuery.data.map((presenca) => (
+                                <span key={presenca.userId} className="rounded-xs border border-[#4b3823] bg-[#150f0a] px-2 py-0.5 font-serif text-xs text-[#d6c4ae]">
+                                  {presenca.nome}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="font-serif text-xs italic text-[#8f795e]">Ninguém confirmou presença ainda.</p>
+                          )}
+                        </div>
+                        {!papelMestre && !presencasQuery.isLoading && !presencasQuery.error && presencasQuery.data !== null && (
+                          presencasQuery.data.some((presenca) => presenca.userId === userId) ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-serif text-xs text-[#b39a78]">Sua presença está confirmada.</span>
+                              <ToolbarButton
+                                disabled={isSavingPresenca}
+                                onClick={() => void alterarPresenca(false)}
+                              >
+                                Cancelar presença
+                              </ToolbarButton>
+                            </div>
+                          ) : (
+                            <ToolbarButton
+                              variant="primary"
+                              icon={<Check className="h-3.5 w-3.5" />}
+                              disabled={isSavingPresenca}
+                              onClick={() => void alterarPresenca(true)}
+                            >
+                              Confirmar presença
+                            </ToolbarButton>
+                          )
+                        )}
+                      </div>
+                      {erroPresenca && <p className="mt-2 font-serif text-xs text-[#d28a70]">{erroPresenca}</p>}
+                    </div>
+                  </>
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="min-w-0 font-serif text-sm text-[#a88d61]">

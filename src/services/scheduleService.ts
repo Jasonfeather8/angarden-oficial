@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { useSessionStore } from '../store/useSessionStore';
-import type { DadosDaSessao, SessaoDaMesa } from '../types';
+import type { DadosDaSessao, PresencaNaSessao, SessaoDaMesa } from '../types';
 import { cacheKeyPrefixes } from './cacheKeys';
 
 type SessaoRow = {
@@ -27,6 +27,60 @@ const obterTenantId = (): string => {
 };
 
 export const scheduleService = {
+  /** Presenças confirmadas na sessão, em ordem de confirmação. */
+  listarPresencas: async (sessionId: string): Promise<PresencaNaSessao[]> => {
+    const tenantId = obterTenantId();
+    const { data, error } = await supabase
+      .from('session_attendance')
+      .select('user_id, profiles ( nome_completo )')
+      .eq('tenant_id', tenantId)
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw new Error('Não foi possível carregar as presenças: ' + error.message);
+    return (data ?? []).map((linha) => {
+      const perfil = linha.profiles as unknown as { nome_completo: string | null } | null;
+      return {
+        userId: linha.user_id,
+        nome: perfil?.nome_completo ?? 'Aventureiro',
+      };
+    });
+  },
+
+  /** Confirma a presença do usuário atual na sessão. */
+  confirmarPresenca: async (sessionId: string): Promise<void> => {
+    const tenantId = obterTenantId();
+    const userId = useSessionStore.getState().session?.user.id;
+    if (!userId) throw new Error('Não foi possível confirmar a presença: usuário não autenticado.');
+
+    const { error } = await supabase
+      .from('session_attendance')
+      .upsert(
+        { session_id: sessionId, user_id: userId, tenant_id: tenantId },
+        { onConflict: 'session_id,user_id' }
+      );
+
+    if (error) throw new Error('Não foi possível confirmar a presença: ' + error.message);
+    invalidateAsyncDataCache(cacheKeyPrefixes.presencas);
+  },
+
+  /** Cancela a presença do usuário atual na sessão. */
+  cancelarPresenca: async (sessionId: string): Promise<void> => {
+    const tenantId = obterTenantId();
+    const userId = useSessionStore.getState().session?.user.id;
+    if (!userId) throw new Error('Não foi possível cancelar a presença: usuário não autenticado.');
+
+    const { error } = await supabase
+      .from('session_attendance')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId);
+
+    if (error) throw new Error('Não foi possível cancelar a presença: ' + error.message);
+    invalidateAsyncDataCache(cacheKeyPrefixes.presencas);
+  },
+
   /** A próxima sessão futura da mesa (a mais próxima primeiro), ou null. */
   getProximaSessao: async (): Promise<SessaoDaMesa | null> => {
     const tenantId = obterTenantId();

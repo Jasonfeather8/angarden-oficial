@@ -1,0 +1,1 @@
+grant select, insert, delete on table public.session_attendance to authenticated

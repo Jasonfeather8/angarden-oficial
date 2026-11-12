@@ -1,0 +1,1 @@
+alter table public.session_attendance enable row level security

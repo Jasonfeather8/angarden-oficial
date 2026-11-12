@@ -1,0 +1,1 @@
+create policy session_attendance_insert on public.session_attendance for insert to authenticated with check (user_id = auth.uid() and tenant_id = current_tenant_id() and exists (select 1 from public.sessions s where s.id = session_id and s.tenant_id = current_tenant_id()))

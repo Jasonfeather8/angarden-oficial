@@ -1,0 +1,1 @@
+create policy session_attendance_select on public.session_attendance for select to authenticated using (is_admin() or tenant_id = current_tenant_id())
