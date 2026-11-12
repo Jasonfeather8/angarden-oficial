@@ -288,6 +288,16 @@ export const fichaService = {
     invalidarCacheAcervo();
   },
 
+  distribuirTesouro: async (entradas: Array<{ characterId: string; delta: number }>): Promise<void> => {
+    if (entradas.length === 0) throw new Error('Selecione ao menos um personagem.');
+    const { error } = await supabase.rpc('distribute_treasure', {
+      p_character_ids: entradas.map((entrada) => entrada.characterId),
+      p_deltas: entradas.map((entrada) => entrada.delta),
+    });
+    if (error) throw new Error('Não foi possível distribuir o tesouro: ' + error.message);
+    invalidarCacheAcervo();
+  },
+
   /**
    * Lista os personagens acessíveis ao usuário: apenas os do seu cliente (tenant).
    * O administrador da plataforma não possui acervo próprio e usa o painel administrativo.

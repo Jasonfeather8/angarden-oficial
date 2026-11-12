@@ -1,0 +1,1 @@
+grant execute on function public.distribute_treasure(text[], numeric[]) to authenticated, service_role

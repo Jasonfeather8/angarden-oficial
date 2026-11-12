@@ -1,0 +1,1 @@
+revoke all on function public.distribute_treasure(text[], numeric[]) from public, anon

@@ -29,6 +29,7 @@ import { PlacaMetrica } from '../components/ui/PlacaMetrica';
 import { ToolbarButton } from '../components/ui/ToolbarButton';
 import { GrimorioBloqueiosModal } from '../components/GrimorioBloqueiosModal';
 import { LimiteFichasModal } from '../components/LimiteFichasModal';
+import { DistribuirTesouroModal } from '../components/DistribuirTesouroModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -134,6 +135,7 @@ export const PainelMestrePage: React.FC = () => {
   const [permissionsFocusId, setPermissionsFocusId] = useState<string | null>(null);
   const [isGrimorioOpen, setIsGrimorioOpen] = useState(false);
   const [isLimitesOpen, setIsLimitesOpen] = useState(false);
+  const [isDistribuirOpen, setIsDistribuirOpen] = useState(false);
   const [isXpModalOpen, setIsXpModalOpen] = useState(false);
   const [isMoneyModalOpen, setIsMoneyModalOpen] = useState(false);
   const [selectedXpTarget, setSelectedXpTarget] = useState('all');
@@ -228,6 +230,12 @@ export const PainelMestrePage: React.FC = () => {
     invalidateAsyncDataCache(cacheKeys.mestreResumo(tenantId));
   };
 
+  const concluirDistribuicao = (mensagem: string) => {
+    invalidateCharacterCaches();
+    refreshCharacters();
+    setStatusMessage(mensagem);
+  };
+
   const seedPermissoes = characters.map((row) => `${row.id}:${row.edicaoLiberada}:${row.acessoMercadoEpico}:${row.acessoMercadoArcano}:${row.acessoMercadoLendario}:${row.podeComprar}`).join('|');
 
   useEffect(() => {
@@ -267,6 +275,8 @@ export const PainelMestrePage: React.FC = () => {
       status: character.status,
     } satisfies AventureiroMesa;
   }), [characters, getPermissions, nomesPorJogador]);
+
+  const aventureirosTesouro = useMemo(() => aventureiros.map(({ id, nome, dinheiro }) => ({ id, nome, dinheiro })), [aventureiros]);
 
   const resumoDaMesa = useMemo(() => ({
     fichas: characters.length,
@@ -495,6 +505,13 @@ export const PainelMestrePage: React.FC = () => {
                 onClick={openXpModal}
               >
                 Conceder XP
+              </ToolbarButton>
+              <ToolbarButton
+                id="btn-distribuir-tesouro"
+                icon={<Coins className="h-3.5 w-3.5" />}
+                onClick={() => { setStatusMessage(''); setIsDistribuirOpen(true); }}
+              >
+                Distribuir tesouro
               </ToolbarButton>
               <span aria-hidden="true" className="mx-0.5 hidden h-6 w-px bg-[#3a2c1d] sm:block" />
               <ToolbarButton
@@ -763,6 +780,7 @@ export const PainelMestrePage: React.FC = () => {
       </Modal>
       <GrimorioBloqueiosModal isOpen={isGrimorioOpen} onClose={() => setIsGrimorioOpen(false)} />
       <LimiteFichasModal isOpen={isLimitesOpen} onClose={() => setIsLimitesOpen(false)} />
+      <DistribuirTesouroModal isOpen={isDistribuirOpen} onClose={() => setIsDistribuirOpen(false)} aventureiros={aventureirosTesouro} onConcluido={concluirDistribuicao} />
     </>
   );
 };
