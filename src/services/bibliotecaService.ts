@@ -3,6 +3,7 @@ import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { supabase } from '../integrations/supabase/client';
 import { useSessionStore } from '../store/useSessionStore';
 import type { EntradaIndiceBiblioteca, ItemBiblioteca, NovoItemBiblioteca } from '../types';
+import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
 import { cacheKeyPrefixes } from './cacheKeys';
 
 /** Bucket PRIVADO do acervo: guarda só PDF e é lido por URL assinada. */
@@ -87,19 +88,40 @@ function invalidarCache(): void {
   invalidateAsyncDataCache(cacheKeyPrefixes.biblioteca);
 }
 
+/** Filtros do acervo, aplicados no banco — a tela não baixa o catálogo inteiro. */
+export interface FiltrosAcervo {
+  /** Id de `CATEGORIAS_BIBLIOTECA`; vazio traz todas as categorias. */
+  categoria?: string | null;
+  /** Busca textual sobre a coluna normalizada `busca`. */
+  termo?: string | null;
+}
+
 export const bibliotecaService = {
   /**
-   * Todo o acervo visível, em ordem alfabética (pela coluna normalizada, para
-   * acento não deslocar a ordem). A RLS decide o que cada conta enxerga — o
-   * Administrador também recebe o que está oculto — e a tela filtra por
-   * categoria em memória: o acervo oficial é pequeno por natureza e não cresce
-   * sem limite como os catálogos do Mercado e do Grimório.
+   * Acervo visível, em ordem alfabética (pela coluna normalizada, para acento
+   * não deslocar a ordem). A RLS decide o que cada conta enxerga — o
+   * Administrador também recebe o que está oculto. O filtro de categoria e a
+   * busca são resolvidos no banco, sobre a coluna gerada `busca` (índice de
+   * trigrama), como nos catálogos do Mercado e do Grimório: um termo com menos
+   * de `TAMANHO_MINIMO_BUSCA` letras não filtra, porque abaixo disso o índice
+   * não ajuda.
    */
-  listarAcervo: async (): Promise<ItemBiblioteca[]> => {
-    const { data, error } = await supabase
+  listarAcervo: async (filtros: FiltrosAcervo = {}): Promise<ItemBiblioteca[]> => {
+    let consulta = supabase
       .from('library_items')
       .select(COLUNAS_ITEM)
       .order('busca', { ascending: true });
+
+    if (filtros.categoria) {
+      consulta = consulta.eq('categoria', filtros.categoria);
+    }
+
+    const termo = normalizarBusca(filtros.termo ?? '');
+    if (termo.length >= TAMANHO_MINIMO_BUSCA) {
+      consulta = consulta.ilike('busca', `%${termo}%`);
+    }
+
+    const { data, error } = await consulta;
     if (error) throw new Error('Não foi possível carregar o acervo da Biblioteca: ' + error.message);
     return ((data ?? []) as ItemRow[]).map(mapearItem);
   },

@@ -1,0 +1,1 @@
+create index if not exists library_items_busca_trgm_idx on public.library_items using gin (busca gin_trgm_ops)

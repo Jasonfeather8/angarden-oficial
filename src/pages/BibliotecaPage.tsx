@@ -1,16 +1,18 @@
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search, Scroll, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
 import { CardMaterialBiblioteca } from '@/components/biblioteca/CardMaterialBiblioteca';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/Skeleton';
+import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { CATEGORIAS_BIBLIOTECA, GRUPOS_BIBLIOTECA } from '@/config/biblioteca';
-import { useAsyncData } from '@/hooks/useAsyncData';
 import { useAuthorization } from '@/hooks/useAuthorization';
-import { bibliotecaService } from '@/services/bibliotecaService';
-import { cacheKeys } from '@/services/cacheKeys';
-import { normalizarBusca } from '@/utils/normalizarBusca';
+import { ROUTES } from '@/routes/paths';
+import { carregarAcervoBiblioteca, chaveAcervoBiblioteca } from '@/services/bibliotecaQuery';
+import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '@/utils/normalizarBusca';
 import type { ItemBiblioteca } from '@/types';
 
 // Os leitores só baixam quando um material é aberto: o pdf.js é pesado e não
@@ -18,57 +20,63 @@ import type { ItemBiblioteca } from '@/types';
 const LeitorPdf = React.lazy(() => import('@/components/biblioteca/LeitorPdf'));
 const LeitorPergaminho = React.lazy(() => import('@/components/biblioteca/LeitorPergaminho'));
 
-const MINIMO_BUSCA_LOCAL = 2;
+/** Espera antes de consultar o servidor, para não disparar a cada tecla. */
+const ESPERA_BUSCA_MS = 300;
 
 /**
  * Estante da Biblioteca. O acervo é catálogo global da plataforma: a RLS
- * entrega tudo o que a conta pode ver (o Administrador também recebe o que
- * está oculto) e o filtro por categoria e a busca acontecem em memória, porque
- * o acervo oficial é pequeno por natureza.
+ * entrega tudo o que a conta pode ver (o Administrador também recebe o que está
+ * oculto) e o filtro de categoria e a busca são resolvidos no banco, sobre a
+ * coluna normalizada `busca`. O agrupamento por seção é só apresentação.
  */
 export const BibliotecaPage: React.FC = () => {
-  const { role } = useAuthorization();
-  const { data, isLoading, error, reload } = useAsyncData(
-    () => bibliotecaService.listarAcervo(),
-    [],
-    { cacheKey: cacheKeys.biblioteca(role) },
-  );
+  const { role, can } = useAuthorization();
+  const navigate = useNavigate();
 
   const [termo, setTermo] = useState('');
+  const [termoDebounced, setTermoDebounced] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [materialAberto, setMaterialAberto] = useState<ItemBiblioteca | null>(null);
 
-  const itens = data ?? [];
+  useEffect(() => {
+    const temporizador = setTimeout(() => setTermoDebounced(termo), ESPERA_BUSCA_MS);
+    return () => clearTimeout(temporizador);
+  }, [termo]);
 
-  const itensFiltrados = useMemo(() => {
-    const alvo = normalizarBusca(termo);
-    return itens.filter((item) => {
-      if (categoriaFiltro && item.categoria !== categoriaFiltro) return false;
-      if (alvo.length < MINIMO_BUSCA_LOCAL) return true;
-      const textoDoItem = normalizarBusca(
-        `${item.titulo} ${item.subtitulo ?? ''} ${item.descricao ?? ''}`,
-      );
-      return textoDoItem.includes(alvo);
-    });
-  }, [itens, termo, categoriaFiltro]);
+  const termoNormalizado = normalizarBusca(termoDebounced);
+  const filtroAtivo = categoriaFiltro !== null || termoNormalizado.length >= TAMANHO_MINIMO_BUSCA;
+
+  const parametros = useMemo(
+    () => ({ papel: role, categoria: categoriaFiltro, termo: termoNormalizado }),
+    [role, categoriaFiltro, termoNormalizado],
+  );
+
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: chaveAcervoBiblioteca(parametros),
+    queryFn: () => carregarAcervoBiblioteca(parametros),
+    placeholderData: keepPreviousData,
+    // Sem validade: a estante pinta do cache e revalida em segundo plano a cada
+    // visita, para uma publicação recente do Administrador aparecer de imediato.
+    staleTime: 0,
+  });
+
+  const itens = data ?? [];
 
   const gruposVisiveis = useMemo(
     () =>
       GRUPOS_BIBLIOTECA.map((grupo) => ({
         grupo,
-        itens: itensFiltrados.filter((item) =>
+        itens: itens.filter((item) =>
           grupo.categorias.some((categoria) => categoria.id === item.categoria),
         ),
       })).filter(({ itens: itensDoGrupo }) => itensDoGrupo.length > 0),
-    [itensFiltrados],
-  );
-
-  const categoriasPresentes = useMemo(
-    () => CATEGORIAS_BIBLIOTECA.filter((categoria) => itens.some((item) => item.categoria === categoria.id)),
     [itens],
   );
 
-  const filtroAtivo = categoriaFiltro !== null || termo.trim().length >= MINIMO_BUSCA_LOCAL;
+  const limparFiltros = () => {
+    setTermo('');
+    setCategoriaFiltro(null);
+  };
 
   return (
     <>
@@ -93,16 +101,36 @@ export const BibliotecaPage: React.FC = () => {
                 Escolha um tomo para consultar suas regras e referências durante a aventura.
               </p>
             </div>
-            <span className="font-serif text-xs italic text-[#80613d]">
-              {itens.length} volume(s) catalogado(s)
-            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-serif text-xs italic text-[#80613d]">
+                {filtroAtivo
+                  ? `${itens.length} volume(s) encontrado(s)`
+                  : `${itens.length} volume(s) catalogado(s)`}
+              </span>
+              {isFetching && !isLoading && (
+                <span className="font-serif text-xs italic text-[#d1a85a]" role="status" aria-live="polite">
+                  Buscando…
+                </span>
+              )}
+              {can.manageLibrary && (
+                <ToolbarButton
+                  icon={<Scroll className="h-4 w-4" />}
+                  onClick={() => navigate(ROUTES.admin.biblioteca)}
+                >
+                  Gerenciar acervo
+                </ToolbarButton>
+              )}
+            </div>
           </div>
 
           {isLoading ? (
             <LoadingState variant="cards" label="Abrindo o acervo…" />
-          ) : error ? (
-            <ErrorState description={error} onRetry={reload} />
-          ) : itens.length === 0 ? (
+          ) : isError ? (
+            <ErrorState
+              description={error instanceof Error ? error.message : 'Não foi possível carregar o acervo.'}
+              onRetry={() => void refetch()}
+            />
+          ) : itens.length === 0 && !filtroAtivo ? (
             <EmptyState
               variant="plano"
               title="Acervo vazio"
@@ -139,37 +167,35 @@ export const BibliotecaPage: React.FC = () => {
                   </div>
                 </div>
 
-                {categoriasPresentes.length > 1 && (
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCategoriaFiltro(null)}
+                    aria-pressed={categoriaFiltro === null}
+                    className={`border px-3 py-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a] ${
+                      categoriaFiltro === null
+                        ? 'border-[#a88d61] bg-[#2a1d10] text-[#f3ebd3]'
+                        : 'border-[#4b3823] bg-[#0e0a07] text-[#a88d61] hover:border-[#8c6b41] hover:text-[#e6ddc5]'
+                    }`}
+                  >
+                    Todo o acervo
+                  </button>
+                  {CATEGORIAS_BIBLIOTECA.map((categoria) => (
                     <button
+                      key={categoria.id}
                       type="button"
-                      onClick={() => setCategoriaFiltro(null)}
-                      aria-pressed={categoriaFiltro === null}
+                      onClick={() => setCategoriaFiltro(categoria.id)}
+                      aria-pressed={categoriaFiltro === categoria.id}
                       className={`border px-3 py-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a] ${
-                        categoriaFiltro === null
+                        categoriaFiltro === categoria.id
                           ? 'border-[#a88d61] bg-[#2a1d10] text-[#f3ebd3]'
                           : 'border-[#4b3823] bg-[#0e0a07] text-[#a88d61] hover:border-[#8c6b41] hover:text-[#e6ddc5]'
                       }`}
                     >
-                      Todo o acervo
+                      {categoria.label}
                     </button>
-                    {categoriasPresentes.map((categoria) => (
-                      <button
-                        key={categoria.id}
-                        type="button"
-                        onClick={() => setCategoriaFiltro(categoria.id)}
-                        aria-pressed={categoriaFiltro === categoria.id}
-                        className={`border px-3 py-1.5 font-cinzel text-[10px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a] ${
-                          categoriaFiltro === categoria.id
-                            ? 'border-[#a88d61] bg-[#2a1d10] text-[#f3ebd3]'
-                            : 'border-[#4b3823] bg-[#0e0a07] text-[#a88d61] hover:border-[#8c6b41] hover:text-[#e6ddc5]'
-                        }`}
-                      >
-                        {categoria.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
               {gruposVisiveis.length === 0 ? (
@@ -178,18 +204,13 @@ export const BibliotecaPage: React.FC = () => {
                   title="Nenhum material encontrado"
                   description="Ajuste a busca ou escolha outra categoria para ver o restante do acervo."
                   action={
-                    filtroAtivo ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTermo('');
-                          setCategoriaFiltro(null);
-                        }}
-                        className="border border-[#8c6b41] bg-[#241a11] px-3 py-2 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#d8bd83] transition-colors hover:border-[#d1a85a] hover:text-[#f0d79b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
-                      >
-                        Limpar filtros
-                      </button>
-                    ) : undefined
+                    <button
+                      type="button"
+                      onClick={limparFiltros}
+                      className="border border-[#8c6b41] bg-[#241a11] px-3 py-2 font-cinzel text-[10px] font-bold uppercase tracking-wider text-[#d8bd83] transition-colors hover:border-[#d1a85a] hover:text-[#f0d79b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                    >
+                      Limpar filtros
+                    </button>
                   }
                 />
               ) : (
