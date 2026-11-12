@@ -17,6 +17,7 @@ export const cacheKeys = {
   cliente: (tenantId?: string | null) => `cliente:${tenantId ?? ''}`,
   proximaSessao: (tenantId?: string | null) => `proxima-sessao:${tenantId ?? ''}`,
   catalogoDoReino: (escopo?: string | null) => `catalogo-reino:${escopo ?? ''}`,
+  historicoXp: (escopo?: string | null) => `historico-xp:${escopo ?? ''}`,
 };
 
 /** Prefixos para descartar de uma vez todas as entradas de uma família de chaves. */
@@ -25,4 +26,5 @@ export const cacheKeyPrefixes = {
   mestreFichas: 'mestre-fichas:',
   grimorioBloqueios: 'grimorio-bloqueios:',
   catalogoDoReino: 'catalogo-reino:',
+  historicoXp: 'historico-xp:',
 };

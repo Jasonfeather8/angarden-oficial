@@ -25,6 +25,15 @@ export interface MesaResumo {
   status: { vidaAtual: number; vidaMax: number; vigorAtual: number; vigorMax: number; north: number } | null;
 }
 
+export interface XpLog {
+  id: string;
+  characterId: string;
+  amount: number;
+  reason: string;
+  createdAt: string;
+  grantedBy: string | null;
+}
+
 function currentScope(): FichaScope | null {
   const session = useSessionStore.getState().session;
   if (!session?.user.tenant_id) return null;
@@ -240,10 +249,37 @@ export const fichaService = {
     return ficha;
   },
 
+  // O Mestre consulta a mesa inteira; o Jogador restringe a leitura às próprias fichas.
+  listarHistoricoXp: async ({ characterIds, limite = 6 }: { characterIds?: string[]; limite?: number } = {}): Promise<XpLog[]> => {
+    const scope = currentScope();
+    if (!scope) return [];
+    if (characterIds && characterIds.length === 0) return [];
+
+    let query = supabase
+      .from('xp_logs')
+      .select('id, character_id, amount, reason, created_at, granted_by')
+      .eq('tenant_id', scope.tenantId)
+      .order('created_at', { ascending: false })
+      .limit(limite);
+    if (characterIds) query = query.in('character_id', characterIds);
+
+    const { data, error } = await query;
+    if (error) throw new Error('Não foi possível carregar o histórico de XP: ' + error.message);
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      characterId: row.character_id,
+      amount: Number(row.amount) || 0,
+      reason: row.reason,
+      createdAt: row.created_at,
+      grantedBy: row.granted_by ?? null,
+    }));
+  },
+
   grantXp: async (characterId: string, amount: number, reason: string): Promise<void> => {
     const { error } = await supabase.rpc('grant_xp', { p_character_id: characterId, p_amount: amount, p_reason: reason });
     if (error) throw new Error('Não foi possível conceder XP: ' + error.message);
     invalidarCacheAcervo();
+    invalidateAsyncDataCache(cacheKeyPrefixes.historicoXp);
   },
 
   adjustTreasure: async (characterId: string, delta: number): Promise<void> => {

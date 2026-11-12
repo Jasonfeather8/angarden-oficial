@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  Award,
   BookOpen,
   Bookmark,
   CalendarClock,
@@ -17,6 +18,7 @@ import {
   Lock,
   Pencil,
   ScrollText,
+  Sparkles,
   Store,
   Swords,
   TrendingUp,
@@ -68,6 +70,19 @@ type Atalho = {
 
 const contar = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
 const formatarNumero = (valor: number) => new Intl.NumberFormat('pt-BR').format(valor);
+const formatarQuando = (iso: string) => {
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return '';
+
+  const agora = new Date();
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const diaDaEntrada = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  const hora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(data);
+  if (diaDaEntrada.getTime() === hoje.getTime()) return `Hoje às ${hora}`;
+  hoje.setDate(hoje.getDate() - 1);
+  if (diaDaEntrada.getTime() === hoje.getTime()) return `Ontem às ${hora}`;
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(data);
+};
 
 const fieldClassName =
   'w-full border border-[#4b3823] bg-[#0d0906] px-3 py-2.5 text-sm text-[#e6ddc5] outline-none transition-colors focus:border-[#b89558] focus:ring-1 focus:ring-[#b89558]/50';
@@ -229,6 +244,22 @@ export const DashboardPage: React.FC = () => {
   const nomesPorJogador = useMemo(
     () => new Map(jogadores.map((perfil) => [perfil.id, perfil.nome_completo])),
     [jogadores]
+  );
+  const idsDoHistorico = useMemo(() => fichasVisiveis.map((ficha) => ficha.id).join(','), [fichasVisiveis]);
+  const nomesPorFicha = useMemo(
+    () => new Map(mesaResumo.map((ficha) => [ficha.id, ficha.nome])),
+    [mesaResumo]
+  );
+  const historicoQuery = useAsyncData(
+    () => fichaService.listarHistoricoXp({
+      characterIds: papelMestre ? undefined : fichasVisiveis.map((ficha) => ficha.id),
+      limite: 6,
+    }),
+    [tenantId, papelMestre, idsDoHistorico],
+    {
+      cacheKey: cacheKeys.historicoXp(`${tenantId ?? ''}:${userId ?? ''}`),
+      enabled: Boolean(tenantId) && (papelMestre || fichasVisiveis.length > 0),
+    }
   );
   const continuar = useMemo(
     () => fichasVisiveis.find((item) => item.id === lastCharacterId) ?? (fichasVisiveis.length === 1 ? fichasVisiveis[0] : null),
@@ -637,6 +668,68 @@ export const DashboardPage: React.FC = () => {
                   </ul>
                 ) : (
                   <EmptyState variant="plano" icon={<CheckCircle2 className="h-8 w-8" />} title="Nada pendente" description={papelMestre ? 'A mesa está em ordem.' : 'Suas fichas estão em ordem.'} />
+                )}
+              </PainelSecao>
+
+              <PainelSecao
+                id="historico-xp-titulo"
+                icon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
+                title="Histórico de XP"
+                hint={papelMestre ? 'recompensas da mesa' : 'suas recompensas'}
+                contentClassName="p-3.5"
+                extra={papelMestre ? <ToolbarButton icon={<Award className="h-3.5 w-3.5" aria-hidden="true" />} onClick={() => navigate(ROUTES.painelMestre)}>Conceder XP</ToolbarButton> : undefined}
+              >
+                {historicoQuery.isLoading || resumoQuery.isLoading ? (
+                  <div role="status" aria-live="polite">
+                    <span className="sr-only">Carregando o histórico de XP…</span>
+                    <div className="space-y-2">
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                    </div>
+                  </div>
+                ) : historicoQuery.error || resumoQuery.error ? (
+                  <ErrorState
+                    description={historicoQuery.error ?? resumoQuery.error ?? ''}
+                    onRetry={() => {
+                      historicoQuery.reload();
+                      resumoQuery.reload();
+                    }}
+                  />
+                ) : (historicoQuery.data ?? []).length === 0 ? (
+                  <EmptyState
+                    variant="plano"
+                    icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
+                    title="Sem recompensas ainda"
+                    description={papelMestre ? 'Quando você conceder XP, o registro aparecerá aqui.' : 'As recompensas concedidas pelo Mestre aparecerão aqui.'}
+                  />
+                ) : (
+                  <ul className="space-y-2">
+                    {(historicoQuery.data ?? []).map((entrada) => {
+                      const nome = nomesPorFicha.get(entrada.characterId) ?? 'Aventureiro';
+                      const autor = entrada.grantedBy === userId
+                        ? 'você'
+                        : entrada.grantedBy ? nomesPorJogador.get(entrada.grantedBy) : undefined;
+                      const quando = formatarQuando(entrada.createdAt);
+                      return (
+                        <li key={entrada.id}>
+                          <Link
+                            to={fichaPath(entrada.characterId)}
+                            className="block rounded-xs border border-[#3e2d1d] bg-[#160f0a] px-2.5 py-2.5 transition-colors hover:border-[#5a4225] hover:bg-[#1b120b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                          >
+                            <span className="flex items-start justify-between gap-2">
+                              <span className="min-w-0 truncate font-cinzel text-[11px] font-bold uppercase tracking-[0.12em] text-[#dcd1ba]">{nome}</span>
+                              <span className="shrink-0 font-cinzel text-[11px] font-bold text-[#e0c98e]">+{formatarNumero(entrada.amount)} XP</span>
+                            </span>
+                            <span className="mt-1 block font-serif text-[12px] leading-snug text-[#d6c4ae]">{entrada.reason}</span>
+                            <span className="mt-0.5 block font-serif text-[10px] text-[#8f795e]">
+                              {quando}{papelMestre && autor ? ` · por ${autor}` : ''}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
               </PainelSecao>
 
