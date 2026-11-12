@@ -13,13 +13,12 @@ const BUCKET_ACERVO = 'biblioteca';
 const VALIDADE_URL_ASSINADA_SEGUNDOS = 60 * 60;
 
 /**
- * Endpoint retomável (TUS) do Storage, no host direto do serviço — é o que a
- * documentação exige para este caminho. O upload padrão do SDK manda o arquivo
- * inteiro numa única requisição e falhava com um manual de 10 MB; aqui o envio
- * é fatiado e retomado de onde parou.
+ * Endpoint retomável (TUS) documentado no domínio principal da API. O upload
+ * padrão do SDK manda o arquivo inteiro numa única requisição e falhava com um
+ * manual de 10 MB; aqui o envio é fatiado e retomado de onde parou.
  */
 const URL_UPLOAD_RESUMIVEL =
-  'https://qmwrpcyzcmmjrjzsorgx.storage.supabase.co/storage/v1/upload/resumable';
+  'https://qmwrpcyzcmmjrjzsorgx.supabase.co/storage/v1/upload/resumable';
 
 /** Tamanho da parte: o Storage exige exatamente 6 MB no envio retomável. */
 const TAMANHO_PEDACO_BYTES = 6 * 1024 * 1024;
@@ -226,6 +225,7 @@ export const bibliotecaService = {
         retryDelays: [0, 3000, 5000, 10000, 20000],
         uploadDataDuringCreation: true,
         removeFingerprintOnSuccess: true,
+        storeFingerprintForResuming: false,
         metadata: {
           bucketName: BUCKET_ACERVO,
           objectName: caminho,
@@ -236,12 +236,19 @@ export const bibliotecaService = {
           if (aoProgredir && total > 0) aoProgredir(Math.round((enviados / total) * 100));
         },
         onError: (erro) => {
-          // O corpo da resposta traz a causa (MIME, teto, política); sem ele a
-          // falha volta como a mensagem genérica do protocolo.
-          const detalhe = 'originalResponse' in erro ? erro.originalResponse?.getBody() : undefined;
+          // Status, cabeçalhos e corpo ajudam a identificar a camada que recusou.
+          const resposta = 'originalResponse' in erro ? erro.originalResponse : undefined;
+          const status = resposta?.getStatus();
+          const diagnostico: string[] = status ? [`HTTP ${status}`] : [];
+          for (const nome of ['server', 'cf-ray', 'content-type', 'content-length']) {
+            const valor = resposta?.getHeader(nome);
+            if (valor) diagnostico.push(`${nome}: ${valor}`);
+          }
+          const corpo = resposta?.getBody().slice(0, 300);
+          const contexto = [diagnostico.join(' · '), corpo].filter(Boolean).join(' — ');
           rejeitar(
             new Error(
-              `Não foi possível enviar o PDF: ${detalhe || erro.message || 'o envio retomável falhou.'}`,
+              `Não foi possível enviar o PDF: ${contexto || erro.message || 'o envio retomável falhou.'}`,
             ),
           );
         },
