@@ -4,6 +4,7 @@ import { Users, UserPlus, Search, Trash2, X } from 'lucide-react';
 import { TenantCharacter } from '../types';
 import { useFichaStore } from '../store/useFichaStore';
 import { fichaService } from '../services/fichaService';
+import { profileService } from '../services/profileService';
 import { GothicButton } from '../components/GothicButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -20,7 +21,7 @@ export const PersonagensPage: React.FC = () => {
   const navigate = useNavigate();
   const setCharacterId = useFichaStore((state) => state.setCharacterId);
   const prewarmFicha = useFichaStore((state) => state.prewarmFicha);
-  const { tenantId } = useAuthorization();
+  const { tenantId, userId } = useAuthorization();
 
   // O acervo é sempre o do cliente (tenant) autenticado.
   const { data, isLoading, error, reload } = useAsyncData<TenantCharacter[]>(
@@ -29,10 +30,19 @@ export const PersonagensPage: React.FC = () => {
     { cacheKey: cacheKeys.acervoPersonagens(tenantId) }
   );
   const characters = data ?? [];
+  const limiteQuery = useAsyncData(
+    () => (userId ? profileService.getLimiteFichas(userId) : Promise.resolve(10)),
+    [userId],
+    { cacheKey: cacheKeys.limiteFichasDoJogador(userId), enabled: Boolean(userId) }
+  );
+  const minhasFichas = characters.filter((character) => character.ownerId === userId).length;
+  const limite = limiteQuery.data ?? 10;
+  const limiteAtingido = Boolean(userId) && limiteQuery.data !== null && minhasFichas >= limite;
 
   const [activeCharacterId, setActiveCharacterId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const prewarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleFichaPrewarm = (id: string) => {
@@ -53,26 +63,32 @@ export const PersonagensPage: React.FC = () => {
   };
 
   const handleCreateNewCharacter = async () => {
-    const newId = `char-${Date.now()}`;
-    const newChar: TenantCharacter = {
-      id: newId,
-      name: 'NOVO PERSONAGEM',
-      image: null,
-      letter: 'N',
-      isKnown: true,
-      description: ['Novo personagem. Preencha os campos da ficha para definir sua identidade, atributos e habilidades.']
-    };
+    if (limiteAtingido) return;
+    setCreateError(null);
+    try {
+      const newId = `char-${Date.now()}`;
+      const newChar: TenantCharacter = {
+        id: newId,
+        name: 'NOVO PERSONAGEM',
+        image: null,
+        letter: 'N',
+        isKnown: true,
+        description: ['Novo personagem. Preencha os campos da ficha para definir sua identidade, atributos e habilidades.']
+      };
 
-    // Inicializa ficha completamente vazia para ser preenchida
-    await fichaService.createTenantCharacter(newChar);
-    invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
-    const blankFicha = fichaService.createBlankFicha(newId, '');
-    await fichaService.saveFicha(newId, blankFicha);
+      // Inicializa ficha completamente vazia para ser preenchida
+      await fichaService.createTenantCharacter(newChar);
+      invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
+      const blankFicha = fichaService.createBlankFicha(newId, '');
+      await fichaService.saveFicha(newId, blankFicha);
 
-    invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
-    reload();
-    setActiveCharacterId(newId);
-    handleOpenFicha(newId);
+      invalidateAsyncDataCache(cacheKeyPrefixes.acervoPersonagens);
+      reload();
+      setActiveCharacterId(newId);
+      handleOpenFicha(newId);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const filteredCharacters = characters.filter((c) =>
@@ -234,7 +250,8 @@ export const PersonagensPage: React.FC = () => {
 
   if (characters.length === 0) {
     return (
-      <PageShell id="page-personagens" variant="amplo" fill title={<h2 className="flex items-center gap-2"><Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Galeria de Personagens</h2>}>
+      <PageShell id="page-personagens" variant="amplo" fill title={<h2 className="flex items-center gap-2"><Users className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />Galeria de Personagens</h2>} headerRight={limiteAtingido ? <p role="status" className="text-xs text-[#c4b9a3]">Limite de {limite} fichas por jogador atingido. O Mestre pode ampliá-lo.</p> : limiteQuery.data !== null && userId ? <p role="status" className="text-xs text-[#8c6b41]">{minhasFichas} de {limite} fichas suas</p> : undefined}>
+        {createError && <p role="alert" className="mb-4 border-l-2 border-[#b56a55] bg-[#2a120d] px-3 py-2 text-xs text-[#f0b09b]">{createError}</p>}
         <EmptyState
           variant="plano"
           icon={<Users className="h-8 w-8" aria-hidden="true" />}
@@ -250,6 +267,7 @@ export const PersonagensPage: React.FC = () => {
                 size="sm"
                 icon={<UserPlus className="h-4 w-4" aria-hidden="true" />}
                 onClick={handleCreateNewCharacter}
+                disabled={limiteAtingido}
               >
                 Novo Personagem
               </GothicButton>
@@ -274,6 +292,11 @@ export const PersonagensPage: React.FC = () => {
       }
       headerRight={
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-start sm:justify-end">
+          {limiteAtingido ? (
+            <p role="status" className="w-full text-xs text-[#c4b9a3]">Limite de {limite} fichas por jogador atingido. O Mestre pode ampliá-lo.</p>
+          ) : limiteQuery.data !== null && userId ? (
+            <p role="status" className="text-xs text-[#8c6b41]">{minhasFichas} de {limite} fichas suas</p>
+          ) : null}
           <div className="relative flex items-center flex-1 sm:flex-initial min-w-[140px]">
             <Search size={14} className="absolute left-2.5 text-[#8c6b41] pointer-events-none" />
             <input
@@ -297,6 +320,7 @@ export const PersonagensPage: React.FC = () => {
           <GothicButton
             id="btn-novo-personagem"
             onClick={handleCreateNewCharacter}
+            disabled={limiteAtingido}
             size="sm"
             variant="primary"
             width={170}
@@ -342,6 +366,7 @@ export const PersonagensPage: React.FC = () => {
       }
       className="select-none font-serif text-[#dcd1ba]"
     >
+      {createError && <p role="alert" className="mb-4 border-l-2 border-[#b56a55] bg-[#2a120d] px-3 py-2 text-xs text-[#f0b09b]">{createError}</p>}
       <div className="flex h-full min-h-0 flex-col lg:flex-row relative gap-4">
 
             {/* Coluna Esquerda: Índice Alfabético & Lista com Efeito Roda */}

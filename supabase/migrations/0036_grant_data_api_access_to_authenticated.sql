@@ -1,0 +1,1 @@
+grant select, insert, delete on table public.grimorio_bloqueios to authenticated

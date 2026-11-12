@@ -1,0 +1,1 @@
+create policy "profiles_update_tenant_mestre" on public.profiles as permissive for update to authenticated using ((public.is_mestre() and tenant_id = public.current_tenant_id())) with check ((public.is_mestre() and tenant_id = public.current_tenant_id()))

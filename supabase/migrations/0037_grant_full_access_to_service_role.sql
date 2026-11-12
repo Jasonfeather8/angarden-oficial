@@ -1,0 +1,1 @@
+grant select, insert, update, delete on table public.grimorio_bloqueios to service_role

@@ -4,18 +4,27 @@ import {
   Check,
   Coins,
   Crown,
+  Lock,
   Minus,
   Pencil,
   Plus,
   RefreshCw,
+  ScrollText,
   ShieldCheck,
+  ShoppingCart,
+  Sparkles,
   Store,
+  UserCog,
   Users,
+  Wand2,
   X,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { GothicButton } from '../components/GothicButton';
 import { PageShell } from '../components/PageShell';
 import { Modal } from '../components/Modal';
+import { GrimorioBloqueiosModal } from '../components/GrimorioBloqueiosModal';
+import { LimiteFichasModal } from '../components/LimiteFichasModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -23,13 +32,17 @@ import { fichaService } from '../services/fichaService';
 import { cacheKeyPrefixes, cacheKeys } from '../services/cacheKeys';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { invalidateAsyncDataCache, useAsyncData } from '../hooks/useAsyncData';
+import { fichaPath } from '../routes/paths';
 import type { FichaCompleta } from '../types';
 
-type PermissionField = 'edicaoLiberada' | 'acessoMercadoEpico';
+type PermissionField = 'edicaoLiberada' | 'acessoMercadoEpico' | 'acessoMercadoArcano' | 'acessoMercadoLendario' | 'podeComprar';
 
 type CharacterPermissions = {
   edicaoLiberada: boolean;
   acessoMercadoEpico: boolean;
+  acessoMercadoArcano: boolean;
+  acessoMercadoLendario: boolean;
+  podeComprar: boolean;
 };
 
 type PermissionMap = Record<string, CharacterPermissions>;
@@ -50,14 +63,20 @@ type CharacterRow = {
   dinheiro: number;
   edicaoLiberada: boolean;
   acessoMercadoEpico: boolean;
+  acessoMercadoArcano: boolean;
+  acessoMercadoLendario: boolean;
+  podeComprar: boolean;
   /** Vitais do motor; quando ainda não chegaram, vêm do último salvamento. */
   status: CharacterStatus | null;
 };
 
 export const PainelMestrePage: React.FC = () => {
   const { isMestre: isMaster, tenantId } = useAuthorization();
+  const navigate = useNavigate();
   const [permissions, setPermissions] = useState<PermissionMap>({});
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [isGrimorioOpen, setIsGrimorioOpen] = useState(false);
+  const [isLimitesOpen, setIsLimitesOpen] = useState(false);
   const [isXpModalOpen, setIsXpModalOpen] = useState(false);
   const [isMoneyModalOpen, setIsMoneyModalOpen] = useState(false);
   const [selectedXpTarget, setSelectedXpTarget] = useState('all');
@@ -78,13 +97,14 @@ export const PainelMestrePage: React.FC = () => {
     { cacheKey: cacheKeys.mestreResumo(tenantId), enabled: isMaster && Boolean(tenantId) }
   );
 
+  const mesaResumo = resumoQuery.data ?? [];
+  const precisaMotor = mesaResumo.some((item) => item.status === null);
   const detalheQuery = useAsyncData(
     () => (tenantId ? fichaService.getMesaCompleta() : Promise.resolve(new Map<string, FichaCompleta>())),
     [tenantId],
-    { cacheKey: cacheKeys.mestreFichas(tenantId), enabled: isMaster && Boolean(tenantId) }
+    { cacheKey: cacheKeys.mestreFichas(tenantId), enabled: isMaster && Boolean(tenantId) && precisaMotor }
   );
 
-  const mesaResumo = resumoQuery.data ?? [];
   const mesaCompleta = detalheQuery.data;
 
   const characters = useMemo<CharacterRow[]>(() => mesaResumo.map((item) => {
@@ -97,6 +117,9 @@ export const PainelMestrePage: React.FC = () => {
       dinheiro: Math.max(0, Number(ficha?.recursos.dinheiro ?? item.dinheiro) || 0),
       edicaoLiberada: ficha?.identidade.edicao_liberada ?? item.edicaoLiberada,
       acessoMercadoEpico: ficha?.identidade.acesso_mercado_epico ?? item.acessoMercadoEpico,
+      acessoMercadoArcano: ficha?.identidade.acesso_mercado_arcano ?? item.acessoMercadoArcano,
+      acessoMercadoLendario: ficha?.identidade.acesso_mercado_lendario ?? item.acessoMercadoLendario,
+      podeComprar: ficha?.identidade.pode_comprar ?? item.podeComprar,
       status: ficha
         ? {
             vidaAtual: Number(ficha.status.vida_atual) || 0,
@@ -124,14 +147,18 @@ export const PainelMestrePage: React.FC = () => {
   const invalidateCharacterCaches = () => {
     invalidateAsyncDataCache(cacheKeyPrefixes.mestreFichas);
     invalidateAsyncDataCache(cacheKeys.personagensResumo(tenantId));
+    invalidateAsyncDataCache(cacheKeys.mestreResumo(tenantId));
   };
 
-  const seedPermissoes = characters.map((row) => `${row.id}:${row.edicaoLiberada}:${row.acessoMercadoEpico}`).join('|');
+  const seedPermissoes = characters.map((row) => `${row.id}:${row.edicaoLiberada}:${row.acessoMercadoEpico}:${row.acessoMercadoArcano}:${row.acessoMercadoLendario}:${row.podeComprar}`).join('|');
 
   useEffect(() => {
     setPermissions(Object.fromEntries(characters.map((row) => [row.id, {
       edicaoLiberada: row.edicaoLiberada,
       acessoMercadoEpico: row.acessoMercadoEpico,
+      acessoMercadoArcano: row.acessoMercadoArcano,
+      acessoMercadoLendario: row.acessoMercadoLendario,
+      podeComprar: row.podeComprar,
     }])));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedPermissoes]);
@@ -139,6 +166,9 @@ export const PainelMestrePage: React.FC = () => {
   const getPermissions = (character: CharacterRow): CharacterPermissions => ({
     edicaoLiberada: permissions[character.id]?.edicaoLiberada ?? character.edicaoLiberada,
     acessoMercadoEpico: permissions[character.id]?.acessoMercadoEpico ?? character.acessoMercadoEpico,
+    acessoMercadoArcano: permissions[character.id]?.acessoMercadoArcano ?? character.acessoMercadoArcano,
+    acessoMercadoLendario: permissions[character.id]?.acessoMercadoLendario ?? character.acessoMercadoLendario,
+    podeComprar: permissions[character.id]?.podeComprar ?? character.podeComprar,
   });
 
   const updatePermission = (character: CharacterRow, field: PermissionField, value: boolean) => {
@@ -155,18 +185,28 @@ export const PainelMestrePage: React.FC = () => {
     try {
       await Promise.all(characters.map(async (character) => {
         const nextPermission = permissions[character.id] ?? getPermissions(character);
+        // As colunas de permissão já vêm no resumo: só buscamos a ficha de quem mudou.
         const currentPermission = {
           edicaoLiberada: character.edicaoLiberada,
           acessoMercadoEpico: character.acessoMercadoEpico,
+          acessoMercadoArcano: character.acessoMercadoArcano,
+          acessoMercadoLendario: character.acessoMercadoLendario,
+          podeComprar: character.podeComprar,
         };
         if (
           currentPermission.edicaoLiberada === nextPermission.edicaoLiberada &&
-          currentPermission.acessoMercadoEpico === nextPermission.acessoMercadoEpico
+          currentPermission.acessoMercadoEpico === nextPermission.acessoMercadoEpico &&
+          currentPermission.acessoMercadoArcano === nextPermission.acessoMercadoArcano &&
+          currentPermission.acessoMercadoLendario === nextPermission.acessoMercadoLendario &&
+          currentPermission.podeComprar === nextPermission.podeComprar
         ) return;
 
         const ficha = await fichaService.getFicha(character.id);
         ficha.identidade.edicao_liberada = nextPermission.edicaoLiberada;
         ficha.identidade.acesso_mercado_epico = nextPermission.acessoMercadoEpico;
+        ficha.identidade.acesso_mercado_arcano = nextPermission.acessoMercadoArcano;
+        ficha.identidade.acesso_mercado_lendario = nextPermission.acessoMercadoLendario;
+        ficha.identidade.pode_comprar = nextPermission.podeComprar;
         const saved = await fichaService.saveFicha(character.id, ficha);
         if (!saved) throw new Error('Falha ao salvar permissões');
       }));
@@ -324,6 +364,28 @@ export const PainelMestrePage: React.FC = () => {
               >
                 Conceder XP de Conduta
               </GothicButton>
+              <GothicButton
+                id="btn-bloqueios-grimorio"
+                size="sm"
+                width={190}
+                height={42}
+                icon={<Lock className="h-4 w-4" />}
+                className="focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                onClick={() => { setStatusMessage(''); setIsGrimorioOpen(true); }}
+              >
+                Bloqueios do Grimório
+              </GothicButton>
+              <GothicButton
+                id="btn-limite-fichas"
+                size="sm"
+                width={175}
+                height={42}
+                icon={<UserCog className="h-4 w-4" />}
+                className="focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                onClick={() => { setStatusMessage(''); setIsLimitesOpen(true); }}
+              >
+                Limite de Fichas
+              </GothicButton>
             </div>
           </div>
 
@@ -393,15 +455,26 @@ export const PainelMestrePage: React.FC = () => {
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-[#d8b86b]">{character.dinheiro} ◈</td>
                       <td className="px-3 py-3 text-right">
-                        <button
-                          type="button"
-                          aria-label={`Ajustar tesouro de ${character.nome}`}
-                          title="Ajustar tesouro"
-                          className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-xs border border-[#5a4225] bg-[#1b120b] text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
-                          onClick={() => openMoneyModal(character.id)}
-                        >
-                          <Coins className="h-4 w-4" />
-                        </button>
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            aria-label={`Abrir a ficha de ${character.nome}`}
+                            title="Abrir ficha"
+                            className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-xs border border-[#5a4225] bg-[#1b120b] text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                            onClick={() => navigate(fichaPath(character.id))}
+                          >
+                            <ScrollText className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Ajustar tesouro de ${character.nome}`}
+                            title="Ajustar tesouro"
+                            className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-xs border border-[#5a4225] bg-[#1b120b] text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+                            onClick={() => openMoneyModal(character.id)}
+                          >
+                            <Coins className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -414,7 +487,7 @@ export const PainelMestrePage: React.FC = () => {
             <span>
               {isLoading
                 ? 'Consultando os pergaminhos da mesa…'
-                : `${characters.length} ${characters.length === 1 ? 'ficha disponível' : 'fichas disponíveis'} · dados locais da campanha`}
+                : `${characters.length} ${characters.length === 1 ? 'ficha disponível' : 'fichas disponíveis'} · dados salvos no servidor`}
             </span>
             <button type="button" onClick={refreshCharacters} className="inline-flex items-center gap-1.5 rounded-xs border border-transparent px-2 py-1 font-cinzel uppercase tracking-wider transition-colors hover:border-[#5a4225] hover:text-[#e6ddc5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"><RefreshCw className="h-3.5 w-3.5" /> Atualizar tabela</button>
           </div>
@@ -433,7 +506,7 @@ export const PainelMestrePage: React.FC = () => {
             <div className="flex items-start justify-between border-b border-[#4b3823] bg-[#21160d] px-5 py-5">
               <div>
                 <h2 id="painel-permissoes-title" className="font-cinzel text-base font-bold uppercase tracking-wider text-[#e6ddc5]">Jogadores &amp; Permissões</h2>
-                <p className="mt-1 font-serif text-xs text-[#a88d61]">Alçadas salvas localmente nesta campanha</p>
+                <p className="mt-1 font-serif text-xs text-[#a88d61]">Permissões salvas no servidor</p>
               </div>
               <button type="button" aria-label="Fechar painel de permissões" className="rounded-xs border border-transparent p-2 text-[#a88d61] hover:border-[#5a4225] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]" onClick={() => setIsPermissionsOpen(false)}><X className="h-5 w-5" /></button>
             </div>
@@ -452,7 +525,10 @@ export const PainelMestrePage: React.FC = () => {
                             <p className="font-cinzel text-sm uppercase text-[#e6ddc5]">{character.nome}</p>
                             <p className="font-serif text-xs text-[#8f795e]">Nível {character.nivel}</p>
                           </div>
-                          {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-[#c6a66d]" aria-label="Salvando permissão" />}
+                          <div className="flex items-center gap-2">
+                            <button type="button" title="Abrir ficha" onClick={() => navigate(fichaPath(character.id))} className="rounded-xs border border-[#5a4225] px-2 py-1 font-cinzel text-[9px] uppercase tracking-wider text-[#c6a66d] transition-colors hover:border-[#a88d61] hover:text-[#f3dfaa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]">Abrir ficha</button>
+                            {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-[#c6a66d]" aria-label="Salvando permissão" />}
+                          </div>
                         </div>
                         <div className="space-y-2.5">
                           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
@@ -462,6 +538,18 @@ export const PainelMestrePage: React.FC = () => {
                           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
                             <span className="flex items-center gap-2"><Store className="h-4 w-4 text-[#a88d61]" /> Acesso ao Mercado Épico</span>
                             <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.acessoMercadoEpico} disabled={isSaving} onChange={(event) => updatePermission(character, 'acessoMercadoEpico', event.target.checked)} />
+                          </label>
+                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
+                            <span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4 text-[#a88d61]" /> Comprar no Mercado</span>
+                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.podeComprar} disabled={isSaving} onChange={(event) => updatePermission(character, 'podeComprar', event.target.checked)} />
+                          </label>
+                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
+                            <span className="flex items-center gap-2"><Wand2 className="h-4 w-4 text-[#a88d61]" /> Mercado Arcano</span>
+                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.acessoMercadoArcano} disabled={isSaving} onChange={(event) => updatePermission(character, 'acessoMercadoArcano', event.target.checked)} />
+                          </label>
+                          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xs border border-[#3e2d1d] px-3 py-2.5 text-sm text-[#dcd1ba] transition-colors hover:border-[#80652e] focus-within:ring-2 focus-within:ring-[#d1a85a]">
+                            <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#a88d61]" /> Mercado Lendário</span>
+                            <input type="checkbox" className="h-4 w-4 accent-[#b88936]" checked={characterPermissions.acessoMercadoLendario} disabled={isSaving} onChange={(event) => updatePermission(character, 'acessoMercadoLendario', event.target.checked)} />
                           </label>
                         </div>
                       </div>
@@ -539,6 +627,8 @@ export const PainelMestrePage: React.FC = () => {
           </div>
         </form>
       </Modal>
+      <GrimorioBloqueiosModal isOpen={isGrimorioOpen} onClose={() => setIsGrimorioOpen(false)} />
+      <LimiteFichasModal isOpen={isLimitesOpen} onClose={() => setIsLimitesOpen(false)} />
     </>
   );
 };

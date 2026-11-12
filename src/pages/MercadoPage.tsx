@@ -273,8 +273,10 @@ export const MercadoPage: React.FC = () => {
   const [isModalCriarOpen, setIsModalCriarOpen] = useState<boolean>(false);
   const [itemParaEdicao, setItemParaEdicao] = useState<MercadoItem | null>(null);
 
-  // Permissão para Arsenal Épico.
+  // Permissões de acesso e compra no mercado para a ficha selecionada.
   const temPermissaoEpica = can.accessEpicMarket(fichaDoComprador);
+  const temPermissaoArcano = can.accessArcanoMarket(fichaDoComprador);
+  const temPermissaoCompra = can.buyInMarket(fichaDoComprador);
 
   // Carregar lista de personagens disponíveis
   const carregarListaPersonagens = async () => {
@@ -981,6 +983,9 @@ export const MercadoPage: React.FC = () => {
                 <div className="space-y-2">
                   {itens.map((item) => {
                     const bloqueadoEpico = item.is_epico && !temPermissaoEpica;
+                    const bloqueadoArcano = item.categoria?.startsWith('arcano_') && !temPermissaoArcano;
+                    const bloqueado = bloqueadoEpico || bloqueadoArcano;
+                    const rotuloBloqueio = bloqueadoEpico ? 'Arsenal Épico Restrito' : 'Mercado Arcano Restrito';
 
                     return (
                       <div
@@ -988,7 +993,7 @@ export const MercadoPage: React.FC = () => {
                         id={`card-item-${item.id}`}
                         onMouseEnter={preloadModalDetalhesCompra}
                         className={`group relative rounded-xs p-1.5 flex flex-col sm:grid sm:grid-cols-12 items-stretch sm:items-center gap-1.5 ${
-                          bloqueadoEpico ? 'opacity-60 cursor-not-allowed' : ''
+                          bloqueado ? 'opacity-60 cursor-not-allowed' : ''
                         }`}
                         style={{
                           background: 'linear-gradient(180deg, #323b44 0%, #222930 15%, #151a1e 50%, #0d1013 85%, #07090b 100%)',
@@ -1059,9 +1064,9 @@ export const MercadoPage: React.FC = () => {
                               </div>
 
                               {/* Overlay de Bloqueio se restrito */}
-                              {bloqueadoEpico && (
-                                <div className="absolute inset-0 bg-black/85 z-40 rounded-xs flex items-center justify-center border border-[#3d4955]">
-                                  <Lock size={14} className="text-[#8c6b41]" />
+                              {bloqueado && (
+                                <div role="img" aria-label={rotuloBloqueio} title={rotuloBloqueio} className="absolute inset-0 bg-black/85 z-40 rounded-xs flex items-center justify-center border border-[#3d4955]">
+                                  <Lock size={14} className="text-[#8c6b41]" aria-hidden="true" />
                                 </div>
                               )}
                             </div>
@@ -1104,16 +1109,16 @@ export const MercadoPage: React.FC = () => {
                               {/* Nome & Subtítulo */}
                               <div className="min-w-0 flex-1 sm:col-span-5 md:col-span-4 pr-1 sm:pr-2 overflow-hidden">
                                 <h4
-                                  onClick={() => !bloqueadoEpico && handleAbrirDetalhes(item)}
+                                  onClick={() => !bloqueado && handleAbrirDetalhes(item)}
                                   className={`font-cinzel text-xs sm:text-[13px] font-bold tracking-wider truncate cursor-pointer transition-colors ${
-                                    bloqueadoEpico
+                                    bloqueado
                                       ? 'text-[#5a4228]'
                                       : 'text-[#f2dfa8] hover:text-[#fff5db]'
                                   }`}
                                   style={{
                                     textShadow: '0 1px 2px rgba(0, 0, 0, 0.9)',
                                   }}
-                                  title={item.nome}
+                                  title={bloqueado ? rotuloBloqueio : item.nome}
                                 >
                                   {item.nome}
                                 </h4>
@@ -1184,13 +1189,13 @@ export const MercadoPage: React.FC = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (!bloqueadoEpico) {
+                                if (!bloqueado) {
                                   handleAbrirDetalhes(item);
                                 }
                               }}
-                              disabled={bloqueadoEpico}
+                              disabled={bloqueado}
                               className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                                bloqueadoEpico
+                                bloqueado
                                   ? 'opacity-50 cursor-not-allowed'
                                   : 'hover:scale-105 hover:brightness-125 cursor-pointer active:scale-95'
                               }`}
@@ -1199,7 +1204,8 @@ export const MercadoPage: React.FC = () => {
                                 border: '1px solid #4a5866',
                                 boxShadow: 'inset 0 1.5px 2px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.6)',
                               }}
-                              title="Ver informações completas do item"
+                              aria-label={bloqueado ? rotuloBloqueio : 'Ver informações completas do item'}
+                              title={bloqueado ? rotuloBloqueio : 'Ver informações completas do item'}
                             >
                               <span
                                 className="font-serif italic font-black text-xs sm:text-[13px] text-[#f59e0b] select-none leading-none pl-0.5"
@@ -1216,10 +1222,10 @@ export const MercadoPage: React.FC = () => {
                           <div className="flex-1 sm:flex-initial sm:col-span-2 md:col-span-1 sm:pl-1 flex items-center justify-end">
                             <GothicButton
                               id={`btn-comprar-${item.id}`}
-                              disabled={bloqueadoEpico}
+                              disabled={bloqueado}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (!bloqueadoEpico) {
+                                if (!bloqueado) {
                                   handleAbrirDetalhes(item);
                                 }
                               }}
@@ -1227,14 +1233,15 @@ export const MercadoPage: React.FC = () => {
                               size="xs"
                               width="100%"
                               height={30}
-                              title={bloqueadoEpico ? 'Arsenal Restrito' : 'Comprar Item'}
-                              icon={bloqueadoEpico ? <Lock size={11} /> : undefined}
+                              title={bloqueado ? rotuloBloqueio : 'Comprar Item'}
+                              aria-label={bloqueado ? rotuloBloqueio : 'Comprar Item'}
+                              icon={bloqueado ? <Lock size={11} /> : undefined}
                             >
-                              {bloqueadoEpico ? '' : 'COMPRAR'}
+                              {bloqueado ? '' : 'COMPRAR'}
                             </GothicButton>
                           </div>
                         </div>
-                        {!bloqueadoEpico && (
+                        {!bloqueado && (
                           <div
                             aria-hidden="true"
                             className="pointer-events-none absolute inset-0 rounded-xs bg-gradient-to-b from-white/10 via-white/5 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
@@ -1297,6 +1304,8 @@ export const MercadoPage: React.FC = () => {
             cargaAtual={cargaAtual}
             nomePersonagemComprador={fichaDoComprador?.identidade?.nome_personagem}
             temPermissaoEpica={temPermissaoEpica}
+            temPermissaoArcano={temPermissaoArcano}
+            temPermissaoCompra={temPermissaoCompra}
             onConfirmarCompra={handleConfirmarCompra}
             canManageCatalog={canManageCatalog}
             onEditar={handleAbrirEdicao}

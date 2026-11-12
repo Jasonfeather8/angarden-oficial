@@ -1,0 +1,1 @@
+alter table public.grimorio_bloqueios add constraint grimorio_bloqueios_volume_key unique (tenant_id, volume_id)

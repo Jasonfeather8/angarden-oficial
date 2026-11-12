@@ -1,0 +1,1 @@
+alter table public.profiles add constraint profiles_limite_fichas_check check (limite_fichas between 0 and 1000)

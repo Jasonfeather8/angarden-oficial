@@ -1,0 +1,1 @@
+alter table public.grimorio_bloqueios enable row level security

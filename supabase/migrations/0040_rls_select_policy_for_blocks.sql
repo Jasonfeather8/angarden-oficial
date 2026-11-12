@@ -1,0 +1,1 @@
+create policy "grimorio_bloqueios_select" on public.grimorio_bloqueios as permissive for select to authenticated using ((public.is_admin() or tenant_id = public.current_tenant_id()))

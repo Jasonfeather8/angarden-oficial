@@ -191,6 +191,12 @@ export const FichaTecnicaPage: React.FC = () => {
     const ocultas = learnedSpellsQuery.data?.ocultas ?? [];
     return magias.filter((spell) => !ocultas.includes(spell.id));
   }, [learnedSpellsQuery.data]);
+  /** Magias aprendidas que o Mestre selou (o catálogo deixa de devolvê-las). */
+  const magiasSeladas = useMemo(() => {
+    if (!learnedSpellsQuery.isSuccess) return 0;
+    const resolvidas = new Set((learnedSpellsQuery.data?.magias ?? []).map((spell) => spell.id));
+    return learnedSpellIds.filter((id) => !resolvidas.has(id)).length;
+  }, [learnedSpellsQuery.data, learnedSpellsQuery.isSuccess, learnedSpellIds]);
   const toggleFichaSpell = (spellId: string) => {
     const character = targetCharacterId;
     const learned = !learnedSpellIds.includes(spellId);
@@ -3186,6 +3192,14 @@ export const FichaTecnicaPage: React.FC = () => {
                   {!learnedSpells.length && <p className={`border border-dashed ${theme.tableBorder} px-3 py-6 text-center font-serif text-xs italic ${theme.textMuted}`}>{erroGrimorio ? 'Não foi possível carregar o grimório.' : isLoadingGrimorio || !hasLoadedGrimorio ? 'Invocando as fórmulas do grimório…' : 'Nenhuma magia aprendida para este personagem.'}</p>}
                 </div>
               </div>
+
+              {magiasSeladas > 0 && (
+                <p className={`border border-dashed ${theme.tableBorder} px-3 py-2 text-center font-serif text-xs italic md:col-span-2 ${theme.textMuted}`}>
+                  {magiasSeladas === 1
+                    ? '1 magia aprendida está selada pelo Mestre e não aparece aqui.'
+                    : `${magiasSeladas} magias aprendidas estão seladas pelo Mestre e não aparecem aqui.`}
+                </p>
+              )}
             </div>
           </div>
         </div>

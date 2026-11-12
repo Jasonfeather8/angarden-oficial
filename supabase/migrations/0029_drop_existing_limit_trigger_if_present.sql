@@ -1,0 +1,1 @@
+drop trigger if exists characters_prevent_ficha_limit on public.characters

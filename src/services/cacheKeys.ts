@@ -5,11 +5,14 @@
  */
 export const cacheKeys = {
   acervoPersonagens: (tenantId?: string | null) => `acervo-personagens:${tenantId ?? ''}`,
+  limiteFichasDoJogador: (userId?: string | null) => `limite-fichas-jogador:${userId ?? ''}`,
   personagensResumo: (tenantId?: string | null) => `personagens-resumo:${tenantId ?? ''}`,
   campanhas: (userId?: string | null) => `campanhas:${userId ?? ''}`,
   campanhasAcessiveis: (userId?: string | null) => `campanhas-acessiveis:${userId ?? ''}`,
   mestreFichas: (tenantId?: string | null) => `mestre-fichas:${tenantId ?? ''}`,
   mestreResumo: (tenantId?: string | null) => `mestre-fichas:resumo:${tenantId ?? ''}`,
+  grimorioBloqueios: (tenantId?: string | null) => `grimorio-bloqueios:${tenantId ?? ''}`,
+  limitesDeFichas: (tenantId?: string | null) => `limites-fichas:${tenantId ?? ''}`,
   proximaSessao: (tenantId?: string | null) => `proxima-sessao:${tenantId ?? ''}`,
 };
 
@@ -17,4 +20,5 @@ export const cacheKeys = {
 export const cacheKeyPrefixes = {
   acervoPersonagens: 'acervo-personagens',
   mestreFichas: 'mestre-fichas:',
+  grimorioBloqueios: 'grimorio-bloqueios:',
 };

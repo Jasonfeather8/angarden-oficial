@@ -1,0 +1,1 @@
+create policy "grimorio_bloqueios_delete" on public.grimorio_bloqueios as permissive for delete to authenticated using ((public.is_admin() or (public.is_mestre() and tenant_id = public.current_tenant_id())))

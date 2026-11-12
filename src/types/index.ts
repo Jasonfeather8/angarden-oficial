@@ -5,6 +5,7 @@ export interface TenantCharacter {
   id: string;
   name: string;
   image: string | null;
+  ownerId?: string;
   largeImage?: string;
   letter: string;
   isKnown: boolean;
@@ -29,6 +30,12 @@ export interface FichaIdentidade {
   edicao_liberada: boolean;
   /** Liberação concedida pelo Mestre para comprar no Arsenal Épico do mercado. */
   acesso_mercado_epico?: boolean;
+  /** Liberação concedida pelo Mestre para acessar o Mercado Arcano. */
+  acesso_mercado_arcano?: boolean;
+  /** Liberação do Mercado Lendário, ainda não construído. */
+  acesso_mercado_lendario?: boolean;
+  /** Autorização para comprar no Mercado. */
+  pode_comprar?: boolean;
   historia?: string;
 }
 

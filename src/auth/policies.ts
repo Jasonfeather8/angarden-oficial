@@ -18,6 +18,9 @@ export const ROLE_LABELS: Record<UserRole, string> = {
  * | canManageCatalog           | `role = 'admin'`                                                                       |
  * | canManageSpellVisibility   | `role IN ('admin','mestre')`                                                           |
  * | canAccessEpicMarket        | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_epico`                  |
+ * | canAccessArcanoMarket      | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_arcano`                |
+ * | canAccessLegendaryMarket   | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_lendario`              |
+ * | canBuyInMarket             | `role IN ('admin','mestre') OR ficha.identidade.pode_comprar`                         |
  * | canCreateCampaign          | `role IN ('admin','mestre') AND tenant_id IS NOT NULL`                                 |
  * | canViewFicha               | `user_id = auth.uid() OR (is_mestre AND tenant_id = current_tenant())`                 |
  * | canEditFicha               | `canViewFicha AND (edicao_liberada OR is_mestre OR is_admin)`                          |
@@ -50,6 +53,18 @@ export const policies = {
   /** Acesso ao Arsenal Épico do Mercado. */
   canAccessEpicMarket: (session: Session | null, ficha?: FichaCompleta | null): boolean =>
     isAdmin(session) || isMestre(session) || Boolean(ficha?.identidade?.acesso_mercado_epico),
+
+  /** Acesso ao Mercado Arcano; antes da ficha carregar, a seção permanece aberta. */
+  canAccessArcanoMarket: (session: Session | null, ficha?: FichaCompleta | null): boolean =>
+    isAdmin(session) || isMestre(session) || (ficha ? ficha.identidade?.acesso_mercado_arcano !== false : true),
+
+  /** O Mercado Lendário ainda não existe; a flag fica pronta para quando a seção nascer. */
+  canAccessLegendaryMarket: (session: Session | null, ficha?: FichaCompleta | null): boolean =>
+    isAdmin(session) || isMestre(session) || Boolean(ficha?.identidade?.acesso_mercado_lendario),
+
+  /** Autorização para comprar no Mercado; antes da ficha carregar, mantém o acesso atual. */
+  canBuyInMarket: (session: Session | null, ficha?: FichaCompleta | null): boolean =>
+    isAdmin(session) || isMestre(session) || (ficha ? ficha.identidade?.pode_comprar !== false : true),
 
   /**
    * Campanhas pertencem a um cliente (tenant). Só quem tem cliente vinculado cria —

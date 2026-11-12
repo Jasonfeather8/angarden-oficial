@@ -1,0 +1,1 @@
+drop index if exists public.grimorio_bloqueios_escola_key

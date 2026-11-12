@@ -9,11 +9,15 @@ export interface Authorization {
   isMestre: boolean;
   isJogador: boolean;
   tenantId: string | null;
+  userId: string | null;
   can: {
     accessAdminPanel: boolean;
     manageCatalog: boolean;
     manageSpellVisibility: boolean;
     accessEpicMarket: (ficha?: FichaCompleta | null) => boolean;
+    accessArcanoMarket: (ficha?: FichaCompleta | null) => boolean;
+    accessLegendaryMarket: (ficha?: FichaCompleta | null) => boolean;
+    buyInMarket: (ficha?: FichaCompleta | null) => boolean;
     createCampaign: boolean;
     viewFicha: (ficha: FichaCompleta, options?: FichaAccessOptions) => boolean;
     editFicha: (ficha: FichaCompleta) => boolean;
@@ -33,11 +37,15 @@ export function useAuthorization(): Authorization {
       isMestre: policies.isMestre(session),
       isJogador: policies.isJogador(session),
       tenantId: session?.user.tenant_id ?? null,
+      userId: session?.user.id ?? null,
       can: {
         accessAdminPanel: policies.canAccessAdminPanel(session),
         manageCatalog: policies.canManageCatalog(session),
         manageSpellVisibility: policies.canManageSpellVisibility(session),
         accessEpicMarket: (ficha) => policies.canAccessEpicMarket(session, ficha),
+        accessArcanoMarket: (ficha) => policies.canAccessArcanoMarket(session, ficha),
+        accessLegendaryMarket: (ficha) => policies.canAccessLegendaryMarket(session, ficha),
+        buyInMarket: (ficha) => policies.canBuyInMarket(session, ficha),
         createCampaign: policies.canCreateCampaign(session),
         viewFicha: (ficha, options) => policies.canViewFicha(session, ficha, options),
         editFicha: (ficha) => policies.canEditFicha(session, ficha),

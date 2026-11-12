@@ -17,6 +17,10 @@ export interface MesaResumo {
   dinheiro: number;
   edicaoLiberada: boolean;
   acessoMercadoEpico: boolean;
+  ownerId: string | null;
+  podeComprar: boolean;
+  acessoMercadoArcano: boolean;
+  acessoMercadoLendario: boolean;
   status: { vidaAtual: number; vidaMax: number; vigorAtual: number; vigorMax: number; north: number } | null;
 }
 
@@ -38,6 +42,7 @@ async function findCharacterTenant(characterId: string): Promise<string | null> 
 interface AcervoCharacterRow {
   id: string;
   nome: string;
+  created_by: string | null;
   imagem_url: string | null;
   large_image_url: string | null;
   letter: string | null;
@@ -52,6 +57,9 @@ interface AcervoFichaRow {
   tenant_id: string;
   edicao_liberada: boolean;
   acesso_mercado_epico: boolean;
+  acesso_mercado_arcano: boolean;
+  acesso_mercado_lendario: boolean;
+  pode_comprar: boolean;
   dados: FichaCompleta | null;
 }
 
@@ -71,6 +79,9 @@ interface FichaResumoRow {
   dinheiro: string | null;
   edicao_liberada: boolean;
   acesso_mercado_epico: boolean;
+  acesso_mercado_arcano: boolean;
+  acesso_mercado_lendario: boolean;
+  pode_comprar: boolean;
   vida_atual: string | null;
   vida_max: string | null;
   vigor_atual: string | null;
@@ -98,12 +109,12 @@ async function carregarAcervoBase(tenantId: string): Promise<AcervoBase> {
   const [charactersResult, fichasResult] = await Promise.all([
     supabase
       .from('characters')
-      .select('id, nome, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao')
+      .select('id, nome, created_by, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao')
       .eq('tenant_id', tenantId)
       .order('ordem', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true }),
-    supabase.from('fichas').select('character_id, tenant_id, edicao_liberada, acesso_mercado_epico, dados').eq('tenant_id', tenantId),
+    supabase.from('fichas').select('character_id, tenant_id, edicao_liberada, acesso_mercado_epico, acesso_mercado_arcano, acesso_mercado_lendario, pode_comprar, dados').eq('tenant_id', tenantId),
   ]);
   if (charactersResult.error) throw new Error('Não foi possível carregar o acervo: ' + charactersResult.error.message);
   if (fichasResult.error) throw new Error('Não foi possível carregar as fichas: ' + fichasResult.error.message);
@@ -118,6 +129,9 @@ function montarFichaDoAcervo(row: AcervoFichaRow): FichaCompleta | null {
   const ficha = row.dados;
   ficha.identidade.edicao_liberada = row.edicao_liberada;
   ficha.identidade.acesso_mercado_epico = row.acesso_mercado_epico;
+  ficha.identidade.acesso_mercado_arcano = row.acesso_mercado_arcano ?? true;
+  ficha.identidade.acesso_mercado_lendario = row.acesso_mercado_lendario ?? false;
+  ficha.identidade.pode_comprar = row.pode_comprar ?? true;
   ficha.identidade.tenant_id = row.tenant_id;
   return ficha;
 }
@@ -138,14 +152,14 @@ async function acervoResumoDoCliente(tenantId: string): Promise<AcervoResumo> {
   const [charactersResult, fichasResult] = await Promise.all([
     supabase
       .from('characters')
-      .select('id, nome, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao')
+      .select('id, nome, created_by, imagem_url, large_image_url, letter, is_known, quote, quote_source, descricao')
       .eq('tenant_id', tenantId)
       .order('ordem', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true }),
     supabase
       .from('fichas')
-      .select('character_id, edicao_liberada, acesso_mercado_epico, nome_personagem:dados->identidade->>nome_personagem, imagem_url:dados->identidade->>imagem_url, historia:dados->identidade->>historia, raca:dados->identidade->>raca, nivel:dados->identidade->>nivel, xp:dados->identidade->>xp, dinheiro:dados->recursos->>dinheiro, vida_atual:dados->status->>vida_atual, vida_max:dados->status->>vida_max, vigor_atual:dados->status->>vigor_atual, vigor_max:dados->status->>vigor_max, north:dados->status->>north')
+      .select('character_id, edicao_liberada, acesso_mercado_epico, acesso_mercado_arcano, acesso_mercado_lendario, pode_comprar, nome_personagem:dados->identidade->>nome_personagem, imagem_url:dados->identidade->>imagem_url, historia:dados->identidade->>historia, raca:dados->identidade->>raca, nivel:dados->identidade->>nivel, xp:dados->identidade->>xp, dinheiro:dados->recursos->>dinheiro, vida_atual:dados->status->>vida_atual, vida_max:dados->status->>vida_max, vigor_atual:dados->status->>vigor_atual, vigor_max:dados->status->>vigor_max, north:dados->status->>north')
       .eq('tenant_id', tenantId),
   ]);
   if (charactersResult.error) throw new Error('Não foi possível carregar o acervo: ' + charactersResult.error.message);
@@ -174,7 +188,7 @@ export const fichaService = {
 
     let fichaQuery = supabase
       .from('fichas')
-      .select('tenant_id, edicao_liberada, acesso_mercado_epico, dados')
+      .select('tenant_id, edicao_liberada, acesso_mercado_epico, acesso_mercado_arcano, acesso_mercado_lendario, pode_comprar, dados')
       .eq('character_id', characterId);
     if (tenantId) fichaQuery = fichaQuery.eq('tenant_id', tenantId);
     const { data, error } = await fichaQuery.maybeSingle();
@@ -184,6 +198,9 @@ export const fichaService = {
       const ficha = data.dados as FichaCompleta;
       ficha.identidade.edicao_liberada = data.edicao_liberada;
       ficha.identidade.acesso_mercado_epico = data.acesso_mercado_epico;
+      ficha.identidade.acesso_mercado_arcano = data.acesso_mercado_arcano ?? true;
+      ficha.identidade.acesso_mercado_lendario = data.acesso_mercado_lendario ?? false;
+      ficha.identidade.pode_comprar = data.pode_comprar ?? true;
       ficha.identidade.tenant_id = data.tenant_id;
       return ficha;
     }
@@ -238,7 +255,7 @@ export const fichaService = {
    * Lista os personagens acessíveis ao usuário: apenas os do seu cliente (tenant).
    * O administrador da plataforma não possui acervo próprio e usa o painel administrativo.
    */
-  getListaPersonagens: async (): Promise<Array<{ id: string; nome: string; raca?: string; nivel?: number; imagem_url?: string; dinheiro: number }>> => {
+  getListaPersonagens: async (): Promise<Array<{ id: string; nome: string; raca?: string; nivel?: number; imagem_url?: string; dinheiro: number; ownerId: string | null }>> => {
     const scope = currentScope();
     if (!scope) return [];
 
@@ -256,6 +273,7 @@ export const fichaService = {
         nivel: Number(ficha?.nivel) || 1,
         imagem_url: ficha?.imagem_url || character.imagem_url || undefined,
         dinheiro: Number(ficha?.dinheiro) || 0,
+        ownerId: character.created_by,
       };
     });
   },
@@ -284,6 +302,10 @@ export const fichaService = {
         dinheiro: Number(ficha?.dinheiro) || 0,
         edicaoLiberada: ficha?.edicao_liberada ?? true,
         acessoMercadoEpico: ficha?.acesso_mercado_epico ?? false,
+        ownerId: character.created_by,
+        podeComprar: ficha?.pode_comprar ?? true,
+        acessoMercadoArcano: ficha?.acesso_mercado_arcano ?? true,
+        acessoMercadoLendario: ficha?.acesso_mercado_lendario ?? false,
         status: temStatus
           ? {
               vidaAtual: Number(ficha?.vida_atual) || 0,
@@ -340,6 +362,18 @@ export const fichaService = {
     return contagens;
   },
 
+  contarFichasPorJogador: async (): Promise<Record<string, number>> => {
+    const scope = currentScope();
+    if (!scope) return {};
+    const base = await acervoResumoDoCliente(scope.tenantId);
+    const contagens: Record<string, number> = {};
+    base.characters.forEach((character) => {
+      if (!character.created_by) return;
+      contagens[character.created_by] = (contagens[character.created_by] ?? 0) + 1;
+    });
+    return contagens;
+  },
+
   createBlankFicha: (
     characterId: string,
     characterName = '',
@@ -360,6 +394,9 @@ export const fichaService = {
         cor_aura: '#a88d61',
         edicao_liberada: true,
         acesso_mercado_epico: false,
+        acesso_mercado_arcano: true,
+        acesso_mercado_lendario: false,
+        pode_comprar: true,
         historia: '',
       },
       atributos: {
@@ -470,7 +507,14 @@ export const fichaService = {
       return false;
     }
 
-    const { edicao_liberada, acesso_mercado_epico, ...identidade } = ficha.identidade;
+    const {
+      edicao_liberada,
+      acesso_mercado_epico,
+      acesso_mercado_arcano,
+      acesso_mercado_lendario,
+      pode_comprar,
+      ...identidade
+    } = ficha.identidade;
     const { identidade: _fichaIdentidade, ...restoFicha } = ficha;
     const dados = { ...restoFicha, identidade };
     const row: Record<string, unknown> = {
@@ -482,6 +526,9 @@ export const fichaService = {
     if (session?.user.role === 'mestre' || session?.user.role === 'admin') {
       row.edicao_liberada = edicao_liberada;
       row.acesso_mercado_epico = acesso_mercado_epico;
+      row.acesso_mercado_arcano = acesso_mercado_arcano;
+      row.acesso_mercado_lendario = acesso_mercado_lendario;
+      row.pode_comprar = pode_comprar;
     }
 
     const { error } = await supabase.from('fichas').upsert(row, { onConflict: 'character_id' });
@@ -510,6 +557,7 @@ export const fichaService = {
         id: row.id,
         name: row.nome,
         image: row.imagem_url,
+        ownerId: row.created_by ?? undefined,
         largeImage: row.large_image_url ?? undefined,
         letter: row.letter ?? row.nome.charAt(0).toUpperCase() ?? '?',
         isKnown: row.is_known,
@@ -549,6 +597,7 @@ export const fichaService = {
     const { error } = await supabase.from('characters').insert({
       id: character.id,
       tenant_id: scope.tenantId,
+      created_by: useSessionStore.getState().session?.user.id ?? null,
       nome: character.name,
       imagem_url: character.image,
       large_image_url: character.largeImage ?? null,

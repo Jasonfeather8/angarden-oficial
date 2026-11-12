@@ -1,0 +1,1 @@
+create unique index if not exists grimorio_bloqueios_escola_key on public.grimorio_bloqueios (tenant_id, escola_id) where escola_id is not null

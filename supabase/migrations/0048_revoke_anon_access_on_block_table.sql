@@ -1,0 +1,1 @@
+revoke all on table public.grimorio_bloqueios from anon

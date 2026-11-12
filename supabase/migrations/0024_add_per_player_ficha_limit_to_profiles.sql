@@ -1,0 +1,1 @@
+alter table public.profiles add column if not exists limite_fichas integer not null default 10

@@ -8,6 +8,7 @@ import {
   CircleDot,
   Eye,
   EyeOff,
+  Lock,
   Pencil,
   Plus,
   Sparkles,
@@ -48,6 +49,7 @@ import {
   excluirMagia,
 } from '../services/grimorioService';
 import { fichaService } from '../services/fichaService';
+import { grimorioBloqueioService } from '../services/grimorioBloqueioService';
 import { cacheKeys } from '../services/cacheKeys';
 import { withTimeout } from '../utils/withTimeout';
 import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
@@ -114,10 +116,27 @@ export const GrimorioPage: React.FC = () => {
   const { can, tenantId } = useAuthorization();
   const canManageCatalog = can.manageCatalog;
   const canManageVisibility = can.manageSpellVisibility;
+  const podeVerBloqueado = canManageVisibility;
+  const bloqueiosQuery = useQuery({
+    queryKey: ['grimorio', 'bloqueios', tenantId],
+    queryFn: () => grimorioBloqueioService.listar(),
+    staleTime: 5 * 60 * 1000,
+    enabled: Boolean(tenantId),
+  });
+  const escolasBloqueadas = bloqueiosQuery.data?.escolas ?? [];
+  const volumesBloqueados = bloqueiosQuery.data?.volumes ?? [];
+  // Selar uma escola "guarda-chuva" grava também as subescolas dela (o serviço faz a expansão),
+  // então a checagem aqui é sempre pelo id exato — igual ao que a RLS aplica.
+  const escolaBloqueada = (schoolId: string) => escolasBloqueadas.includes(schoolId);
+  const volumeBloqueado = (volumeId: string) => {
+    const volume = grimorioVolumes.find((item) => item.id === volumeId);
+    return volumesBloqueados.includes(volumeId) || Boolean(volume && escolaBloqueada(volume.schoolId));
+  };
   const { imagensPesadas, bytesPesados, processando, processadas, erroOtimizacao, otimizarImagens } = useOtimizarImagensGrimorio(canManageCatalog);
   const storeCharacterId = useFichaStore((state) => state.characterId);
   const setStoreCharacterId = useFichaStore((state) => state.setCharacterId);
   const [view, setView] = useState<View>('schools');
+  const [bloqueioAviso, setBloqueioAviso] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState(ESCOLA_INICIAL_DO_GRIMORIO);
   const [branch, setBranch] = useState('');
   const [volumeId, setVolumeId] = useState('');
@@ -253,6 +272,12 @@ export const GrimorioPage: React.FC = () => {
     : formVolumes.find((volume) => volume.id === selectedVolume.id) ?? formVolumes[0];
 
   const chooseSchool = (id: string, chosenBranch = '') => {
+    if (escolaBloqueada(id) && !podeVerBloqueado) {
+      const target = grimorioAllSchools.find((item) => item.id === id);
+      setBloqueioAviso(`O Mestre selou a escola ${target?.name ?? id}.`);
+      return;
+    }
+    setBloqueioAviso(null);
     setSchoolId(id);
     setBranch(chosenBranch);
     setVolumeId('');
@@ -263,6 +288,11 @@ export const GrimorioPage: React.FC = () => {
   const chooseElement = (id: string) => {
     const element = grimorioElementos.find((item) => item.id === id);
     if (!element) return;
+    if (escolaBloqueada(id) && !podeVerBloqueado) {
+      setBloqueioAviso(`O Mestre selou a escola ${element.name}.`);
+      return;
+    }
+    setBloqueioAviso(null);
     setSchoolId(element.id);
     setBranch(element.subtitle);
     setVolumeId('');
@@ -273,6 +303,11 @@ export const GrimorioPage: React.FC = () => {
   const chooseMentalizacaoSubcategory = (id: string) => {
     const subcategory = grimorioMentalizacao.find((item) => item.id === id);
     if (!subcategory) return;
+    if (escolaBloqueada(id) && !podeVerBloqueado) {
+      setBloqueioAviso(`O Mestre selou a escola ${subcategory.name}.`);
+      return;
+    }
+    setBloqueioAviso(null);
     setSchoolId(subcategory.id);
     setBranch(subcategory.subtitle);
     setVolumeId('');
@@ -281,6 +316,13 @@ export const GrimorioPage: React.FC = () => {
   };
 
   const chooseVolume = (id: string) => {
+    const volume = grimorioVolumes.find((item) => item.id === id);
+    const bloqueado = volumeBloqueado(id) || escolaBloqueada(school.id);
+    if (bloqueado && !podeVerBloqueado) {
+      setBloqueioAviso(`O Mestre selou o tomo ${volume?.title ?? id} ou sua escola.`);
+      return;
+    }
+    setBloqueioAviso(null);
     setVolumeId(id);
     setFolioPage(1);
     setView('book');
@@ -569,6 +611,7 @@ export const GrimorioPage: React.FC = () => {
               Nenhum personagem encontrado. Crie um personagem na aba Personagens para vincular as magias aprendidas.
             </p>
           )}
+          {bloqueioAviso && <p role="status" className="border-l-2 border-[#a88d61] bg-[#21170e] px-3 py-2 text-xs text-[#c4b9a3]">{bloqueioAviso}</p>}
 
           {view !== 'schools' && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3a2c1d] pb-4">
@@ -577,11 +620,18 @@ export const GrimorioPage: React.FC = () => {
             </div>
           )}
 
-          {!buscandoMagias && view === 'schools' && <SchoolsView onChoose={chooseSchool} onCreate={canManageCatalog ? () => setIsCreateOpen(true) : undefined} />}
-          {!buscandoMagias && view === 'element-tree' && <ElementTreeView onChooseElement={chooseElement} />}
-          {!buscandoMagias && view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={chooseMentalizacaoSubcategory} />}
-          {!buscandoMagias && view === 'tree' && <TreeView school={school} volumes={volumes} onChooseVolume={chooseVolume} />}
-          {!buscandoMagias && view === 'book' && (isLoadingGrimorio ? (
+          {!buscandoMagias && view === 'schools' && <SchoolsView onChoose={chooseSchool} bloqueadas={escolasBloqueadas} podeAbrirBloqueada={podeVerBloqueado} onCreate={canManageCatalog ? () => setIsCreateOpen(true) : undefined} />}
+          {!buscandoMagias && view === 'element-tree' && <ElementTreeView onChooseElement={chooseElement} bloqueadas={grimorioElementos.filter((item) => escolaBloqueada(item.id)).map((item) => item.id)} podeAbrirBloqueada={podeVerBloqueado} />}
+          {!buscandoMagias && view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={chooseMentalizacaoSubcategory} bloqueadas={grimorioMentalizacao.filter((item) => escolaBloqueada(item.id)).map((item) => item.id)} podeAbrirBloqueada={podeVerBloqueado} />}
+          {!buscandoMagias && view === 'tree' && <TreeView school={school} volumes={volumes} escolaEstaBloqueada={escolaBloqueada(school.id)} escolasBloqueadas={escolasBloqueadas} volumesBloqueados={volumesBloqueados} podeAbrirBloqueada={podeVerBloqueado} onChooseVolume={chooseVolume} />}
+          {!buscandoMagias && view === 'book' && !podeVerBloqueado && volumeBloqueado(selectedVolume.id) ? (
+            <EmptyState
+              variant="plano"
+              icon={<Lock className="h-8 w-8" aria-hidden="true" />}
+              title="Volume selado pelo Mestre"
+              description="O conteúdo deste tomo está selado para esta mesa."
+            />
+          ) : !buscandoMagias && view === 'book' && (isLoadingGrimorio ? (
             <div className="space-y-5">
               <span role="status" aria-live="polite" className="sr-only">Consultando os arquivos arcanos…</span>
               <FolioSkeleton />
@@ -707,7 +757,7 @@ export const GrimorioPage: React.FC = () => {
   );
 };
 
-const SchoolsView = ({ onChoose, onCreate }: { onChoose: (schoolId: string, branch?: string) => void; onCreate?: () => void }) => {
+const SchoolsView = ({ onChoose, onCreate, bloqueadas, podeAbrirBloqueada }: { onChoose: (schoolId: string, branch?: string) => void; onCreate?: () => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => {
   return (
     <>
       <section aria-labelledby="schools-heading" className="space-y-5 max-[639px]:space-y-7">
@@ -720,11 +770,20 @@ const SchoolsView = ({ onChoose, onCreate }: { onChoose: (schoolId: string, bran
         {[{ x: 29, y: 29 }, { x: 71, y: 29 }, { x: 71, y: 71 }, { x: 29, y: 71 }, { x: 50, y: 29 }, { x: 71, y: 50 }, { x: 50, y: 71 }, { x: 29, y: 50 }].map((ponto) => <circle key={`escola-no-${ponto.x}-${ponto.y}`} cx={ponto.x} cy={ponto.y} r="0.7" fill="#d8b86b" fillOpacity="0.5" />)}
       </svg>
       <div className="relative z-10 flex h-32 w-32 flex-col items-center justify-center rounded-full border border-[#a88d61] bg-[#1a110a] text-center shadow-[0_0_25px_rgba(168,141,97,0.2)] max-[639px]:h-20 max-[639px]:w-20"><BrandMark variant="arvore" altura={30} decorativa className="mb-1" /><span className="font-cinzel text-[11px] uppercase tracking-widest text-[#e6ddc5] max-[639px]:text-[9px]">Círculo Menor</span></div>
-      {grimorioSchools.map((item, index) => { const position = [{ top: '2%', left: '50%', transform: 'translateX(-50%)' }, { top: '19%', right: '3%' }, { top: '61%', right: '3%' }, { bottom: '2%', left: '50%', transform: 'translateX(-50%)' }, { top: '61%', left: '3%' }, { top: '19%', left: '3%' }, { top: '41%', left: '50%', transform: 'translate(-50%, -50%)' }][index]; return <button key={item.id} type="button" onClick={() => onChoose(item.id)} style={{ ...position, borderColor: item.accent }} className={`absolute z-20 flex size-[105px] -translate-y-1/2 flex-col items-center justify-center rounded-full border bg-[#17100b] px-3 py-2 text-center shadow-lg transition hover:-translate-y-2 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] max-[639px]:size-[60px] max-[639px]:px-0.5 max-[639px]:leading-[1.05] max-[639px]:text-[7px] sm:size-[125px] ${index === 2 || index === 4 ? 'max-[639px]:!top-[73%]' : index === 6 ? 'max-[639px]:!top-[35%]' : ''}`}><span className="block break-words font-cinzel text-[10px] uppercase leading-tight tracking-wide text-[#eadfc8] max-[639px]:text-[7px]">{item.name}</span><span className="mt-1 block break-words text-[10px] italic leading-tight text-[#9d896b] max-[639px]:text-[7px]">{item.subtitle}</span>{item.id !== 'elementar' && item.branches && <span className="mt-1 block break-words text-[9px] leading-tight text-[#c6a15b] max-[639px]:text-[7px]">Fogo · Água · Ar · Terra</span>}</button>; })}
+      {grimorioSchools.map((item, index) => {
+        const position = [{ top: '2%', left: '50%', transform: 'translateX(-50%)' }, { top: '19%', right: '3%' }, { top: '61%', right: '3%' }, { bottom: '2%', left: '50%', transform: 'translateX(-50%)' }, { top: '61%', left: '3%' }, { top: '19%', left: '3%' }, { top: '41%', left: '50%', transform: 'translate(-50%, -50%)' }][index];
+        const bloqueada = bloqueadas.includes(item.id);
+        return (
+          <button key={item.id} type="button" onClick={() => onChoose(item.id)} aria-disabled={bloqueada && !podeAbrirBloqueada} aria-label={`Escolher ${item.name}${bloqueada ? ' — Selado pelo Mestre' : ''}`} title={bloqueada ? 'Selado pelo Mestre' : item.description} style={{ ...position, borderColor: item.accent }} className={`absolute z-20 flex size-[105px] -translate-y-1/2 flex-col items-center justify-center rounded-full border bg-[#17100b] px-3 py-2 text-center shadow-lg transition hover:-translate-y-2 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] max-[639px]:size-[60px] max-[639px]:px-0.5 max-[639px]:leading-[1.05] max-[639px]:text-[7px] sm:size-[125px] ${index === 2 || index === 4 ? 'max-[639px]:!top-[73%]' : index === 6 ? 'max-[639px]:!top-[35%]' : ''}`}>
+            {bloqueada && <Lock className="absolute right-2 top-2 h-4 w-4 text-[#d6b56a] max-[639px]:right-1 max-[639px]:top-1 max-[639px]:h-3 max-[639px]:w-3" aria-hidden="true" />}
+            <span className="block break-words font-cinzel text-[10px] uppercase leading-tight tracking-wide text-[#eadfc8] max-[639px]:text-[7px]">{item.name}</span><span className="mt-1 block break-words text-[10px] italic leading-tight text-[#9d896b] max-[639px]:text-[7px]">{item.subtitle}</span>{item.id !== 'elementar' && item.branches && <span className="mt-1 block break-words text-[9px] leading-tight text-[#c6a15b] max-[639px]:text-[7px]">Fogo · Água · Ar · Terra</span>}
+          </button>
+        );
+      })}
     </div>
     {onCreate && <div className="flex justify-center border-t border-[#3a2c1d] pt-4"><button type="button" onClick={onCreate} className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#b49768] hover:text-[#f0d68b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] max-[639px]:min-h-11 max-[639px]:px-3"><Plus size={15} /> Inscrever uma magia pessoal</button></div>}
       </section>
-      <ExpandedCirclesView onChoose={onChoose} />
+      <ExpandedCirclesView onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
     </>
   );
 };
@@ -789,9 +848,11 @@ interface ExpandedCircleSectionProps {
   /** Brilho de fundo e borda próprios do círculo. */
   tom: string;
   onChoose: (schoolId: string) => void;
+  bloqueadas: string[];
+  podeAbrirBloqueada: boolean;
 }
 
-const ExpandedCircleSection = ({ id, title, description, schools, circleClassName, figura, tom, onChoose }: ExpandedCircleSectionProps) => {
+const ExpandedCircleSection = ({ id, title, description, schools, circleClassName, figura, tom, onChoose, bloqueadas, podeAbrirBloqueada }: ExpandedCircleSectionProps) => {
   const positions = schools.map((_, index) => {
     const angle = -Math.PI / 2 + (index * Math.PI * 2) / schools.length;
     return { x: 50 + Math.cos(angle) * 40, y: 50 + Math.sin(angle) * 40 };
@@ -820,36 +881,41 @@ const ExpandedCircleSection = ({ id, title, description, schools, circleClassNam
           <BrandMark variant="arvore" altura={32} decorativa className="mb-1" />
           <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[1.05] tracking-[0.15em] text-[#d8b86b] sm:text-[9px] lg:text-[10px]">{title}</span>
         </div>
-        {schools.map((school, index) => (
+        {schools.map((school, index) => {
+          const bloqueada = bloqueadas.includes(school.id);
+          return (
           <button
             key={school.id}
             type="button"
             onClick={() => onChoose(school.id)}
-            aria-label={`Escolher ${school.name}${school.subtitle ? ` (${school.subtitle})` : ''}`}
-            title={school.description}
+            aria-disabled={bloqueada && !podeAbrirBloqueada}
+            aria-label={`Escolher ${school.name}${school.subtitle ? ` (${school.subtitle})` : ''}${bloqueada ? ' — Selado pelo Mestre' : ''}`}
+            title={bloqueada ? 'Selado pelo Mestre' : school.description}
             style={{ left: `${positions[index].x}%`, top: `${positions[index].y}%`, borderColor: school.accent }}
             className="absolute z-20 flex size-[68px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-2 text-center shadow-[0_0_18px_rgba(0,0,0,0.75)] transition hover:scale-105 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:size-[58px] max-[639px]:px-0.5 sm:size-[104px] lg:size-[118px]"
           >
+            {bloqueada && <Lock className="absolute right-2 top-2 h-4 w-4 text-[#d6b56a] max-[639px]:right-1 max-[639px]:top-1 max-[639px]:h-3 max-[639px]:w-3" aria-hidden="true" />}
             <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[0.95] tracking-wide text-[#eadfc8] max-[639px]:text-[6px] sm:text-[10px] lg:text-[11px]">{school.name}</span>
             <span className="mt-1 block max-w-full break-words text-[7px] italic leading-[0.95] text-[#c6a15b] max-[639px]:text-[6px] sm:text-[9px] lg:text-[10px]">{school.subtitle}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
       </section>
     </RevealCircle>
   );
 };
 
-const ExpandedCirclesView = ({ onChoose }: { onChoose: (schoolId: string, branch?: string) => void }) => (
+const ExpandedCirclesView = ({ onChoose, bloqueadas, podeAbrirBloqueada }: { onChoose: (schoolId: string, branch?: string) => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => (
   <div className="relative space-y-10 pt-2">
     <div className="pointer-events-none absolute bottom-12 left-1/2 top-12 z-0 w-px -translate-x-1/2 bg-gradient-to-b from-[#8c6b41]/55 via-[#8c6b41]/25 to-[#8c6b41]/55" aria-hidden="true" />
-    <ExpandedCircleSection id="circulo-maior" title="Círculo Maior" description="Tradições vastas para aqueles que já atravessaram o primeiro limiar." schools={grimorioMaiorSchools} circleClassName="max-w-[680px] max-[639px]:max-w-[360px]" figura="pentagrama" tom="border-[#4d3822] bg-[radial-gradient(circle_at_center,rgba(216,184,107,0.22),transparent_58%),#0e0a07]" onChoose={onChoose} />
-    <ExpandedCircleSection id="circulo-exoterico" title="Círculo Exotérico" description="Artes veladas que sondam a mente, os sonhos e os sinais do mundo." schools={grimorioExotericoSchools} circleClassName="max-w-[790px] max-[639px]:max-w-[360px]" figura="octagrama" tom="border-[#43394f] bg-[radial-gradient(circle_at_center,rgba(154,127,157,0.22),transparent_58%),#0e0a07]" onChoose={onChoose} />
-    <ExpandedCircleSection id="circulo-cosmico" title="Círculo Cósmico" description="Forças primordiais que regem o espaço, a matéria, a luz e o tempo." schools={grimorioCosmicoSchools} circleClassName="max-w-[900px] max-[639px]:max-w-[360px]" figura="hexagrama" tom="border-[#394154] bg-[radial-gradient(circle_at_center,rgba(119,107,148,0.24),transparent_58%),#0e0a07]" onChoose={onChoose} />
+    <ExpandedCircleSection id="circulo-maior" title="Círculo Maior" description="Tradições vastas para aqueles que já atravessaram o primeiro limiar." schools={grimorioMaiorSchools} circleClassName="max-w-[680px] max-[639px]:max-w-[360px]" figura="pentagrama" tom="border-[#4d3822] bg-[radial-gradient(circle_at_center,rgba(216,184,107,0.22),transparent_58%),#0e0a07]" onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
+    <ExpandedCircleSection id="circulo-exoterico" title="Círculo Exotérico" description="Artes veladas que sondam a mente, os sonhos e os sinais do mundo." schools={grimorioExotericoSchools} circleClassName="max-w-[790px] max-[639px]:max-w-[360px]" figura="octagrama" tom="border-[#43394f] bg-[radial-gradient(circle_at_center,rgba(154,127,157,0.22),transparent_58%),#0e0a07]" onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
+    <ExpandedCircleSection id="circulo-cosmico" title="Círculo Cósmico" description="Forças primordiais que regem o espaço, a matéria, a luz e o tempo." schools={grimorioCosmicoSchools} circleClassName="max-w-[900px] max-[639px]:max-w-[360px]" figura="hexagrama" tom="border-[#394154] bg-[radial-gradient(circle_at_center,rgba(119,107,148,0.24),transparent_58%),#0e0a07]" onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
   </div>
 );
 
-const MentalizacaoTreeView = ({ onChooseSubcategory }: { onChooseSubcategory: (id: string) => void }) => {
+const MentalizacaoTreeView = ({ onChooseSubcategory, bloqueadas, podeAbrirBloqueada }: { onChooseSubcategory: (id: string) => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => {
   const positions = [
     { top: '20%', left: '50%', transform: 'translate(-50%, -50%)' },
     { top: '72%', left: '25%', transform: 'translate(-50%, -50%)' },
@@ -877,26 +943,31 @@ const MentalizacaoTreeView = ({ onChooseSubcategory }: { onChooseSubcategory: (i
           <BrandMark variant="arvore" altura={32} decorativa className="mb-1" />
           <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[1.05] tracking-[0.15em] text-[#d8b86b] sm:text-[9px]">Mentalização</span>
         </div>
-        {grimorioMentalizacao.map((item, index) => (
+        {grimorioMentalizacao.map((item, index) => {
+          const bloqueada = bloqueadas.includes(item.id);
+          return (
           <button
             key={item.id}
             type="button"
             onClick={() => onChooseSubcategory(item.id)}
-            aria-label={`Escolher ${item.name}`}
-            title={item.description}
+            aria-disabled={bloqueada && !podeAbrirBloqueada}
+            aria-label={`Escolher ${item.name}${bloqueada ? ' — Selado pelo Mestre' : ''}`}
+            title={bloqueada ? 'Selado pelo Mestre' : item.description}
             style={{ ...positions[index], borderColor: item.accent }}
             className="absolute z-20 flex size-[112px] flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-2 text-center shadow-[0_0_18px_rgba(0,0,0,0.7)] transition hover:scale-105 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:size-[76px] max-[639px]:px-1"
           >
+            {bloqueada && <Lock className="absolute right-2 top-2 h-4 w-4 text-[#d6b56a] max-[639px]:right-1 max-[639px]:top-1 max-[639px]:h-3 max-[639px]:w-3" aria-hidden="true" />}
             <span className="block break-words font-cinzel text-[10px] uppercase leading-tight tracking-wide text-[#eadfc8] max-[639px]:text-[8px]">{item.name}</span>
             <span className="mt-1 block break-words text-[9px] italic leading-tight text-[#c6a15b] max-[639px]:text-[7px]">({item.subtitle})</span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
 };
 
-const ElementTreeView = ({ onChooseElement }: { onChooseElement: (id: string) => void }) => {
+const ElementTreeView = ({ onChooseElement, bloqueadas, podeAbrirBloqueada }: { onChooseElement: (id: string) => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => {
   const elementNodes = [
     { id: 'piromancia', x: 14, y: 28, kind: 'base' },
     { id: 'hidromancia', x: 38, y: 28, kind: 'base' },
@@ -957,16 +1028,19 @@ const ElementTreeView = ({ onChooseElement }: { onChooseElement: (id: string) =>
         {elementNodes.map((node) => {
           const element = grimorioElementos.find((item) => item.id === node.id)!;
           const sizeClass = node.kind === 'base' ? 'size-14 sm:size-[6.7rem]' : 'size-[2.875rem] sm:size-[6.4rem]';
+          const bloqueada = bloqueadas.includes(element.id);
           return (
             <button
               key={element.id}
               type="button"
               onClick={() => onChooseElement(element.id)}
-              aria-label={`Escolher ${element.name} (${element.subtitle})`}
-              title={element.description}
+              aria-disabled={bloqueada && !podeAbrirBloqueada}
+              aria-label={`Escolher ${element.name} (${element.subtitle})${bloqueada ? ' — Selado pelo Mestre' : ''}`}
+              title={bloqueada ? 'Selado pelo Mestre' : element.description}
               style={{ borderColor: element.accent, left: `${node.x}%`, top: `${node.y}%` }}
               className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex ${sizeClass} flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-1.5 text-center shadow-[0_0_18px_rgba(0,0,0,0.7)] transition hover:-translate-y-[calc(50%+0.25rem)] hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:px-0.5`}
             >
+              {bloqueada && <Lock className="absolute right-1 top-1 h-3 w-3 text-[#d6b56a]" aria-hidden="true" />}
               <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[0.95] tracking-wide text-[#eadfc8] sm:text-[10px]">{element.name}</span>
               <span className="mt-1 block max-w-full break-words text-[8px] italic leading-[0.95] text-[#c6a15b] sm:text-[10px]">({element.subtitle})</span>
             </button>
@@ -977,8 +1051,11 @@ const ElementTreeView = ({ onChooseElement }: { onChooseElement: (id: string) =>
   );
 };
 
-const TreeView = ({ school, volumes, onChooseVolume }: { school: typeof grimorioAllSchools[number]; volumes: typeof grimorioVolumes; onChooseVolume: (id: string) => void }) => (
-  <section aria-labelledby="tree-heading" className="space-y-6"><div className="text-center"><p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Árvore de volumes</p><h3 id="tree-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">Os tomos de {school.name}</h3><p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">Selecione um volume para abrir suas páginas e consultar as magias guardadas.</p></div><div className="relative mx-auto max-w-3xl py-5"><div className="absolute bottom-10 left-1/2 top-10 hidden w-px -translate-x-1/2 bg-[#6b4f2d] sm:block" /><div className="space-y-4">{volumes.map((volume, index) => <div key={volume.id} className={`relative flex items-center gap-3 sm:gap-6 ${index % 2 ? 'sm:flex-row-reverse' : ''}`}><div className="hidden h-px flex-1 bg-[#6b4f2d]/70 sm:block" /><button type="button" onClick={() => onChooseVolume(volume.id)} className="group relative z-10 flex w-full items-center gap-4 border border-[#654b2c] bg-[#1a120c] p-4 text-left shadow-[0_7px_18px_rgba(0,0,0,0.4)] transition hover:border-[#c19a57] hover:bg-[#25190e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] sm:w-[45%]"><span className="flex h-14 w-14 shrink-0 items-center justify-center border border-[#9b7c43] bg-[#2b1d10] font-cinzel text-xl text-[#d7b866]">{volume.number}</span><span><span className="block font-cinzel text-sm uppercase tracking-wider text-[#e6ddc5] group-hover:text-[#f0d68b]">{volume.title}</span><span className="mt-1 block text-xs italic text-[#a88d61]">{volume.subtitle}</span><span className="mt-2 block text-[10px] text-[#8f806a]">{volume.description}</span></span></button><div className="hidden flex-1 sm:block" /></div>)}</div></div></section>
+const TreeView = ({ school, volumes, onChooseVolume, escolaEstaBloqueada, escolasBloqueadas, volumesBloqueados, podeAbrirBloqueada }: { school: typeof grimorioAllSchools[number]; volumes: typeof grimorioVolumes; onChooseVolume: (id: string) => void; escolaEstaBloqueada: boolean; escolasBloqueadas: string[]; volumesBloqueados: string[]; podeAbrirBloqueada: boolean }) => (
+  <section aria-labelledby="tree-heading" className="space-y-6"><div className="text-center"><p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Árvore de volumes</p><h3 id="tree-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">Os tomos de {school.name}</h3><p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">Selecione um volume para abrir suas páginas e consultar as magias guardadas.</p></div><div className="relative mx-auto max-w-3xl py-5"><div className="absolute bottom-10 left-1/2 top-10 hidden w-px -translate-x-1/2 bg-[#6b4f2d] sm:block" /><div className="space-y-4">{volumes.map((volume, index) => {
+    const bloqueado = escolaEstaBloqueada || escolasBloqueadas.includes(volume.schoolId) || volumesBloqueados.includes(volume.id);
+    return <div key={volume.id} className={`relative flex items-center gap-3 sm:gap-6 ${index % 2 ? 'sm:flex-row-reverse' : ''}`}><div className="hidden h-px flex-1 bg-[#6b4f2d]/70 sm:block" /><button type="button" onClick={() => onChooseVolume(volume.id)} aria-disabled={bloqueado && !podeAbrirBloqueada} aria-label={`${volume.title}${bloqueado ? ' — Selado pelo Mestre' : ''}`} title={bloqueado ? 'Selado pelo Mestre' : volume.description} className="group relative z-10 flex w-full items-center gap-4 border border-[#654b2c] bg-[#1a120c] p-4 text-left shadow-[0_7px_18px_rgba(0,0,0,0.4)] transition hover:border-[#c19a57] hover:bg-[#25190e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] sm:w-[45%]"><span className="flex h-14 w-14 shrink-0 items-center justify-center border border-[#9b7c43] bg-[#2b1d10] font-cinzel text-xl text-[#d7b866]">{volume.number}</span><span className="min-w-0"><span className="block font-cinzel text-sm uppercase tracking-wider text-[#e6ddc5] group-hover:text-[#f0d68b]">{volume.title}</span><span className="mt-1 block text-xs italic text-[#a88d61]">{volume.subtitle}</span><span className="mt-2 block text-[10px] text-[#8f806a]">{volume.description}</span>{bloqueado && <span className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-[#d6b56a]"><Lock size={12} aria-hidden="true" /> Selado</span>}</span>{bloqueado && <Lock className="ml-auto h-4 w-4 shrink-0 text-[#d6b56a]" aria-hidden="true" />}</button><div className="hidden flex-1 sm:block" /></div>;
+  })}</div></div></section>
 );
 
 const FolioSkeleton = () => (

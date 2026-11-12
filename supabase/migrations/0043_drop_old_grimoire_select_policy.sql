@@ -1,0 +1,1 @@
+drop policy if exists "grimorio_select" on public.grimorio_spells

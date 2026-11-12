@@ -1,0 +1,1 @@
+create index if not exists grimorio_bloqueios_tenant_idx on public.grimorio_bloqueios (tenant_id)

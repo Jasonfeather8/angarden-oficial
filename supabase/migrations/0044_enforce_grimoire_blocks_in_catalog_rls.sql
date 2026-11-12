@@ -1,0 +1,1 @@
+create policy "grimorio_select" on public.grimorio_spells as permissive for select to authenticated using ((public.is_admin() or public.is_mestre() or (public.is_active() and not oculta and not public.grimorio_conteudo_bloqueado((dados ->> 'volumeId'), (dados ->> 'schoolId')))))

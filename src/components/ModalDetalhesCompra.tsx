@@ -15,6 +15,8 @@ export interface ModalDetalhesCompraProps {
   cargaAtual?: number;
   nomePersonagemComprador?: string;
   temPermissaoEpica?: boolean;
+  temPermissaoArcano?: boolean;
+  temPermissaoCompra?: boolean;
   onConfirmarCompra?: (item: MercadoItem, quantidade: number) => Promise<void>;
   canManageCatalog?: boolean;
   onEditar?: (item: MercadoItem) => void;
@@ -50,6 +52,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
   cargaAtual = 0,
   nomePersonagemComprador,
   temPermissaoEpica = true,
+  temPermissaoArcano = true,
+  temPermissaoCompra = true,
   onConfirmarCompra,
   canManageCatalog = false,
   onEditar,
@@ -85,7 +89,9 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
   const pesoTotalAcrescentado = Number(((item.peso || 0) * quantidade).toFixed(2));
   const saldoSuficiente = saldoAtual >= custoTotal;
   const bloqueadoPorEpico = item.is_epico && !temPermissaoEpica;
-  const podeComprar = saldoSuficiente && !bloqueadoPorEpico && quantidade > 0;
+  const bloqueadoPorArcano = Boolean(item.categoria?.startsWith('arcano_')) && !temPermissaoArcano;
+  const bloqueadoPorCompra = !temPermissaoCompra;
+  const podeComprar = saldoSuficiente && !bloqueadoPorEpico && !bloqueadoPorArcano && !bloqueadoPorCompra && quantidade > 0;
 
   const isArmadura =
     item.categoria === 'mercado_armaduras' ||
@@ -806,7 +812,21 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
           </div>
         )}
 
-        {origem === 'mercado' && !saldoSuficiente && !bloqueadoPorEpico && (
+        {origem === 'mercado' && bloqueadoPorArcano && (
+          <div className="flex items-center gap-2 p-3 rounded bg-red-950/40 border border-red-800/80 text-red-300 text-xs">
+            <Lock size={16} className="flex-shrink-0 text-red-400" />
+            <span>Este item pertence ao Mercado Arcano, cujo acesso foi restringido pelo Mestre nesta ficha.</span>
+          </div>
+        )}
+
+        {origem === 'mercado' && bloqueadoPorCompra && (
+          <div className="flex items-center gap-2 p-3 rounded bg-red-950/40 border border-red-800/80 text-red-300 text-xs">
+            <Lock size={16} className="flex-shrink-0 text-red-400" />
+            <span>Compras bloqueadas pelo Mestre nesta ficha.</span>
+          </div>
+        )}
+
+        {origem === 'mercado' && !saldoSuficiente && !bloqueadoPorEpico && !bloqueadoPorArcano && !bloqueadoPorCompra && (
           <div className="flex items-center gap-2 p-3 rounded bg-amber-950/40 border border-amber-800/80 text-amber-300 text-xs">
             <AlertCircle size={16} className="flex-shrink-0 text-amber-400" />
             <span>Saldo insuficiente na bolsa do personagem para completar a transação.</span>

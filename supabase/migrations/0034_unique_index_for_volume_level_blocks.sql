@@ -1,0 +1,1 @@
+create unique index if not exists grimorio_bloqueios_volume_key on public.grimorio_bloqueios (tenant_id, volume_id) where volume_id is not null

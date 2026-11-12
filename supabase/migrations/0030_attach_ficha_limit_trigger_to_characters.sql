@@ -1,0 +1,1 @@
+create trigger characters_prevent_ficha_limit before insert on public.characters for each row execute function public.prevent_ficha_limit()

@@ -54,6 +54,7 @@ export interface Usuario {
 export interface PerfilConta extends Usuario {
   updated_at: string;
   motivo_recusa?: string;
+  limite_fichas: number;
 }
 
 /** Sessão ativa. Substituível por `supabase.auth.getSession()`. */
