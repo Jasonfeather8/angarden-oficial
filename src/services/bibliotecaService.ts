@@ -23,6 +23,18 @@ const URL_UPLOAD_RESUMIVEL =
 /** Tamanho da parte: o Storage exige exatamente 6 MB no envio retomável. */
 const TAMANHO_PEDACO_BYTES = 6 * 1024 * 1024;
 
+async function erroUpload(resposta?: Response, erro?: unknown): Promise<Error> {
+  const diagnostico: string[] = resposta ? [`HTTP ${resposta.status}`] : [];
+  for (const nome of ['server', 'cf-ray', 'content-type', 'content-length']) {
+    const valor = resposta?.headers.get(nome);
+    if (valor) diagnostico.push(`${nome}: ${valor}`);
+  }
+  const corpo = resposta ? (await resposta.text()).slice(0, 300) : '';
+  const detalheErro = erro instanceof Error ? erro.message : String(erro ?? 'Falha de rede.');
+  const contexto = [diagnostico.join(' · '), corpo].filter(Boolean).join(' — ');
+  return new Error(`Não foi possível enviar o PDF: ${contexto || `Falha de rede — ${detalheErro}`}`);
+}
+
 const COLUNAS_ITEM =
   'id, tipo, categoria, titulo, subtitulo, descricao, capa_url, arquivo_caminho, arquivo_url, arquivo_bytes, indice, conteudo, oculto, created_at, updated_at';
 
@@ -193,9 +205,9 @@ export const bibliotecaService = {
   /**
    * Envia o PDF direto ao bucket pelo endpoint retomável (TUS), sem passar pela
    * função de borda de mídia: aquela limita a 5 MB e trafega base64, o que não
-   * serve para um manual. O envio é fatiado em partes de 6 MB, retomado de onde
-   * parou, e o Storage devolve a causa real quando recusa. O `tus-js-client`
-   * entra por `import()` para não pesar a rota administrativa.
+   * serve para um manual. O envio é fatiado em partes de 6 MB e retomado de onde
+   * parou; usa `fetch` porque requisições XHR com corpo falham no ambiente de
+   * prévia, enquanto o envio retomável permite sincronizar o avanço com o Storage.
    */
   enviarPdf: async (
     arquivo: File,
@@ -215,47 +227,103 @@ export const bibliotecaService = {
     if (!token) throw new Error('Sessão expirada. Entre novamente na plataforma.');
 
     const caminho = `${crypto.randomUUID()}.pdf`;
-    const { Upload } = await import('tus-js-client');
+    const metadados = [
+      ['bucketName', BUCKET_ACERVO],
+      ['objectName', caminho],
+      ['contentType', 'application/pdf'],
+      ['cacheControl', '3600'],
+    ]
+      .map(([chave, valor]) => `${chave} ${btoa(valor)}`)
+      .join(',');
 
-    await new Promise<void>((resolver, rejeitar) => {
-      const envio = new Upload(arquivo, {
-        endpoint: URL_UPLOAD_RESUMIVEL,
-        headers: { authorization: `Bearer ${token}`, 'x-upsert': 'true' },
-        chunkSize: TAMANHO_PEDACO_BYTES,
-        retryDelays: [0, 3000, 5000, 10000, 20000],
-        uploadDataDuringCreation: true,
-        removeFingerprintOnSuccess: true,
-        storeFingerprintForResuming: false,
-        metadata: {
-          bucketName: BUCKET_ACERVO,
-          objectName: caminho,
-          contentType: 'application/pdf',
-          cacheControl: '3600',
-        },
-        onProgress: (enviados, total) => {
-          if (aoProgredir && total > 0) aoProgredir(Math.round((enviados / total) * 100));
-        },
-        onError: (erro) => {
-          // Status, cabeçalhos e corpo ajudam a identificar a camada que recusou.
-          const resposta = 'originalResponse' in erro ? erro.originalResponse : undefined;
-          const status = resposta?.getStatus();
-          const diagnostico: string[] = status ? [`HTTP ${status}`] : [];
-          for (const nome of ['server', 'cf-ray', 'content-type', 'content-length']) {
-            const valor = resposta?.getHeader(nome);
-            if (valor) diagnostico.push(`${nome}: ${valor}`);
+    const criarResposta = await (async () => {
+      try {
+        return await fetch(URL_UPLOAD_RESUMIVEL, {
+          method: 'POST',
+          headers: {
+            authorization: `Bearer ${token}`,
+            'x-upsert': 'true',
+            'tus-resumable': '1.0.0',
+            'upload-length': String(arquivo.size),
+            'upload-metadata': metadados,
+          },
+        });
+      } catch (erro) {
+        throw await erroUpload(undefined, erro);
+      }
+    })();
+
+    if (!criarResposta.ok) throw await erroUpload(criarResposta);
+    const location = criarResposta.headers.get('location');
+    if (!location) throw new Error('O Storage não informou o endereço do envio retomável.');
+    const enderecoEnvio = new URL(location, URL_UPLOAD_RESUMIVEL).href;
+
+    let deslocamento = 0;
+    while (deslocamento < arquivo.size) {
+      let parteConcluida = false;
+      let ultimoErro: Error | undefined;
+
+      for (let tentativa = 0; tentativa < 3 && !parteConcluida; tentativa += 1) {
+        const parte = arquivo.slice(deslocamento, deslocamento + TAMANHO_PEDACO_BYTES);
+        try {
+          let resposta: Response;
+          try {
+            resposta = await fetch(enderecoEnvio, {
+              method: 'PATCH',
+              headers: {
+                authorization: `Bearer ${token}`,
+                'tus-resumable': '1.0.0',
+                'upload-offset': String(deslocamento),
+                'content-type': 'application/offset+octet-stream',
+              },
+              body: parte,
+            });
+          } catch (erro) {
+            throw await erroUpload(undefined, erro);
           }
-          const corpo = resposta?.getBody().slice(0, 300);
-          const contexto = [diagnostico.join(' · '), corpo].filter(Boolean).join(' — ');
-          rejeitar(
-            new Error(
-              `Não foi possível enviar o PDF: ${contexto || erro.message || 'o envio retomável falhou.'}`,
-            ),
-          );
-        },
-        onSuccess: () => resolver(),
-      });
-      envio.start();
-    });
+          if (!resposta.ok) throw await erroUpload(resposta);
+
+          const offsetResposta = Number(resposta.headers.get('upload-offset'));
+          deslocamento =
+            Number.isFinite(offsetResposta) && offsetResposta > deslocamento
+              ? offsetResposta
+              : deslocamento + parte.size;
+          parteConcluida = true;
+          aoProgredir?.(Math.round((deslocamento / arquivo.size) * 100));
+        } catch (erro) {
+          ultimoErro = erro instanceof Error ? erro : await erroUpload(undefined, erro);
+          if (tentativa === 2) break;
+
+          await new Promise((resolver) => setTimeout(resolver, tentativa === 0 ? 1000 : 3000));
+          try {
+            let sincronizacao: Response;
+            try {
+              sincronizacao = await fetch(enderecoEnvio, {
+                method: 'HEAD',
+                headers: { authorization: `Bearer ${token}`, 'tus-resumable': '1.0.0' },
+              });
+            } catch (erroSincronizacao) {
+              throw await erroUpload(undefined, erroSincronizacao);
+            }
+            if (!sincronizacao.ok) throw await erroUpload(sincronizacao);
+            const offsetSincronizado = Number(sincronizacao.headers.get('upload-offset'));
+            if (Number.isFinite(offsetSincronizado) && offsetSincronizado >= deslocamento) {
+              deslocamento = offsetSincronizado;
+            }
+            if (deslocamento >= arquivo.size) {
+              parteConcluida = true;
+              aoProgredir?.(Math.round((deslocamento / arquivo.size) * 100));
+            }
+          } catch (erroSincronizacao) {
+            throw erroSincronizacao instanceof Error
+              ? erroSincronizacao
+              : await erroUpload(undefined, erroSincronizacao);
+          }
+        }
+      }
+
+      if (!parteConcluida) throw ultimoErro ?? new Error('O envio retomável falhou.');
+    }
 
     return { caminho, bytes: arquivo.size };
   },
