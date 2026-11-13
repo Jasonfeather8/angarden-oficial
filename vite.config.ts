@@ -14,6 +14,12 @@ export default defineConfig(() => {
       // ao instalar bibliotecas secundárias de UI, autenticação ou gráficos.
       dedupe: ['react', 'react-dom'],
     },
+    optimizeDeps: {
+      // O leitor de PDF é carregado por import() dinâmico: sem esta entrada o
+      // Vite só descobre o build legacy ao abrir um manual e recarrega a página
+      // no meio da leitura.
+      include: ['pdfjs-dist/legacy/build/pdf.mjs'],
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
