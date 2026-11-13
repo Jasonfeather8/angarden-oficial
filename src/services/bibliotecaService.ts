@@ -18,9 +18,8 @@ export const LIMITE_UPLOAD_PDF_BYTES = 20 * 1024 * 1024;
 
 const URL_FUNCAO_BIBLIOTECA_UPLOAD =
   'https://qmwrpcyzcmmjrjzsorgx.supabase.co/functions/v1/biblioteca-upload';
-
-/** Validade da URL assinada, suficiente para uma sessão inteira de leitura. */
-const VALIDADE_URL_ASSINADA_SEGUNDOS = 60 * 60;
+const URL_FUNCAO_BIBLIOTECA_ASSINAR =
+  'https://qmwrpcyzcmmjrjzsorgx.supabase.co/functions/v1/biblioteca-assinar';
 
 const COLUNAS_ITEM =
   'id, tipo, categoria, titulo, subtitulo, descricao, capa_url, arquivo_caminho, arquivo_url, arquivo_bytes, indice, conteudo, oculto, created_at, updated_at';
@@ -268,15 +267,44 @@ export const bibliotecaService = {
 
   /** URL assinada de leitura: o bucket é privado e a URL expira. */
   assinarArquivo: async (caminho: string): Promise<string> => {
-    const { data, error } = await supabase.storage
-      .from(BUCKET_ACERVO)
-      .createSignedUrl(caminho, VALIDADE_URL_ASSINADA_SEGUNDOS);
-    if (error || !data?.signedUrl) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('Não foi possível liberar o arquivo para leitura: sessão expirada.');
+
+    let resposta: Response;
+    try {
+      resposta = await fetch(URL_FUNCAO_BIBLIOTECA_ASSINAR, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ token, caminho }),
+      });
+    } catch (erro) {
       throw new Error(
-        'Não foi possível liberar o arquivo para leitura: ' + (error?.message ?? 'o armazenamento não devolveu a URL.'),
+        'Não foi possível liberar o arquivo para leitura: ' +
+          (erro instanceof Error ? erro.message : String(erro)),
       );
     }
-    return data.signedUrl;
+
+    const texto = await resposta.text();
+    let dados: unknown;
+    try {
+      dados = texto ? JSON.parse(texto) : null;
+    } catch {
+      dados = null;
+    }
+    const respostaObjeto = dados && typeof dados === 'object' ? dados as Record<string, unknown> : null;
+    const motivo = typeof respostaObjeto?.motivo === 'string'
+      ? respostaObjeto.motivo
+      : typeof respostaObjeto?.message === 'string'
+        ? respostaObjeto.message
+        : 'Resposta inválida da função de assinatura.';
+    if (!resposta.ok || respostaObjeto?.ok !== true) {
+      throw new Error('Não foi possível liberar o arquivo para leitura: ' + motivo);
+    }
+    if (typeof respostaObjeto.url !== 'string') {
+      throw new Error('Não foi possível liberar o arquivo para leitura: resposta inválida da função de assinatura.');
+    }
+    return respostaObjeto.url;
   },
 
   invalidarCache,
