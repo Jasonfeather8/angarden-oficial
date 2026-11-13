@@ -4,6 +4,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const MAX_BYTES = 20 * 1024 * 1024;
+/** Teto do base64 correspondente ao limite de PDF, já contando o padding. */
+const MAX_BASE64 = Math.ceil(MAX_BYTES / 3) * 4;
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -18,18 +20,27 @@ function jsonResponse(status: number, body: Record<string, unknown>): Response {
   });
 }
 
+/**
+ * Decodifica o base64 recebido no corpo. A checagem é por tamanho e pela
+ * própria decodificação: um regex sobre a string inteira (dezenas de
+ * megabytes) estoura a pilha do isolate da função.
+ */
 function decodificarPdf(conteudoBase64: unknown): Uint8Array | null {
   if (
     typeof conteudoBase64 !== 'string' ||
     conteudoBase64.length === 0 ||
-    conteudoBase64.length > Math.ceil(MAX_BYTES / 3) * 4 ||
-    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(conteudoBase64)
+    conteudoBase64.length > MAX_BASE64 ||
+    conteudoBase64.length % 4 !== 0
   ) return null;
 
   try {
+    // O `atob` já recusa caractere fora do alfabeto base64 e padding inválido.
     const binario = atob(conteudoBase64);
-    if (binario.length > MAX_BYTES || binario.slice(0, 5) !== '%PDF-') return null;
-    return Uint8Array.from(binario, (caractere) => caractere.charCodeAt(0));
+    if (binario.length === 0 || binario.length > MAX_BYTES || !binario.startsWith('%PDF-')) return null;
+
+    const bytes = new Uint8Array(binario.length);
+    for (let i = 0; i < binario.length; i += 1) bytes[i] = binario.charCodeAt(i);
+    return bytes;
   } catch {
     return null;
   }
@@ -114,10 +125,20 @@ Deno.serve(async (request: Request) => {
       return jsonResponse(403, { ok: false, motivo: 'A publicação no acervo é exclusiva do Administrador da plataforma.' });
     }
 
-    const bytes = decodificarPdf(entrada.conteudoBase64);
+    const conteudoBase64 = entrada.conteudoBase64;
+    if (typeof conteudoBase64 !== 'string' || conteudoBase64.length === 0) {
+      console.warn('[biblioteca-upload] Corpo sem conteúdo de PDF.');
+      return jsonResponse(400, { ok: false, motivo: 'Envie o conteúdo do PDF no campo conteudoBase64.' });
+    }
+    if (conteudoBase64.length > MAX_BASE64) {
+      console.warn('[biblioteca-upload] PDF acima do limite do acervo.', { caracteres: conteudoBase64.length });
+      return jsonResponse(413, { ok: false, motivo: 'O PDF excede o limite de 20 MB do acervo.' });
+    }
+
+    const bytes = decodificarPdf(conteudoBase64);
     if (!bytes) {
-      console.warn('[biblioteca-upload] PDF inválido, malformado ou acima do limite de 20 MB.');
-      return jsonResponse(400, { ok: false, motivo: 'Conteúdo PDF inválido ou maior que 20 MB.' });
+      console.warn('[biblioteca-upload] PDF inválido ou malformado.', { caracteres: conteudoBase64.length });
+      return jsonResponse(400, { ok: false, motivo: 'O arquivo está corrompido ou não é um PDF válido.' });
     }
 
     const caminho = `${crypto.randomUUID()}.pdf`;
