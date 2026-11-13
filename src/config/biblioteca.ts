@@ -44,13 +44,6 @@ export const rotuloCategoria = (id: string): string =>
 export const grupoDaCategoria = (id: string): string =>
   GRUPOS_BIBLIOTECA.find((grupo) => grupo.categorias.some((categoria) => categoria.id === id))?.id ?? '';
 
-/**
- * Teto de upload do acervo, em bytes. O bucket privado `biblioteca` recusa
- * acima disso, e o teto global do projeto pode ser menor — por isso o
- * formulário avisa o limite antes de enviar.
- */
-export const LIMITE_UPLOAD_PDF_BYTES = 50 * 1024 * 1024;
-
 export function formatarTamanhoArquivo(bytes?: number | null): string {
   if (!bytes || bytes <= 0) return '—';
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

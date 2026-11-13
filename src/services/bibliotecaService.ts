@@ -1,4 +1,4 @@
-import { formatarTamanhoArquivo, LIMITE_UPLOAD_PDF_BYTES } from '../config/biblioteca';
+import { formatarTamanhoArquivo } from '../config/biblioteca';
 import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { supabase } from '../integrations/supabase/client';
 import { useSessionStore } from '../store/useSessionStore';
@@ -9,31 +9,18 @@ import { cacheKeyPrefixes } from './cacheKeys';
 /** Bucket PRIVADO do acervo: guarda só PDF e é lido por URL assinada. */
 const BUCKET_ACERVO = 'biblioteca';
 
+/**
+ * Teto do envio: a função de borda recebe o PDF inteiro em base64 no corpo da
+ * requisição, e acima disso a conversão deixa de ser segura. Arquivos maiores
+ * continuam possíveis pelo campo de link externo.
+ */
+export const LIMITE_UPLOAD_PDF_BYTES = 20 * 1024 * 1024;
+
+const URL_FUNCAO_BIBLIOTECA_UPLOAD =
+  'https://qmwrpcyzcmmjrjzsorgx.supabase.co/functions/v1/biblioteca-upload';
+
 /** Validade da URL assinada, suficiente para uma sessão inteira de leitura. */
 const VALIDADE_URL_ASSINADA_SEGUNDOS = 60 * 60;
-
-/**
- * Endpoint retomável (TUS) documentado no domínio principal da API. O upload
- * padrão do SDK manda o arquivo inteiro numa única requisição e falhava com um
- * manual de 10 MB; aqui o envio é fatiado e retomado de onde parou.
- */
-const URL_UPLOAD_RESUMIVEL =
-  'https://qmwrpcyzcmmjrjzsorgx.supabase.co/storage/v1/upload/resumable';
-
-/** Tamanho da parte: o Storage exige exatamente 6 MB no envio retomável. */
-const TAMANHO_PEDACO_BYTES = 6 * 1024 * 1024;
-
-async function erroUpload(resposta?: Response, erro?: unknown): Promise<Error> {
-  const diagnostico: string[] = resposta ? [`HTTP ${resposta.status}`] : [];
-  for (const nome of ['server', 'cf-ray', 'content-type', 'content-length']) {
-    const valor = resposta?.headers.get(nome);
-    if (valor) diagnostico.push(`${nome}: ${valor}`);
-  }
-  const corpo = resposta ? (await resposta.text()).slice(0, 300) : '';
-  const detalheErro = erro instanceof Error ? erro.message : String(erro ?? 'Falha de rede.');
-  const contexto = [diagnostico.join(' · '), corpo].filter(Boolean).join(' — ');
-  return new Error(`Não foi possível enviar o PDF: ${contexto || `Falha de rede — ${detalheErro}`}`);
-}
 
 const COLUNAS_ITEM =
   'id, tipo, categoria, titulo, subtitulo, descricao, capa_url, arquivo_caminho, arquivo_url, arquivo_bytes, indice, conteudo, oculto, created_at, updated_at';
@@ -202,13 +189,7 @@ export const bibliotecaService = {
     invalidarCache();
   },
 
-  /**
-   * Envia o PDF direto ao bucket pelo endpoint retomável (TUS), sem passar pela
-   * função de borda de mídia: aquela limita a 5 MB e trafega base64, o que não
-   * serve para um manual. O envio é fatiado em partes de 6 MB e retomado de onde
-   * parou; usa `fetch` porque requisições XHR com corpo falham no ambiente de
-   * prévia, enquanto o envio retomável permite sincronizar o avanço com o Storage.
-   */
+  /** Envia um PDF pela requisição simples à função de borda dedicada. */
   enviarPdf: async (
     arquivo: File,
     aoProgredir?: (percentual: number) => void,
@@ -226,106 +207,52 @@ export const bibliotecaService = {
     const token = data.session?.access_token;
     if (!token) throw new Error('Sessão expirada. Entre novamente na plataforma.');
 
-    const caminho = `${crypto.randomUUID()}.pdf`;
-    const metadados = [
-      ['bucketName', BUCKET_ACERVO],
-      ['objectName', caminho],
-      ['contentType', 'application/pdf'],
-      ['cacheControl', '3600'],
-    ]
-      .map(([chave, valor]) => `${chave} ${btoa(valor)}`)
-      .join(',');
+    const leitor = new FileReader();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      leitor.onload = () => {
+        if (typeof leitor.result === 'string') resolve(leitor.result);
+        else reject(new Error('Não foi possível ler o arquivo PDF.'));
+      };
+      leitor.onerror = () => reject(new Error('Não foi possível ler o arquivo PDF.'));
+      leitor.readAsDataURL(arquivo);
+    });
+    const conteudoBase64 = dataUrl.replace(/^data:application\/pdf;base64,/, '');
+    if (conteudoBase64 === dataUrl) throw new Error('Não foi possível preparar o arquivo PDF para envio.');
 
-    const criarResposta = await (async () => {
-      try {
-        return await fetch(URL_UPLOAD_RESUMIVEL, {
-          method: 'POST',
-          headers: {
-            authorization: `Bearer ${token}`,
-            'x-upsert': 'true',
-            'tus-resumable': '1.0.0',
-            'upload-length': String(arquivo.size),
-            'upload-metadata': metadados,
-          },
-        });
-      } catch (erro) {
-        throw await erroUpload(undefined, erro);
-      }
-    })();
-
-    if (!criarResposta.ok) throw await erroUpload(criarResposta);
-    const location = criarResposta.headers.get('location');
-    if (!location) throw new Error('O Storage não informou o endereço do envio retomável.');
-    const enderecoEnvio = new URL(location, URL_UPLOAD_RESUMIVEL).href;
-
-    let deslocamento = 0;
-    while (deslocamento < arquivo.size) {
-      let parteConcluida = false;
-      let ultimoErro: Error | undefined;
-
-      for (let tentativa = 0; tentativa < 3 && !parteConcluida; tentativa += 1) {
-        const parte = arquivo.slice(deslocamento, deslocamento + TAMANHO_PEDACO_BYTES);
-        try {
-          let resposta: Response;
-          try {
-            resposta = await fetch(enderecoEnvio, {
-              method: 'PATCH',
-              headers: {
-                authorization: `Bearer ${token}`,
-                'tus-resumable': '1.0.0',
-                'upload-offset': String(deslocamento),
-                'content-type': 'application/offset+octet-stream',
-              },
-              body: parte,
-            });
-          } catch (erro) {
-            throw await erroUpload(undefined, erro);
-          }
-          if (!resposta.ok) throw await erroUpload(resposta);
-
-          const offsetResposta = Number(resposta.headers.get('upload-offset'));
-          deslocamento =
-            Number.isFinite(offsetResposta) && offsetResposta > deslocamento
-              ? offsetResposta
-              : deslocamento + parte.size;
-          parteConcluida = true;
-          aoProgredir?.(Math.round((deslocamento / arquivo.size) * 100));
-        } catch (erro) {
-          ultimoErro = erro instanceof Error ? erro : await erroUpload(undefined, erro);
-          if (tentativa === 2) break;
-
-          await new Promise((resolver) => setTimeout(resolver, tentativa === 0 ? 1000 : 3000));
-          try {
-            let sincronizacao: Response;
-            try {
-              sincronizacao = await fetch(enderecoEnvio, {
-                method: 'HEAD',
-                headers: { authorization: `Bearer ${token}`, 'tus-resumable': '1.0.0' },
-              });
-            } catch (erroSincronizacao) {
-              throw await erroUpload(undefined, erroSincronizacao);
-            }
-            if (!sincronizacao.ok) throw await erroUpload(sincronizacao);
-            const offsetSincronizado = Number(sincronizacao.headers.get('upload-offset'));
-            if (Number.isFinite(offsetSincronizado) && offsetSincronizado >= deslocamento) {
-              deslocamento = offsetSincronizado;
-            }
-            if (deslocamento >= arquivo.size) {
-              parteConcluida = true;
-              aoProgredir?.(Math.round((deslocamento / arquivo.size) * 100));
-            }
-          } catch (erroSincronizacao) {
-            throw erroSincronizacao instanceof Error
-              ? erroSincronizacao
-              : await erroUpload(undefined, erroSincronizacao);
-          }
-        }
-      }
-
-      if (!parteConcluida) throw ultimoErro ?? new Error('O envio retomável falhou.');
+    aoProgredir?.(0);
+    let resposta: Response;
+    try {
+      resposta = await fetch(URL_FUNCAO_BIBLIOTECA_UPLOAD, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ token, conteudoBase64 }),
+      });
+    } catch (erro) {
+      throw new Error(`Não foi possível enviar o PDF: ${erro instanceof Error ? erro.message : String(erro)}`);
     }
 
-    return { caminho, bytes: arquivo.size };
+    const texto = await resposta.text();
+    let dados: unknown;
+    try {
+      dados = texto ? JSON.parse(texto) : null;
+    } catch {
+      dados = null;
+    }
+    const respostaObjeto = dados && typeof dados === 'object' ? dados as Record<string, unknown> : null;
+    const motivo = typeof respostaObjeto?.motivo === 'string'
+      ? respostaObjeto.motivo
+      : typeof respostaObjeto?.message === 'string'
+        ? respostaObjeto.message
+        : 'Resposta inválida da função de upload.';
+    if (!resposta.ok || respostaObjeto?.ok !== true) {
+      throw new Error(`Não foi possível enviar o PDF (${resposta.status}): ${motivo}`);
+    }
+    if (typeof respostaObjeto.caminho !== 'string' || typeof respostaObjeto.bytes !== 'number') {
+      throw new Error(`Não foi possível enviar o PDF (${resposta.status}): resposta inválida da função de upload.`);
+    }
+
+    aoProgredir?.(100);
+    return { caminho: respostaObjeto.caminho, bytes: respostaObjeto.bytes };
   },
 
   /** Descarta um PDF que subiu mas cujo material não chegou a ser publicado. */

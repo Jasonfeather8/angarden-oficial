@@ -7,10 +7,9 @@ import { LeitorMarkdown } from '@/components/biblioteca/LeitorMarkdown';
 import {
   CATEGORIAS_BIBLIOTECA,
   GRUPOS_BIBLIOTECA,
-  LIMITE_UPLOAD_PDF_BYTES,
   formatarTamanhoArquivo,
 } from '@/config/biblioteca';
-import { bibliotecaService } from '@/services/bibliotecaService';
+import { bibliotecaService, LIMITE_UPLOAD_PDF_BYTES } from '@/services/bibliotecaService';
 import { enviarImagem } from '@/services/mediaService';
 import type { EntradaIndiceBiblioteca, ItemBiblioteca, NovoItemBiblioteca, TipoItemBiblioteca } from '@/types';
 
@@ -567,7 +566,7 @@ export const FormularioMaterialBiblioteca: React.FC<FormularioMaterialBiblioteca
         </ToolbarButton>
         {progressoEnvio !== null && (
           <span role="status" aria-live="polite" className="font-serif text-xs text-[#d4af37]">
-            Enviando o PDF… {progressoEnvio}%
+            {progressoEnvio === 0 ? 'Enviando o PDF…' : `Enviando o PDF… ${progressoEnvio}%`}
           </span>
         )}
       </div>
