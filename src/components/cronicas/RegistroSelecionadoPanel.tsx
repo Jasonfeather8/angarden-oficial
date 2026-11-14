@@ -10,6 +10,8 @@ export interface RegistroSelecionadoPanelProps {
   nomesDeCategoria: Record<string, string>;
   /** Ações do Mestre autor, renderizadas acima do registro. */
   acoes?: React.ReactNode;
+  /** Blocos da crônica: notas, checklist, recompensas e companhia. */
+  children?: React.ReactNode;
 }
 
 /** Coluna central: o relato da crônica em leitura e os dados da sessão. */
@@ -18,6 +20,7 @@ export const RegistroSelecionadoPanel: React.FC<RegistroSelecionadoPanelProps> =
   participantes,
   nomesDeCategoria,
   acoes,
+  children,
 }) => {
   const [companhiaExpandida, setCompanhiaExpandida] = useState(true);
 
@@ -109,6 +112,10 @@ export const RegistroSelecionadoPanel: React.FC<RegistroSelecionadoPanelProps> =
           </div>
         )}
       </div>
+
+      {children && (
+        <div className="mt-6 space-y-5 border-t border-[#3a2c1d] pt-5">{children}</div>
+      )}
     </section>
   );
 };

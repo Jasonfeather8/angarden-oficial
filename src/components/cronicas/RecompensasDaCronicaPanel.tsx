@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Gift, HandCoins } from 'lucide-react';
+import { Gift, HandCoins, Package } from 'lucide-react';
 import { cronicaService } from '@/services/cronicaService';
 import { fichaService } from '@/services/fichaService';
 import { useAuthorization } from '@/hooks/useAuthorization';
@@ -10,6 +10,7 @@ import { LoadingState } from '../ui/Skeleton';
 import { ToolbarButton } from '../ui/ToolbarButton';
 import { EntregarRecompensaModal } from './EntregarRecompensaModal';
 import { RecompensaDaCronicaModal } from './RecompensaDaCronicaModal';
+import { SeletorDeLootModal } from './SeletorDeLootModal';
 import { useObjetivosDaCronica } from './useObjetivosDaCronica';
 import { useParticipantesDaCronica } from './useParticipantesDaCronica';
 import { useRecompensasDaCronica } from './useRecompensasDaCronica';
@@ -42,6 +43,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [editando, setEditando] = useState<RecompensaDaCronica | undefined>(undefined);
   const [entregando, setEntregando] = useState<RecompensaDaCronica | undefined>(undefined);
+  const [selecionandoLoot, setSelecionandoLoot] = useState(false);
   const [meusPersonagens, setMeusPersonagens] = useState<Array<{ id: string; nome: string }>>([]);
   const [erro, setErro] = useState('');
 
@@ -213,9 +215,19 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
         ) : (
           <div className="space-y-5">
             <section aria-label="Mercadorias vinculadas">
-              <h3 className="mb-2 font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#c6a66d]">
-                Mercadorias vinculadas
-              </h3>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#c6a66d]">
+                  Mercadorias vinculadas
+                </h3>
+                {podeGerir && (
+                  <ToolbarButton
+                    icon={<Package className="h-3.5 w-3.5" />}
+                    onClick={() => setSelecionandoLoot(true)}
+                  >
+                    Vincular mercadoria
+                  </ToolbarButton>
+                )}
+              </div>
               {mercadorias.length === 0 ? (
                 <p className="font-serif text-xs italic text-[#8f795e]">Nenhuma mercadoria vinculada.</p>
               ) : (
@@ -251,6 +263,15 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
         objetivos={objetivos.objetivos}
         onClose={() => setFormularioAberto(false)}
         onSave={salvar}
+      />
+
+      <SeletorDeLootModal
+        isOpen={selecionandoLoot}
+        onClose={() => setSelecionandoLoot(false)}
+        cronicaId={cronica.id}
+        objetivos={objetivos.objetivos}
+        jaVinculadas={mercadorias.flatMap((recompensa) => (recompensa.itemId ? [recompensa.itemId] : []))}
+        onDone={reload}
       />
 
       {entregando && (

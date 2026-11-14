@@ -1,13 +1,20 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Flag, Sparkles } from 'lucide-react';
 import { ArteDaCronica } from './ArteDaCronica';
-import type { Cronica } from '@/types';
+import { formatScheduledDate } from './formatters';
+import type { Cronica, CronicaStatus } from '@/types';
+
+const ROTULO_DO_ESTADO: Record<CronicaStatus, string> = {
+  PUBLICADA: 'Publicada',
+  AGENDADA: 'Agendada',
+  CONCLUIDA: 'Concluída',
+};
 
 export interface CapaDaSessaoPanelProps {
   cronica: Cronica;
 }
 
-/** Coluna lateral: capa da sessão e progresso da crônica. */
+/** Coluna lateral: capa da sessão, estado e progresso da crônica. */
 export const CapaDaSessaoPanel: React.FC<CapaDaSessaoPanelProps> = ({ cronica }) => (
   <aside aria-label="Resumo da crônica" className="min-w-0">
     <div className="mb-3 flex items-center justify-between border-b border-[#3a2c1d] pb-2">
@@ -15,6 +22,24 @@ export const CapaDaSessaoPanel: React.FC<CapaDaSessaoPanelProps> = ({ cronica })
       <Sparkles className="h-4 w-4 text-[#8c6b41]" />
     </div>
     <ArteDaCronica title={cronica.titulo} capaUrl={cronica.capaUrl} />
+
+    <div className="mt-4 border border-[#4b3823] bg-[#120d09] p-3">
+      <p className="flex items-center gap-1.5 font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
+        <Flag className="h-3.5 w-3.5" aria-hidden="true" /> Estado da crônica
+      </p>
+      <p className="mt-1 font-cinzel text-sm font-bold text-[#e0bd71]">{ROTULO_DO_ESTADO[cronica.status]}</p>
+      {cronica.status === 'AGENDADA' && cronica.agendadaPara && (
+        <p className="mt-1 font-serif text-xs italic text-[#806b53]">
+          Publicação em {formatScheduledDate(cronica.agendadaPara)}
+        </p>
+      )}
+      {cronica.status === 'CONCLUIDA' && cronica.concluidaEm && (
+        <p className="mt-1 font-serif text-xs italic text-[#806b53]">
+          Concluída em {formatScheduledDate(cronica.concluidaEm)}
+        </p>
+      )}
+    </div>
+
     <div className="mt-4 border border-[#4b3823] bg-[#120d09] p-3">
       <div className="flex items-center justify-between font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
         <span>Progresso da crônica</span>

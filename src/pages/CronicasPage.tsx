@@ -164,7 +164,9 @@ export const CronicasPage: React.FC = () => {
               />
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(220px,0.85fr)_minmax(300px,1.35fr)_minmax(220px,0.8fr)]">
+                {/* A coluna central concentra o registro e os blocos da crônica
+                    (notas, checklist, recompensas e companhia), por isso é mais larga. */}
+                <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(200px,0.7fr)_minmax(320px,1.9fr)_minmax(200px,0.7fr)]">
                   <LinhaDoTempoPanel
                     cronicas={filtradas}
                     cronicaSelecionadaId={emLeitura.id}
@@ -186,38 +188,26 @@ export const CronicasPage: React.FC = () => {
                         onAlterada={reload}
                       />
                     }
-                  />
+                  >
+                    <NotasDaCronicaPanel
+                      cronica={emLeitura}
+                      podeGerir={podeGerir}
+                      onCronicaAlterada={reload}
+                    />
+                    <ChecklistDaCronicaPanel
+                      cronica={emLeitura}
+                      podeGerir={podeGerir}
+                      onCronicaAlterada={reload}
+                    />
+                    <RecompensasDaCronicaPanel cronica={emLeitura} podeGerir={podeGerir} />
+                    <ParticipantesDaCronicaPanel
+                      cronica={emLeitura}
+                      podeGerir={podeGerir}
+                      userId={userId}
+                      onAlterados={participantes.reload}
+                    />
+                  </RegistroSelecionadoPanel>
                   <CapaDaSessaoPanel cronica={emLeitura} />
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-                  <ChecklistDaCronicaPanel
-                    key={`checklist-${emLeitura.id}`}
-                    cronica={emLeitura}
-                    podeGerir={podeGerir}
-                    onCronicaAlterada={reload}
-                  />
-                  <ParticipantesDaCronicaPanel
-                    key={`companhia-${emLeitura.id}`}
-                    cronica={emLeitura}
-                    podeGerir={podeGerir}
-                    userId={userId}
-                    onAlterados={participantes.reload}
-                  />
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-                  <RecompensasDaCronicaPanel
-                    key={`recompensas-${emLeitura.id}`}
-                    cronica={emLeitura}
-                    podeGerir={podeGerir}
-                  />
-                  <NotasDaCronicaPanel
-                    key={`notas-${emLeitura.id}`}
-                    cronica={emLeitura}
-                    podeGerir={podeGerir}
-                    onCronicaAlterada={reload}
-                  />
                 </div>
               </>
             )}

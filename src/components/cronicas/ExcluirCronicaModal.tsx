@@ -42,6 +42,9 @@ export const ExcluirCronicaModal: React.FC<ExcluirCronicaModalProps> = ({
         Deseja excluir <strong className="text-[#f0d79b]">{cronica.titulo}</strong>? Os objetivos, as notas, as
         recompensas e as inscrições desta crônica também serão removidos.
       </p>
+      <p className="border border-[#5a4225] bg-[#1b120b] px-3 py-2 font-serif text-xs text-[#c6a66d]">
+        O que já foi entregue permanece na ficha dos personagens — a exclusão apaga apenas o registro da crônica.
+      </p>
       {erro && <p role="alert" className="font-serif text-sm text-red-300">{erro}</p>}
       <div className="flex flex-col-reverse justify-end gap-2 border-t border-[#3a2c1d] pt-4 sm:flex-row">
         <button
