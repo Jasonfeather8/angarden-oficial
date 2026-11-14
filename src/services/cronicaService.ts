@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import { withTimeout } from '../utils/withTimeout';
 import { cacheKeyPrefixes } from './cacheKeys';
+import { fichaService } from './fichaService';
 
 const COLUNAS_CRONICA = 'id, titulo, data_aventura, local, relato, progresso, personagens, status, agendada_para, capa_url, categoria_id, campanha_id, concluida_em, notas_visiveis, created_by, created_at';
 const COLUNAS_OBJETIVO = 'id, titulo, detalhes, imagem_url, concluido, ordem';
@@ -31,7 +32,7 @@ type CategoriaRow = { id: string; nome: string; ordem: number };
 type ObjetivoRow = { id: string; titulo: string; detalhes: string | null; imagem_url: string | null; concluido: boolean; ordem: number };
 type NotaRow = { id: string; titulo: string; conteudo: string; visivel_jogadores: boolean; created_at: string; autor_id: string | null };
 type RecompensaRow = { id: string; objective_id: string | null; tipo: RecompensaDaCronica['tipo']; descricao: string; valor: number | string; quantidade: number | string; item_id: string | null; spell_id: string | null };
-type ParticipanteRow = { id: string; user_id: string; character_id: string; nome_personagem: string; nome_jogador: string; status: SituacaoParticipante; characters: { imagem_url: string | null } | null };
+type ParticipanteRow = { id: string; user_id: string; character_id: string; nome_personagem: string; nome_jogador: string; status: SituacaoParticipante };
 type InvitePreviewRow = { chronicle_id: string; titulo: string; data_aventura: string; local: string; relato: string; cliente: string; mestre: string; ja_participa: boolean };
 
 function tenantId(): string {
@@ -408,11 +409,13 @@ export const cronicaService = {
 
   listarParticipantes: async (cronicaId: string): Promise<ParticipanteDaCronica[]> => {
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_participants')
-      .select('id, user_id, character_id, nome_personagem, nome_jogador, status, characters ( imagem_url )').eq('chronicle_id', cronicaId).order('created_at', { ascending: true })));
+      .select('id, user_id, character_id, nome_personagem, nome_jogador, status').eq('chronicle_id', cronicaId).order('created_at', { ascending: true })));
     if (error) throw erro('carregar os participantes', error.message);
-    return ((data ?? []) as unknown as ParticipanteRow[]).map((row) => ({ id: row.id, userId: row.user_id, characterId: row.character_id,
+    const rows = (data ?? []) as unknown as ParticipanteRow[];
+    const imagens = await fichaService.imagensDePersonagens(rows.map((row) => row.character_id));
+    return rows.map((row) => ({ id: row.id, userId: row.user_id, characterId: row.character_id,
       nomePersonagem: row.nome_personagem, nomeJogador: row.nome_jogador, status: row.status,
-      imagemUrl: row.characters?.imagem_url ?? undefined }));
+      imagemUrl: imagens.get(row.character_id) }));
   },
 
   inscreverParticipante: async (cronicaId: string, characterId: string, status: SituacaoParticipante = 'aprovado'): Promise<void> => {

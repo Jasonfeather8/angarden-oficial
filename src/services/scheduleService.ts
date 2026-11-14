@@ -3,6 +3,7 @@ import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { useSessionStore } from '../store/useSessionStore';
 import type { DadosDaSessao, PresencaNaSessao, SessaoDaMesa } from '../types';
 import { cacheKeyPrefixes } from './cacheKeys';
+import { fichaService } from './fichaService';
 
 type SessaoRow = {
   id: string;
@@ -51,22 +52,23 @@ export const scheduleService = {
 
     const { data: personagens, error: erroPersonagens } = await supabase
       .from('characters')
-      .select('created_by, imagem_url, ordem')
+      .select('id, created_by, ordem')
       .eq('tenant_id', tenantId)
       .in('created_by', userIds)
       .order('ordem', { ascending: true, nullsFirst: false });
 
     if (erroPersonagens) throw new Error('Não foi possível carregar as presenças: ' + erroPersonagens.message);
-    const imagensPorUsuario = new Map<string, string>();
+    const personagemPorUsuario = new Map<string, string>();
     for (const personagem of personagens ?? []) {
-      if (personagem.created_by && personagem.imagem_url && !imagensPorUsuario.has(personagem.created_by)) {
-        imagensPorUsuario.set(personagem.created_by, personagem.imagem_url);
+      if (personagem.created_by && !personagemPorUsuario.has(personagem.created_by)) {
+        personagemPorUsuario.set(personagem.created_by, personagem.id);
       }
     }
+    const imagens = await fichaService.imagensDePersonagens([...personagemPorUsuario.values()]);
 
     return presencas.map((presenca) => ({
       ...presenca,
-      imagemUrl: imagensPorUsuario.get(presenca.userId),
+      imagemUrl: imagens.get(personagemPorUsuario.get(presenca.userId) ?? ''),
     }));
   },
 

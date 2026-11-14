@@ -3,6 +3,7 @@ import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { useSessionStore } from '../store/useSessionStore';
 import { supabase } from '@/integrations/supabase/client';
 import { cacheKeyPrefixes, cacheKeys } from './cacheKeys';
+import { normalizarBusca } from '@/utils/normalizarBusca';
 
 export interface FichaScope {
   tenantId: string;
@@ -184,6 +185,55 @@ async function acervoResumoDoCliente(tenantId: string): Promise<AcervoResumo> {
 
 export const fichaService = {
   invalidarCacheAcervo,
+
+  imagensDePersonagens: async (characterIds: string[]): Promise<Map<string, string>> => {
+    const scope = currentScope();
+    if (!characterIds.length || !scope) return new Map();
+
+    const [fichasResult, charactersResult] = await Promise.all([
+      supabase
+        .from('fichas')
+        .select('character_id, imagem_url:dados->identidade->>imagem_url')
+        .eq('tenant_id', scope.tenantId)
+        .in('character_id', characterIds),
+      supabase
+        .from('characters')
+        .select('id, imagem_url')
+        .eq('tenant_id', scope.tenantId)
+        .in('id', characterIds),
+    ]);
+    if (fichasResult.error) throw new Error('Não foi possível carregar as imagens dos personagens: ' + fichasResult.error.message);
+    if (charactersResult.error) throw new Error('Não foi possível carregar as imagens dos personagens: ' + charactersResult.error.message);
+
+    const imagens = new Map<string, string>();
+    for (const personagem of charactersResult.data ?? []) {
+      if (personagem.imagem_url) imagens.set(personagem.id, personagem.imagem_url);
+    }
+    for (const ficha of fichasResult.data ?? []) {
+      if (ficha.imagem_url) imagens.set(ficha.character_id, ficha.imagem_url);
+    }
+    return imagens;
+  },
+
+  // Resolve retratos de crônicas antigas que guardam apenas os nomes dos personagens.
+  imagensPorNomeDePersonagem: async (nomes: string[]): Promise<Map<string, string>> => {
+    const scope = currentScope();
+    if (!nomes.length || !scope) return new Map();
+
+    const base = await acervoResumoDoCliente(scope.tenantId);
+    const imagens = new Map<string, string>();
+    for (const personagem of base.characters) {
+      if (personagem.nome?.trim() && personagem.imagem_url?.trim()) {
+        imagens.set(normalizarBusca(personagem.nome), personagem.imagem_url);
+      }
+    }
+    for (const ficha of base.fichas) {
+      if (ficha.nome_personagem?.trim() && ficha.imagem_url?.trim()) {
+        imagens.set(normalizarBusca(ficha.nome_personagem), ficha.imagem_url);
+      }
+    }
+    return imagens;
+  },
 
   getFicha: async (characterId: string): Promise<FichaCompleta> => {
     const session = useSessionStore.getState().session;

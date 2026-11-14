@@ -3,6 +3,8 @@ import { CalendarDays, ChevronDown, ChevronUp, Clock3, FileText, MapPin, Users }
 import { formatScheduledDate, formatSessionDate } from './formatters';
 import type { Cronica, ParticipanteDaCronica } from '@/types';
 import { RetratoDePresenca } from '@/components/ui/RetratoDePresenca';
+import { useImagensDaCompanhia } from './useImagensDaCompanhia';
+import { normalizarBusca } from '@/utils/normalizarBusca';
 
 export interface RegistroSelecionadoPanelProps {
   cronica: Cronica;
@@ -20,6 +22,8 @@ export const RegistroSelecionadoPanel: React.FC<RegistroSelecionadoPanelProps> =
 }) => {
   const [companhiaExpandida, setCompanhiaExpandida] = useState(true);
   const aprovados = participantes.filter((participante) => participante.status === 'aprovado');
+  const nomesLegado = participantes.length ? [] : cronica.personagens;
+  const imagensPorNome = useImagensDaCompanhia(cronica.id, nomesLegado);
   // Todos os itens da seção estão presentes na sessão; o retrato carrega o selo.
   const companhia: { nome: string; imagemUrl?: string; confirmado: boolean }[] = participantes.length
     ? aprovados.map((participante) => ({
@@ -27,7 +31,11 @@ export const RegistroSelecionadoPanel: React.FC<RegistroSelecionadoPanelProps> =
         imagemUrl: participante.imagemUrl,
         confirmado: true,
       }))
-    : cronica.personagens.map((nome) => ({ nome, confirmado: true }));
+    : cronica.personagens.map((nome) => ({
+        nome,
+        imagemUrl: imagensPorNome.get(normalizarBusca(nome)),
+        confirmado: true,
+      }));
   const estadoDoRegistro =
     cronica.status === 'AGENDADA' && cronica.agendadaPara
       ? `Agendada para ${formatScheduledDate(cronica.agendadaPara)}`

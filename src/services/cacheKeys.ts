@@ -23,6 +23,7 @@ export const cacheKeys = {
   cronicaNotas: (cronicaId?: string | null) => `cronicas:notas:${cronicaId ?? ''}`,
   cronicaRecompensas: (cronicaId?: string | null) => `cronicas:recompensas:${cronicaId ?? ''}`,
   cronicaParticipantes: (cronicaId?: string | null) => `cronicas:participantes:${cronicaId ?? ''}`,
+  cronicaCompanhia: (cronicaId?: string | null) => `cronicas:companhia:${cronicaId ?? ''}`,
   catalogoDoReino: (escopo?: string | null) => `catalogo-reino:${escopo ?? ''}`,
   mercadoNovidades: () => 'mercado-novidades',
   historicoXp: (escopo?: string | null) => `historico-xp:${escopo ?? ''}`,
