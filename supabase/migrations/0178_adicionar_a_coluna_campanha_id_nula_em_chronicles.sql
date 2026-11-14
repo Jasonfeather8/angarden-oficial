@@ -1,0 +1,1 @@
+alter table public.chronicles add column if not exists campanha_id uuid references public.campaigns(id) on delete set null

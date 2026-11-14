@@ -1,0 +1,1 @@
+revoke execute on function public.creditar_xp_na_ficha(text, numeric, text) from public, anon, authenticated

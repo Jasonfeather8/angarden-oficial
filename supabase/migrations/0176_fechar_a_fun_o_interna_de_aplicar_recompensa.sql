@@ -1,0 +1,1 @@
+revoke execute on function public.aplicar_recompensa_da_cronica(text, text, numeric, text, text, text) from public, anon, authenticated

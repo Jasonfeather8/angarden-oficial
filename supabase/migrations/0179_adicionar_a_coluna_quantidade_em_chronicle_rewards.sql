@@ -1,0 +1,1 @@
+alter table public.chronicle_rewards add column if not exists quantidade numeric not null default 1

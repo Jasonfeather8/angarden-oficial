@@ -1,0 +1,1 @@
+grant execute on function public.creditar_xp_na_ficha(text, numeric, text) to service_role

@@ -1,0 +1,1 @@
+create index if not exists chronicles_campanha_idx on public.chronicles (campanha_id)

@@ -1,0 +1,1 @@
+grant execute on function public.aplicar_recompensa_da_cronica(text, text, numeric, text, text, text) to service_role

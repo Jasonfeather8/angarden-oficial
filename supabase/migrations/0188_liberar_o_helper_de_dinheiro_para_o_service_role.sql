@@ -1,0 +1,1 @@
+grant execute on function public.creditar_dinheiro_na_ficha(text, numeric) to service_role

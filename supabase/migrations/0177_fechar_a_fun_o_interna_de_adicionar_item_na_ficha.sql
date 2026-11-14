@@ -1,0 +1,1 @@
+revoke execute on function public.adicionar_item_na_ficha(text, text, numeric) from public, anon, authenticated

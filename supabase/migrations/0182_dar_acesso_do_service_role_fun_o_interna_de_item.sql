@@ -1,0 +1,1 @@
+grant execute on function public.adicionar_item_na_ficha(text, text, numeric) to service_role

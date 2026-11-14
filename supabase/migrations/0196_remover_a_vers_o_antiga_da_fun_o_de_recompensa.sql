@@ -1,0 +1,1 @@
+drop function if exists public.aplicar_recompensa_da_cronica(text, text, numeric, text, text, text)
