@@ -61,7 +61,9 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
 
   const adicionarObjetivo = () => {
     if (!novoTitulo.trim()) return;
-    void executar(() => cronicaService.criarObjetivo(cronica.id, novoTitulo)).then(() => setNovoTitulo(''));
+    // A imagem e os detalhes do progresso são preenchidos depois, no modal do progresso.
+    void executar(() => cronicaService.criarObjetivo(cronica.id, { titulo: novoTitulo, detalhes: '' }))
+      .then(() => setNovoTitulo(''));
   };
 
   const concluidos = objetivos.filter((objetivo) => objetivo.concluido).length;

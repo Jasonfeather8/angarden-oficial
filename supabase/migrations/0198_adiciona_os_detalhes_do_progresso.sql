@@ -1,0 +1,1 @@
+alter table public.chronicle_objectives add column if not exists detalhes text not null default ''

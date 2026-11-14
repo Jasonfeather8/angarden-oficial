@@ -385,9 +385,13 @@ export interface CategoriaCronica {
   ordem: number;
 }
 
+/** Progresso (item do checklist) de uma crônica. */
 export interface ObjetivoDaCronica {
   id: string;
   titulo: string;
+  detalhes: string;
+  /** URL da imagem do progresso no bucket `midia` (`{tenant_id}/cronicas/...`). */
+  imagemUrl?: string;
   concluido: boolean;
   ordem: number;
 }

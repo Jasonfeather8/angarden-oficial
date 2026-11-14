@@ -18,6 +18,7 @@ import { withTimeout } from '../utils/withTimeout';
 import { cacheKeyPrefixes } from './cacheKeys';
 
 const COLUNAS_CRONICA = 'id, titulo, data_aventura, local, relato, progresso, personagens, status, agendada_para, capa_url, categoria_id, campanha_id, concluida_em, notas_visiveis, created_by, created_at';
+const COLUNAS_OBJETIVO = 'id, titulo, detalhes, imagem_url, concluido, ordem';
 
 type CronicaRow = {
   id: string; titulo: string; data_aventura: string; local: string; relato: string;
@@ -27,7 +28,7 @@ type CronicaRow = {
 };
 
 type CategoriaRow = { id: string; nome: string; ordem: number };
-type ObjetivoRow = { id: string; titulo: string; concluido: boolean; ordem: number };
+type ObjetivoRow = { id: string; titulo: string; detalhes: string | null; imagem_url: string | null; concluido: boolean; ordem: number };
 type NotaRow = { id: string; titulo: string; conteudo: string; visivel_jogadores: boolean; created_at: string; autor_id: string | null };
 type RecompensaRow = { id: string; objective_id: string | null; tipo: RecompensaDaCronica['tipo']; descricao: string; valor: number | string; quantidade: number | string; item_id: string | null; spell_id: string | null };
 type ParticipanteRow = { id: string; user_id: string; character_id: string; nome_personagem: string; nome_jogador: string; status: SituacaoParticipante };
@@ -54,6 +55,13 @@ function mapearCronica(row: CronicaRow): Cronica {
     categoriaId: row.categoria_id ?? undefined, campanhaId: row.campanha_id ?? undefined,
     concluidaEm: row.concluida_em ?? undefined,
     notasVisiveis: row.notas_visiveis, criadaPor: row.created_by ?? undefined,
+  };
+}
+
+function mapearObjetivo(row: ObjetivoRow): ObjetivoDaCronica {
+  return {
+    id: row.id, titulo: row.titulo, detalhes: row.detalhes ?? '',
+    imagemUrl: row.imagem_url ?? undefined, concluido: row.concluido, ordem: row.ordem,
   };
 }
 
@@ -232,13 +240,16 @@ export const cronicaService = {
   // As leituras filhas são escopadas por `chronicle_id`: a RLS decide pelo
   // vínculo (cliente do Mestre ou inscrição do convidado), que pode ser de outro cliente.
   listarObjetivos: async (cronicaId: string): Promise<ObjetivoDaCronica[]> => {
-    const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_objectives').select('id, titulo, concluido, ordem')
+    const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_objectives').select(COLUNAS_OBJETIVO)
       .eq('chronicle_id', cronicaId).order('ordem')));
     if (error) throw erro('carregar os objetivos', error.message);
-    return (data ?? []) as ObjetivoRow[];
+    return ((data ?? []) as unknown as ObjetivoRow[]).map(mapearObjetivo);
   },
 
-  criarObjetivo: async (cronicaId: string, titulo: string): Promise<ObjetivoDaCronica> => {
+  criarObjetivo: async (
+    cronicaId: string,
+    dados: { titulo: string; detalhes: string; imagemUrl?: string },
+  ): Promise<ObjetivoDaCronica> => {
     let clienteId: string;
     try { clienteId = tenantId(); } catch (cause) { throw erro('criar o objetivo', String(cause)); }
     const { data: rows, error: listError } = await withTimeout(Promise.resolve(supabase.from('chronicle_objectives').select('ordem')
@@ -246,11 +257,27 @@ export const cronicaService = {
     if (listError) throw erro('criar o objetivo', listError.message);
     const ordem = ((rows?.[0] as { ordem: number } | undefined)?.ordem ?? -1) + 1;
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_objectives')
-      .insert({ chronicle_id: cronicaId, tenant_id: clienteId, titulo: titulo.trim(), concluido: false, ordem })
-      .select('id, titulo, concluido, ordem').single()));
+      .insert({
+        chronicle_id: cronicaId, tenant_id: clienteId, titulo: dados.titulo.trim(),
+        detalhes: dados.detalhes.trim(), imagem_url: dados.imagemUrl ?? null, concluido: false, ordem,
+      })
+      .select(COLUNAS_OBJETIVO).single()));
     if (error) throw erro('criar o objetivo', error.message);
     invalidarCache();
-    return data as ObjetivoDaCronica;
+    return mapearObjetivo(data as unknown as ObjetivoRow);
+  },
+
+  atualizarObjetivo: async (
+    id: string,
+    dados: { titulo: string; detalhes: string; imagemUrl?: string },
+  ): Promise<void> => {
+    let clienteId: string;
+    try { clienteId = tenantId(); } catch (cause) { throw erro('atualizar o objetivo', String(cause)); }
+    const { error } = await withTimeout(Promise.resolve(supabase.from('chronicle_objectives').update({
+      titulo: dados.titulo.trim(), detalhes: dados.detalhes.trim(), imagem_url: dados.imagemUrl ?? null,
+    }).eq('id', id).eq('tenant_id', clienteId)));
+    if (error) throw erro('atualizar o objetivo', error.message);
+    invalidarCache();
   },
 
   alternarObjetivo: async (id: string, concluido: boolean): Promise<void> => {
