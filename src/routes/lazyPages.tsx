@@ -10,6 +10,7 @@ export const GrimorioPage = React.lazy(() => import('../pages/GrimorioPage').the
 export const BibliotecaPage = React.lazy(() => import('../pages/BibliotecaPage').then((module) => ({ default: module.BibliotecaPage })));
 export const CronicasPage = React.lazy(() => import('../pages/CronicasPage').then((module) => ({ default: module.CronicasPage })));
 export const ConviteCronicaPage = React.lazy(() => import('../pages/ConviteCronicaPage').then((module) => ({ default: module.ConviteCronicaPage })));
+export const CronicaDetalhePage = React.lazy(() => import('../pages/CronicaDetalhePage').then((module) => ({ default: module.CronicaDetalhePage })));
 export const PainelMestrePage = React.lazy(() => import('../pages/PainelMestrePage').then((module) => ({ default: module.PainelMestrePage })));
 export const PerfilPage = React.lazy(() => import('../pages/PerfilPage').then((module) => ({ default: module.PerfilPage })));
 export const LoginPage = React.lazy(() => import('../pages/LoginPage').then((module) => ({ default: module.LoginPage })));
@@ -36,6 +37,7 @@ const pageImports = new Map<string, () => Promise<unknown>>([
   [ROUTES.biblioteca, () => import('../pages/BibliotecaPage')],
   [ROUTES.cronicas, () => import('../pages/CronicasPage')],
   [ROUTES.conviteCronica, () => import('../pages/ConviteCronicaPage')],
+  [ROUTES.cronicaDetalhe, () => import('../pages/CronicaDetalhePage')],
   [ROUTES.painelMestre, () => import('../pages/PainelMestrePage')],
   [ROUTES.perfil, () => import('../pages/PerfilPage')],
   [ROUTES.login, () => import('../pages/LoginPage')],
@@ -60,6 +62,7 @@ const pageImports = new Map<string, () => Promise<unknown>>([
  */
 const routeGroups: string[][] = [
   [ROUTES.dashboard, ROUTES.personagens, ROUTES.ficha, ROUTES.mercado],
+  [ROUTES.cronicas, ROUTES.cronicaDetalhe],
   [ROUTES.admin.root, ROUTES.admin.solicitacoes, ROUTES.admin.clientes, ROUTES.admin.campanhas, ROUTES.admin.midia, ROUTES.admin.importarMagias, ROUTES.admin.biblioteca],
   [ROUTES.login, ROUTES.cadastro, ROUTES.recuperarSenha, ROUTES.redefinirSenha, ROUTES.authCallback],
 ];
@@ -69,6 +72,7 @@ const loadedRoutes = new Map<string, Promise<unknown>>();
 function routeKey(path: string): string | undefined {
   if (path.startsWith('/ficha/')) return ROUTES.ficha;
   if (path.startsWith('/cronicas/convite/')) return ROUTES.conviteCronica;
+  if (path.startsWith('/cronicas/')) return ROUTES.cronicaDetalhe;
   if (path === '/') return ROUTES.dashboard;
   return pageImports.has(path) ? path : undefined;
 }

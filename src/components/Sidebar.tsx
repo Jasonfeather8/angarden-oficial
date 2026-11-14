@@ -20,7 +20,7 @@ import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
-import { ROUTES, isFichaRoute } from '../routes/paths';
+import { ROUTES, isCronicaRoute, isFichaRoute } from '../routes/paths';
 import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
 import { BrandMark } from './BrandMark';
 
@@ -68,7 +68,9 @@ export const Sidebar: React.FC = () => {
   const currentPath = pathname === '/' ? ROUTES.dashboard : pathname;
 
   const isItemActive = (item: MenuItem): boolean =>
-    item.to === currentPath || (item.id === 'personagens' && isFichaRoute(pathname));
+    item.to === currentPath ||
+    (item.id === 'personagens' && isFichaRoute(pathname)) ||
+    (item.id === 'cronicas' && isCronicaRoute(pathname));
 
   return (
     <>

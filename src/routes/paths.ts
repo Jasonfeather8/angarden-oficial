@@ -12,6 +12,7 @@ export const ROUTES = {
   grimorio: '/grimorio',
   biblioteca: '/biblioteca',
   cronicas: '/cronicas',
+  cronicaDetalhe: '/cronicas/:cronicaId',
   conviteCronica: '/cronicas/convite/:token',
   painelMestre: '/painel-mestre',
   perfil: '/perfil',
@@ -31,12 +32,14 @@ export const ROUTES = {
 export const fichaPath = (characterId: string): string =>
   `/ficha/${encodeURIComponent(characterId)}`;
 
-/** Monta a URL da tela de Crônicas já com um relato selecionado. */
+/** Monta a URL dedicada da crônica aberta, que agora tem rota própria. */
 export const cronicaPath = (cronicaId: string): string =>
-  `${ROUTES.cronicas}?cronica=${encodeURIComponent(cronicaId)}`;
+  `/cronicas/${encodeURIComponent(cronicaId)}`;
 
 export const conviteCronicaPath = (token: string): string =>
   `/cronicas/convite/${encodeURIComponent(token)}`;
+
+export const isCronicaRoute = (pathname: string): boolean => pathname.startsWith('/cronicas/');
 
 /** O menu "Personagens" permanece ativo enquanto uma ficha estiver aberta. */
 export const isFichaRoute = (pathname: string): boolean => pathname.startsWith('/ficha/');

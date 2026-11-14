@@ -8,7 +8,6 @@ export type CampoDoFormulario =
   | 'titulo'
   | 'dataAventura'
   | 'relato'
-  | 'progresso'
   | 'local'
   | 'agendadaPara';
 
@@ -18,7 +17,6 @@ export interface NovaCronicaForm {
   titulo: string;
   dataAventura: string;
   relato: string;
-  progresso: string;
   local: string;
   agendadaPara: string;
   capaUrl?: string;
@@ -30,13 +28,27 @@ const formularioInicial: NovaCronicaForm = {
   titulo: '',
   dataAventura: '',
   relato: '',
-  progresso: '0',
   local: '',
   agendadaPara: '',
   capaUrl: undefined,
   categoriaId: '',
   notasVisiveis: false,
 };
+
+function formularioDe(cronica: Cronica): NovaCronicaForm {
+  return {
+    titulo: cronica.titulo,
+    dataAventura: cronica.dataAventura,
+    relato: cronica.relato,
+    local: cronica.local,
+    agendadaPara: cronica.agendadaPara
+      ? new Date(cronica.agendadaPara).toISOString().slice(0, 16)
+      : '',
+    capaUrl: cronica.capaUrl,
+    categoriaId: cronica.categoriaId ?? '',
+    notasVisiveis: cronica.notasVisiveis,
+  };
+}
 
 interface UseCronicaFormOptions {
   /** Chamado depois de criar ou editar, com a crônica gravada. */
@@ -50,6 +62,7 @@ interface UseCronicaFormOptions {
 export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [cronicaEmEdicao, setCronicaEmEdicao] = useState<Cronica | null>(null);
+  const [recemCriada, setRecemCriada] = useState(false);
   const [publishMode, setPublishMode] = useState<ModoDePublicacao>('now');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -62,6 +75,7 @@ export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
     setForm(formularioInicial);
     setPublishMode('now');
     setCronicaEmEdicao(null);
+    setRecemCriada(false);
     setSaveError(null);
   };
 
@@ -73,19 +87,7 @@ export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
   const abrirEdicao = (cronica: Cronica) => {
     resetForm();
     setCronicaEmEdicao(cronica);
-    setForm({
-      titulo: cronica.titulo,
-      dataAventura: cronica.dataAventura,
-      relato: cronica.relato,
-      progresso: String(cronica.progresso),
-      local: cronica.local,
-      agendadaPara: cronica.agendadaPara
-        ? new Date(cronica.agendadaPara).toISOString().slice(0, 16)
-        : '',
-      capaUrl: cronica.capaUrl,
-      categoriaId: cronica.categoriaId ?? '',
-      notasVisiveis: cronica.notasVisiveis,
-    });
+    setForm(formularioDe(cronica));
     setPublishMode(cronica.status === 'AGENDADA' ? 'schedule' : 'now');
     setCreateModalOpen(true);
   };
@@ -125,7 +127,7 @@ export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
         dataAventura: form.dataAventura,
         relato: form.relato.trim(),
         local: form.local.trim(),
-        progresso: Math.min(100, Math.max(0, Number(form.progresso) || 0)),
+        progresso: 0,
         // O legado `personagens` é preservado; a companhia viva está nas inscrições.
         personagens: editando?.personagens ?? [],
         status: editando?.status === 'CONCLUIDA'
@@ -146,13 +148,20 @@ export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
         dados.capaUrl = capaUrl;
       }
 
-      const salva = editando
-        ? await cronicaService.atualizar(editando.id, dados)
-        : await cronicaService.criar(dados);
-
-      setCreateModalOpen(false);
-      resetForm();
-      onSalva(salva);
+      if (editando) {
+        const salva = await cronicaService.atualizar(editando.id, dados, false);
+        setCreateModalOpen(false);
+        resetForm();
+        onSalva(salva);
+      } else {
+        // Após criar, o mesmo modal segue aberto para montar checklist e companhia.
+        const salva = await cronicaService.criar(dados);
+        setCronicaEmEdicao(salva);
+        setForm(formularioDe(salva));
+        setRecemCriada(true);
+        setPublishMode('now');
+        onSalva(salva);
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Não foi possível salvar a crônica.');
     } finally {
@@ -163,6 +172,7 @@ export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
   return {
     isCreateModalOpen,
     cronicaEmEdicao,
+    recemCriada,
     abrirCriacao,
     abrirEdicao,
     fecharFormulario,

@@ -30,6 +30,7 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
 }) => {
   const { objetivos, isLoading, error, reload } = useObjetivosDaCronica(cronica.id);
   const [novoTitulo, setNovoTitulo] = useState('');
+  const [tituloRenomeado, setTituloRenomeado] = useState('');
   const [progressoManual, setProgressoManual] = useState(String(cronica.progresso));
   const [renomeando, setRenomeando] = useState<string | null>(null);
   const [erro, setErro] = useState('');
@@ -45,7 +46,28 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
     }
   };
 
+  const salvarRenomeacao = (objetivoId: string) => {
+    const titulo = tituloRenomeado.trim();
+    if (!titulo) return;
+    void executar(() => cronicaService.renomearObjetivo(objetivoId, titulo)).then(() => setRenomeando(null));
+  };
+
+  const salvarProgresso = () => {
+    void executar(
+      () => cronicaService.definirProgresso(cronica.id, Math.min(100, Math.max(0, Number(progressoManual) || 0))),
+      false,
+    );
+  };
+
+  const adicionarObjetivo = () => {
+    if (!novoTitulo.trim()) return;
+    void executar(() => cronicaService.criarObjetivo(cronica.id, novoTitulo)).then(() => setNovoTitulo(''));
+  };
+
   const concluidos = objetivos.filter((objetivo) => objetivo.concluido).length;
+  // Com checklist, o percentual sai dos próprios objetivos: é o mesmo número que
+  // o banco grava em `chronicles.progresso`, sem depender de uma cópia antiga.
+  const percentual = objetivos.length > 0 ? Math.round((100 * concluidos) / objetivos.length) : cronica.progresso;
 
   return (
     <PainelSecao title="Checklist da crônica" icon={<ListChecks className="h-4 w-4" />} hint={`${concluidos}/${objetivos.length}`}>
@@ -60,20 +82,21 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
               {objetivos.map((objetivo) => (
                 <li key={objetivo.id} className="flex flex-wrap items-center gap-2">
                   {renomeando === objetivo.id ? (
-                    <form
-                      className="flex min-w-0 flex-1 items-center gap-2"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        const titulo = String(new FormData(event.currentTarget).get('titulo') ?? '').trim();
-                        if (!titulo) return;
-                        void executar(() => cronicaService.renomearObjetivo(objetivo.id, titulo)).then(() =>
-                          setRenomeando(null),
-                        );
-                      }}
-                    >
-                      <input name="titulo" defaultValue={objetivo.titulo} aria-label={`Novo título para ${objetivo.titulo}`} className={inputClassName} />
-                      <ToolbarButton type="submit">Salvar</ToolbarButton>
-                    </form>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        value={tituloRenomeado}
+                        onChange={(event) => setTituloRenomeado(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            salvarRenomeacao(objetivo.id);
+                          }
+                        }}
+                        aria-label={`Novo título para ${objetivo.titulo}`}
+                        className={inputClassName}
+                      />
+                      <ToolbarButton type="button" onClick={() => salvarRenomeacao(objetivo.id)}>Salvar</ToolbarButton>
+                    </div>
                   ) : (
                     <label className="flex min-w-0 flex-1 items-center gap-2 font-serif text-sm text-[#d6c4ae]">
                       <input
@@ -92,7 +115,10 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
                       <ToolbarButton
                         aria-label={`Renomear ${objetivo.titulo}`}
                         icon={<Pencil className="h-3.5 w-3.5" />}
-                        onClick={() => setRenomeando(objetivo.id)}
+                        onClick={() => {
+                          setTituloRenomeado(objetivo.titulo);
+                          setRenomeando(objetivo.id);
+                        }}
                       >
                         Renomear
                       </ToolbarButton>
@@ -117,19 +143,10 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
               rotulo="Progresso"
               atual={concluidos}
               max={objetivos.length}
-              valorTexto={`${cronica.progresso}%`}
+              valorTexto={`${percentual}%`}
             />
           ) : podeGerir ? (
-            <form
-              className="space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void executar(
-                  () => cronicaService.definirProgresso(cronica.id, Math.min(100, Math.max(0, Number(progressoManual) || 0))),
-                  false,
-                );
-              }}
-            >
+            <div className="space-y-2">
               <label htmlFor={`progresso-${cronica.id}`} className="block font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
                 Progresso informado à mão (%)
               </label>
@@ -143,35 +160,34 @@ export const ChecklistDaCronicaPanel: React.FC<ChecklistDaCronicaPanelProps> = (
                   onChange={(event) => setProgressoManual(event.target.value)}
                   className={`${inputClassName} max-w-24`}
                 />
-                <ToolbarButton type="submit">Salvar progresso</ToolbarButton>
+                <ToolbarButton type="button" onClick={salvarProgresso}>Salvar progresso</ToolbarButton>
               </div>
               <p className="font-serif text-xs italic text-[#806b53]">
                 Sem checklist, o progresso é informado à mão.
               </p>
-            </form>
+            </div>
           ) : (
             <p className="font-cinzel text-xl text-[#d1a85a]">{cronica.progresso}%</p>
           )}
 
           {podeGerir && (
-            <form
-              className="flex gap-2 border-t border-[#2e2216] pt-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!novoTitulo.trim()) return;
-                void executar(() => cronicaService.criarObjetivo(cronica.id, novoTitulo)).then(() => setNovoTitulo(''));
-              }}
-            >
+            <div className="flex gap-2 border-t border-[#2e2216] pt-3">
               <label htmlFor={`objetivo-${cronica.id}`} className="sr-only">Novo objetivo</label>
               <input
                 id={`objetivo-${cronica.id}`}
                 value={novoTitulo}
                 onChange={(event) => setNovoTitulo(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    adicionarObjetivo();
+                  }
+                }}
                 placeholder="Adicionar objetivo"
                 className={inputClassName}
               />
-              <ToolbarButton type="submit" icon={<Plus className="h-3.5 w-3.5" />}>Adicionar</ToolbarButton>
-            </form>
+              <ToolbarButton type="button" onClick={adicionarObjetivo} icon={<Plus className="h-3.5 w-3.5" />}>Adicionar</ToolbarButton>
+            </div>
           )}
 
           {erro && <p role="alert" className="font-serif text-sm text-red-300">{erro}</p>}

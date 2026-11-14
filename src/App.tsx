@@ -19,6 +19,7 @@ import {
   CadastroPage,
   CronicasPage,
   ConviteCronicaPage,
+  CronicaDetalhePage,
   DashboardPage,
   FichaTecnicaPage,
   GrimorioPage,
@@ -104,6 +105,7 @@ export default function App() {
           <Route path={ROUTES.biblioteca} element={<BibliotecaPage />} />
           <Route path={ROUTES.cronicas} element={<CronicasPage />} />
           <Route path={ROUTES.conviteCronica} element={<ConviteCronicaPage />} />
+          <Route path={ROUTES.cronicaDetalhe} element={<CronicaDetalhePage />} />
           <Route
             path={ROUTES.painelMestre}
             element={

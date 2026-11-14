@@ -116,10 +116,11 @@ async function listarCronicas(limite?: number): Promise<Cronica[]> {
   return (limite !== undefined ? todas.slice(0, limite) : todas).map(mapearCronica);
 }
 
-function valoresCronica(dados: NovaCronica) {
+function valoresCronica(dados: NovaCronica, comProgresso = true) {
   return {
     titulo: dados.titulo, data_aventura: dados.dataAventura, local: dados.local, relato: dados.relato,
-    progresso: dados.progresso, personagens: dados.personagens, status: dados.status,
+    ...(comProgresso ? { progresso: dados.progresso } : {}),
+    personagens: dados.personagens, status: dados.status,
     agendada_para: dados.agendadaPara ? new Date(dados.agendadaPara).toISOString() : null,
     capa_url: dados.capaUrl ?? null, categoria_id: dados.categoriaId ?? null,
     notas_visiveis: dados.notasVisiveis,
@@ -143,12 +144,12 @@ export const cronicaService = {
     return mapearCronica(data as unknown as CronicaRow);
   },
 
-  atualizar: async (id: string, dados: NovaCronica): Promise<Cronica> => {
+  atualizar: async (id: string, dados: NovaCronica, comProgresso = true): Promise<Cronica> => {
     let clienteId: string;
     try { clienteId = tenantId(); } catch (cause) { throw erro('atualizar a crônica', String(cause)); }
     // O vínculo com campanha não é editado pela tela: a coluna fica como está.
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicles')
-      .update(valoresCronica(dados)).eq('id', id).eq('tenant_id', clienteId)
+      .update(valoresCronica(dados, comProgresso)).eq('id', id).eq('tenant_id', clienteId)
       .select(COLUNAS_CRONICA).single()));
     if (error) throw erro('atualizar a crônica', error.message);
     invalidarCache();

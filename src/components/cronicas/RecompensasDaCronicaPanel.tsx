@@ -18,6 +18,8 @@ import { useRecompensasDaCronica } from './useRecompensasDaCronica';
 export interface RecompensasDaCronicaPanelProps {
   cronica: Cronica;
   podeGerir: boolean;
+  somenteLeitura?: boolean;
+  onCronicaAlterada?: () => void;
 }
 
 function descreverValor(recompensa: RecompensaDaCronica): string {
@@ -34,11 +36,17 @@ function descreverValor(recompensa: RecompensaDaCronica): string {
  * vinculadas. O Mestre autor entrega aos personagens aprovados; o jogador
  * resgata para os próprios personagens quando a recompensa é liberada.
  */
-export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps> = ({ cronica, podeGerir }) => {
+export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps> = ({ cronica, podeGerir, somenteLeitura = false, onCronicaAlterada }) => {
+  // Na tela da crônica o painel é leitura; o Mestre gere as recompensas no modal.
+  const podeEditar = podeGerir && !somenteLeitura;
   const { userId } = useAuthorization();
   const { recompensas, isLoading, error, reload } = useRecompensasDaCronica(cronica.id);
   const objetivos = useObjetivosDaCronica(cronica.id);
   const participantes = useParticipantesDaCronica(cronica.id);
+  const recarregar = () => {
+    reload();
+    onCronicaAlterada?.();
+  };
 
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [editando, setEditando] = useState<RecompensaDaCronica | undefined>(undefined);
@@ -77,14 +85,14 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
   const salvar = async (dados: NovaRecompensaCronica) => {
     if (editando) await cronicaService.atualizarRecompensa(editando.id, dados);
     else await cronicaService.criarRecompensa(cronica.id, dados);
-    reload();
+    recarregar();
   };
 
   const excluir = async (recompensa: RecompensaDaCronica) => {
     setErro('');
     try {
       await cronicaService.excluirRecompensa(recompensa.id);
-      reload();
+      recarregar();
     } catch (cause) {
       setErro(cause instanceof Error ? cause.message : 'Não foi possível excluir a recompensa.');
     }
@@ -94,7 +102,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
     setErro('');
     try {
       await cronicaService.resgatarRecompensa(recompensa.id, characterId);
-      reload();
+      recarregar();
     } catch (cause) {
       setErro(cause instanceof Error ? cause.message : 'Não foi possível resgatar a recompensa.');
     }
@@ -129,7 +137,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
               Receberam: {recebedores.length ? recebedores.join(', ') : 'ninguém ainda'}
             </p>
           </div>
-          {podeGerir && (
+          {podeEditar && (
             <div className="flex flex-wrap gap-2">
               <ToolbarButton
                 onClick={() => {
@@ -186,7 +194,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
         title="Recompensas e mercadorias"
         icon={<Gift className="h-4 w-4" />}
         extra={
-          podeGerir ? (
+          podeEditar ? (
             <ToolbarButton
               variant="primary"
               onClick={() => {
@@ -219,7 +227,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
                 <h3 className="font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#c6a66d]">
                   Mercadorias vinculadas
                 </h3>
-                {podeGerir && (
+                {podeEditar && (
                   <ToolbarButton
                     icon={<Package className="h-3.5 w-3.5" />}
                     onClick={() => setSelecionandoLoot(true)}
@@ -271,7 +279,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
         cronicaId={cronica.id}
         objetivos={objetivos.objetivos}
         jaVinculadas={mercadorias.flatMap((recompensa) => (recompensa.itemId ? [recompensa.itemId] : []))}
-        onDone={reload}
+        onDone={recarregar}
       />
 
       {entregando && (
@@ -282,7 +290,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
           participantes={participantes.participantes}
           entreguesA={entregando.entreguesA}
           onClose={() => setEntregando(undefined)}
-          onDone={reload}
+          onDone={recarregar}
         />
       )}
     </>

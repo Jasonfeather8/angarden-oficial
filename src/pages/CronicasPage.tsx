@@ -1,46 +1,27 @@
 import React, { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { FileText, Plus, ScrollText } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
-import { CapaDaSessaoPanel } from '@/components/cronicas/CapaDaSessaoPanel';
-import { ChecklistDaCronicaPanel } from '@/components/cronicas/ChecklistDaCronicaPanel';
-import { CompartilharCronicaModal } from '@/components/cronicas/CompartilharCronicaModal';
-import { CronicaAcoesBar } from '@/components/cronicas/CronicaAcoesBar';
-import { ExcluirCronicaModal } from '@/components/cronicas/ExcluirCronicaModal';
+import { CardCronica } from '@/components/cronicas/CardCronica';
 import { FiltroDeCategorias } from '@/components/cronicas/FiltroDeCategorias';
 import type { FiltroDeCategoriasAtivo } from '@/components/cronicas/FiltroDeCategorias';
 import { GerenciarCategoriasModal } from '@/components/cronicas/GerenciarCategoriasModal';
-import { LinhaDoTempoPanel } from '@/components/cronicas/LinhaDoTempoPanel';
-import { NotasDaCronicaPanel } from '@/components/cronicas/NotasDaCronicaPanel';
 import { NovaCronicaModal } from '@/components/cronicas/NovaCronicaModal';
-import { ParticipantesDaCronicaPanel } from '@/components/cronicas/ParticipantesDaCronicaPanel';
-import { RecompensasDaCronicaPanel } from '@/components/cronicas/RecompensasDaCronicaPanel';
-import { RegistroSelecionadoPanel } from '@/components/cronicas/RegistroSelecionadoPanel';
 import { useCategoriasDaCronica } from '@/components/cronicas/useCategoriasDaCronica';
 import { useCronicaForm } from '@/components/cronicas/useCronicaForm';
 import { useCronicas } from '@/components/cronicas/useCronicas';
-import { useObjetivosDaCronica } from '@/components/cronicas/useObjetivosDaCronica';
-import { useParticipantesDaCronica } from '@/components/cronicas/useParticipantesDaCronica';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/Skeleton';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { useAuthorization } from '@/hooks/useAuthorization';
 
-/**
- * Crônicas: linha do tempo, relato em leitura, companhia, checklist, recompensas
- * e as notas do Mestre. Cada crônica é gerida apenas pelo Mestre que a criou.
- */
+/** Estante de crônicas, filtrável por categoria. */
 export const CronicasPage: React.FC = () => {
-  const { isAdmin, isMestre, tenantId, userId } = useAuthorization();
-  const { cronicas, selecionada, selecionar, isLoading, error, reload } = useCronicas(tenantId);
+  const { isMestre, tenantId } = useAuthorization();
+  const { cronicas, isLoading, error, reload } = useCronicas(tenantId);
   const categorias = useCategoriasDaCronica(tenantId);
-  const [, setSearchParams] = useSearchParams();
-
   const [categoriaAtiva, setCategoriaAtiva] = useState<FiltroDeCategoriasAtivo>('todas');
   const [gerenciandoCategorias, setGerenciandoCategorias] = useState(false);
-  const [excluindo, setExcluindo] = useState(false);
-  const [compartilhando, setCompartilhando] = useState(false);
 
   const nomesDeCategoria = useMemo(
     () => Object.fromEntries(categorias.categorias.map((categoria) => [categoria.id, categoria.nome])),
@@ -69,33 +50,7 @@ export const CronicasPage: React.FC = () => {
     [cronicas, categoriaAtiva],
   );
 
-  const emLeitura = filtradas.find((cronica) => cronica.id === selecionada?.id) ?? filtradas[0];
-  const podeGerir = Boolean(emLeitura && (isAdmin || emLeitura.criadaPor === userId));
-
-  const formulario = useCronicaForm({
-    onSalva: (cronica) => {
-      reload();
-      selecionar(cronica.id);
-    },
-  });
-
-  const participantes = useParticipantesDaCronica(emLeitura?.id ?? null);
-  const objetivos = useObjetivosDaCronica(emLeitura?.id ?? null);
-  const temChecklist = objetivos.objetivos.length > 0;
-
-  const selecionarNaLista = (id: string) => {
-    selecionar(id);
-    setCategoriaAtiva('todas');
-  };
-
-  const aposExcluir = () => {
-    setSearchParams({}, { replace: true });
-    reload();
-  };
-
-  // Só o Mestre cria crônicas: a crônica pertence a um cliente, e o
-  // administrador da plataforma não tem `tenant_id` para vincular.
-  const podeCriar = isMestre;
+  const formulario = useCronicaForm({ onSalva: () => reload() });
 
   return (
     <>
@@ -115,7 +70,7 @@ export const CronicasPage: React.FC = () => {
               <FileText className="h-3.5 w-3.5" aria-hidden="true" />
               {cronicas.length} {cronicas.length === 1 ? 'registro' : 'registros'}
             </div>
-            {podeCriar && (
+            {isMestre && (
               <ToolbarButton
                 id="btn-nova-cronica"
                 variant="primary"
@@ -141,7 +96,7 @@ export const CronicasPage: React.FC = () => {
             variant="plano"
             title="Nenhuma crônica registrada"
             description={
-              podeCriar
+              isMestre
                 ? 'Registre o primeiro relato usando o botão “Nova Crônica” acima.'
                 : 'Assim que uma crônica for compartilhada com você, ela aparecerá aqui.'
             }
@@ -153,69 +108,30 @@ export const CronicasPage: React.FC = () => {
               ativo={categoriaAtiva}
               contagens={contagens}
               onSelecionar={setCategoriaAtiva}
-              onGerir={podeGerir ? () => setGerenciandoCategorias(true) : undefined}
+              onGerir={isMestre ? () => setGerenciandoCategorias(true) : undefined}
             />
-
-            {!emLeitura ? (
+            {filtradas.length === 0 ? (
               <EmptyState
                 variant="plano"
                 title="Nenhuma crônica nesta categoria"
                 description="Escolha outra categoria para continuar a leitura."
               />
             ) : (
-              <>
-                {/* A coluna central concentra o registro e os blocos da crônica
-                    (notas, checklist, recompensas e companhia), por isso é mais larga. */}
-                <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(200px,0.7fr)_minmax(320px,1.9fr)_minmax(200px,0.7fr)]">
-                  <LinhaDoTempoPanel
-                    cronicas={filtradas}
-                    cronicaSelecionadaId={emLeitura.id}
-                    onSelecionar={selecionarNaLista}
-                    nomesDeCategoria={nomesDeCategoria}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filtradas.map((cronica) => (
+                  <CardCronica
+                    key={cronica.id}
+                    cronica={cronica}
+                    nomeDaCategoria={nomesDeCategoria[cronica.categoriaId ?? '']}
                   />
-                  <RegistroSelecionadoPanel
-                    key={`registro-${emLeitura.id}`}
-                    cronica={emLeitura}
-                    participantes={participantes.participantes}
-                    nomesDeCategoria={nomesDeCategoria}
-                    acoes={
-                      <CronicaAcoesBar
-                        cronica={emLeitura}
-                        podeGerir={podeGerir}
-                        abrirEdicao={formulario.abrirEdicao}
-                        abrirCompartilhar={() => setCompartilhando(true)}
-                        abrirExclusao={() => setExcluindo(true)}
-                        onAlterada={reload}
-                      />
-                    }
-                  >
-                    <NotasDaCronicaPanel
-                      cronica={emLeitura}
-                      podeGerir={podeGerir}
-                      onCronicaAlterada={reload}
-                    />
-                    <ChecklistDaCronicaPanel
-                      cronica={emLeitura}
-                      podeGerir={podeGerir}
-                      onCronicaAlterada={reload}
-                    />
-                    <RecompensasDaCronicaPanel cronica={emLeitura} podeGerir={podeGerir} />
-                    <ParticipantesDaCronicaPanel
-                      cronica={emLeitura}
-                      podeGerir={podeGerir}
-                      userId={userId}
-                      onAlterados={participantes.reload}
-                    />
-                  </RegistroSelecionadoPanel>
-                  <CapaDaSessaoPanel cronica={emLeitura} />
-                </div>
-              </>
+                ))}
+              </div>
             )}
           </>
         )}
       </PageShell>
 
-      {podeCriar && (
+      {isMestre && (
         <NovaCronicaModal
           isOpen={formulario.isCreateModalOpen}
           onClose={formulario.fecharFormulario}
@@ -225,14 +141,16 @@ export const CronicasPage: React.FC = () => {
           onCategoriaChange={formulario.setCategoriaId}
           onNotasVisiveisChange={formulario.setNotasVisiveis}
           categorias={categorias.categorias}
-          temChecklist={Boolean(formulario.cronicaEmEdicao) && temChecklist}
           editando={Boolean(formulario.cronicaEmEdicao)}
+          cronica={formulario.cronicaEmEdicao}
+          recemCriada={formulario.recemCriada}
           concluida={formulario.cronicaEmEdicao?.status === 'CONCLUIDA'}
           onCoverChange={formulario.handleCoverChange}
           publishMode={formulario.publishMode}
           onPublishModeChange={formulario.setPublishMode}
           isSaving={formulario.isSaving}
           saveError={formulario.saveError}
+          onCronicaAlterada={reload}
         />
       )}
 
@@ -245,22 +163,6 @@ export const CronicasPage: React.FC = () => {
           reload();
         }}
       />
-
-      {emLeitura && (
-        <>
-          <ExcluirCronicaModal
-            isOpen={excluindo}
-            onClose={() => setExcluindo(false)}
-            cronica={emLeitura}
-            onExcluida={aposExcluir}
-          />
-          <CompartilharCronicaModal
-            isOpen={compartilhando}
-            onClose={() => setCompartilhando(false)}
-            cronicaId={emLeitura.id}
-          />
-        </>
-      )}
     </>
   );
 };
