@@ -1,1201 +1,230 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowLeft,
-  BookMarked,
-  BookOpen,
-  Check,
-  CircleDot,
-  Eye,
-  EyeOff,
-  Lock,
-  Pencil,
-  Plus,
-  Sparkles,
-  Trash2,
-  WandSparkles,
-  X,
-  Search,
-  User,
-} from 'lucide-react';
+import React from 'react';
+import { BookOpen, Lock } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
-import { BrandMark } from '../components/BrandMark';
-import { Modal } from '../components/Modal';
-import { ModalSelecionarComprador, PersonagemResumo } from '../components/ModalSelecionarComprador';
-import { GothicButton } from '../components/GothicButton';
+import { ModalSelecionarComprador } from '../components/ModalSelecionarComprador';
 import { EmptyState } from '../components/ui/EmptyState';
-import {
-  getSchoolVolumes,
-  grimorioAdditionalSchools,
-  grimorioCosmicoSchools,
-  grimorioAllSchools,
-  grimorioElementos,
-  grimorioExotericoSchools,
-  grimorioMaiorSchools,
-  grimorioMentalizacao,
-  GRIMORIO_ELEMENT_TREE,
-  grimorioSchools,
-  grimorioVolumes,
-  GRIMORIO_LEVELS,
-  GrimorioLevel,
-  GrimorioSpell,
-} from '../mocks/grimorio';
-import {
-  getLearnedSpellIds,
-  setLearnedSpell,
-  criarMagia,
-  atualizarMagia,
-  alternarOculta,
-  excluirMagia,
-} from '../services/grimorioService';
-import { fichaService } from '../services/fichaService';
-import { grimorioBloqueioService } from '../services/grimorioBloqueioService';
-import { cacheKeys } from '../services/cacheKeys';
-import { withTimeout } from '../utils/withTimeout';
-import { normalizarBusca, TAMANHO_MINIMO_BUSCA } from '../utils/normalizarBusca';
-import { agendarEmOciosidade } from '../utils/idleCallback';
-import { precarregarImagem } from '../utils/precarregarImagem';
 import { ErrorState } from '../components/ui/ErrorState';
-import { Skeleton } from '../components/ui/Skeleton';
+import { SpellDetailsModal as SharedSpellDetailsModal } from '../components/GrimorioSpellComponents';
 import { useAuthorization } from '../hooks/useAuthorization';
-import { useAsyncData } from '../hooks/useAsyncData';
 import { useOtimizarImagensGrimorio } from '../hooks/useOtimizarImagensGrimorio';
-import { enviarImagem } from '../services/mediaService';
-import { useFichaStore } from '../store/useFichaStore';
-import { Field, MagicVisual, SpellCard, SpellDetailsModal as SharedSpellDetailsModal } from '../components/GrimorioSpellComponents';
-import {
-  carregarFolioGrimorio,
-  chaveFolioGrimorio,
-  ESCOLA_INICIAL_DO_GRIMORIO,
-  TAMANHO_FOLIO,
-} from '../services/grimorioQuery';
-
-type View = 'schools' | 'element-tree' | 'mental-tree' | 'tree' | 'book';
-type BookVolume = 1 | 2 | 3;
-
-const grimorioFormSchools = [...grimorioSchools, ...grimorioAdditionalSchools];
-
-const resolveDestinationSchool = (selectedSchoolId: string, subcategory: string) => {
-  const selectedSchool = grimorioAllSchools.find((item) => item.id === selectedSchoolId);
-  if (!selectedSchool || (selectedSchool.id !== 'elementar' && selectedSchool.id !== 'mentalizacao')) return selectedSchool;
-
-  const normalizedSubcategory = subcategory.trim().toLowerCase();
-  const subcategories = selectedSchool.id === 'elementar' ? grimorioElementos : grimorioMentalizacao;
-  return subcategories.find((item) =>
-    item.name.toLowerCase() === normalizedSubcategory || item.subtitle.toLowerCase() === normalizedSubcategory,
-  ) ?? selectedSchool;
-};
-
-const ACTIVE_CHARACTER_LABEL = 'Personagem ativo';
-
-interface NewSpellForm {
-  name: string;
-  level: GrimorioLevel | '';
-  description: string;
-  difficulty: string;
-  damage: string;
-  duration: string;
-  range: string;
-  magicalEffects: string;
-  consumption: string;
-  type: string;
-  channeling: string;
-  condition: string;
-  schoolId: string;
-  subcategory: string;
-  image: string;
-  bookVolume: BookVolume | '';
-}
-
-const initialNewSpellForm: NewSpellForm = {
-  name: '', level: '', description: '', difficulty: '', damage: '', duration: '', range: '', magicalEffects: '',
-  consumption: '', type: '', channeling: '', condition: '', schoolId: '', subcategory: '', image: '', bookVolume: '',
-};
+import { AvisoDeImagensPesadas } from '../components/grimorio/AvisoDeImagensPesadas';
+import { BarraDeBuscaDeMagias } from '../components/grimorio/BarraDeBuscaDeMagias';
+import { BarraDeNavegacao } from '../components/grimorio/BarraDeNavegacao';
+import { BookView } from '../components/grimorio/BookView';
+import { CabecalhoDoGrimorio } from '../components/grimorio/CabecalhoDoGrimorio';
+import { ElementTreeView } from '../components/grimorio/ElementTreeView';
+import { MagiaFormModal } from '../components/grimorio/MagiaFormModal';
+import { MentalizacaoTreeView } from '../components/grimorio/MentalizacaoTreeView';
+import { ResultadosDaBusca } from '../components/grimorio/ResultadosDaBusca';
+import { SchoolsView } from '../components/grimorio/SchoolsView';
+import { TreeView } from '../components/grimorio/TreeView';
+import { useBloqueiosDoGrimorio } from '../components/grimorio/useBloqueiosDoGrimorio';
+import { useBuscaDeMagias } from '../components/grimorio/useBuscaDeMagias';
+import { useDetalhesDaMagia } from '../components/grimorio/useDetalhesDaMagia';
+import { useMagiaForm } from '../components/grimorio/useMagiaForm';
+import { useMagiasAprendidas } from '../components/grimorio/useMagiasAprendidas';
+import { useMagiasDoGrimorio } from '../components/grimorio/useMagiasDoGrimorio';
+import { useNavegacaoDoGrimorio } from '../components/grimorio/useNavegacaoDoGrimorio';
+import { usePersonagemDoGrimorio } from '../components/grimorio/usePersonagemDoGrimorio';
 
 export const GrimorioPage: React.FC = () => {
   const { can, tenantId } = useAuthorization();
   const canManageCatalog = can.manageCatalog;
   const canManageVisibility = can.manageSpellVisibility;
   const podeVerBloqueado = canManageVisibility;
-  const bloqueiosQuery = useQuery({
-    queryKey: ['grimorio', 'bloqueios', tenantId],
-    queryFn: () => grimorioBloqueioService.listar(),
-    staleTime: 5 * 60 * 1000,
-    enabled: Boolean(tenantId),
-  });
-  const escolasBloqueadas = bloqueiosQuery.data?.escolas ?? [];
-  const volumesBloqueados = bloqueiosQuery.data?.volumes ?? [];
-  // Selar uma escola "guarda-chuva" grava também as subescolas dela (o serviço faz a expansão),
-  // então a checagem aqui é sempre pelo id exato — igual ao que a RLS aplica.
-  const escolaBloqueada = (schoolId: string) => escolasBloqueadas.includes(schoolId);
-  const volumeBloqueado = (volumeId: string) => {
-    const volume = grimorioVolumes.find((item) => item.id === volumeId);
-    return volumesBloqueados.includes(volumeId) || Boolean(volume && escolaBloqueada(volume.schoolId));
-  };
+
+  const detalhes = useDetalhesDaMagia();
+  const bloqueios = useBloqueiosDoGrimorio(tenantId);
   const { imagensPesadas, bytesPesados, processando, processadas, erroOtimizacao, otimizarImagens } = useOtimizarImagensGrimorio(canManageCatalog);
-  const storeCharacterId = useFichaStore((state) => state.characterId);
-  const setStoreCharacterId = useFichaStore((state) => state.setCharacterId);
-  const [view, setView] = useState<View>('schools');
-  const [bloqueioAviso, setBloqueioAviso] = useState<string | null>(null);
-  const [schoolId, setSchoolId] = useState(ESCOLA_INICIAL_DO_GRIMORIO);
-  const [branch, setBranch] = useState('');
-  const [volumeId, setVolumeId] = useState('');
-  const [selectedSpell, setSelectedSpell] = useState<GrimorioSpell | null>(null);
-  const [personagemId, setPersonagemId] = useState<string>(() => storeCharacterId);
-  const {
-    data: listaPersonagensData,
-    isLoading: isLoadingPersonagens,
-    error: erroPersonagensHook,
-    reload: reloadPersonagens,
-  } = useAsyncData(() => fichaService.getListaPersonagens(), [tenantId], {
-    cacheKey: cacheKeys.personagensResumo(tenantId),
-    enabled: Boolean(tenantId),
+  const personagem = usePersonagemDoGrimorio(tenantId);
+  const aprendidas = useMagiasAprendidas(personagem.personagemId);
+  const navegacao = useNavegacaoDoGrimorio({
+    escolaBloqueada: bloqueios.escolaBloqueada,
+    volumeBloqueado: bloqueios.volumeBloqueado,
+    podeVerBloqueado,
   });
-  const listaPersonagens: PersonagemResumo[] = listaPersonagensData ?? [];
-  const erroPersonagens = erroPersonagensHook === 'Não foi possível carregar os dados.'
-    ? 'Não foi possível carregar a lista de personagens do grimório.'
-    : erroPersonagensHook;
-  const [isModalCompradorOpen, setIsModalCompradorOpen] = useState(false);
-  const [learnedIds, setLearnedIds] = useState<string[]>([]);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newSpellForm, setNewSpellForm] = useState<NewSpellForm>(initialNewSpellForm);
-  const [editingSpell, setEditingSpell] = useState<GrimorioSpell | null>(null);
-  const [folioPage, setFolioPage] = useState(1);
-  const [busca, setBusca] = useState('');
-  const [buscaDebounced, setBuscaDebounced] = useState('');
-  const [erroMutacaoGrimorio, setErroMutacaoGrimorio] = useState<string | null>(null);
-  const [enviandoImagem, setEnviandoImagem] = useState(false);
-  const [erroUploadImagem, setErroUploadImagem] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (listaPersonagens.length > 0 && !listaPersonagens.some((personagem) => personagem.id === personagemId)) {
-      const personagemFallback = listaPersonagens[0];
-      setPersonagemId(personagemFallback.id);
-      setStoreCharacterId(personagemFallback.id);
-    }
-  }, [listaPersonagens, personagemId, setStoreCharacterId]);
-
-  useEffect(() => {
-    let isCurrent = true;
-    setLearnedIds([]);
-    const loadLearnedSpells = async () => {
-      try {
-        const ids = await withTimeout(getLearnedSpellIds(personagemId));
-        if (isCurrent) setLearnedIds(ids);
-      } catch (error) {
-        console.error('Erro ao carregar magias aprendidas do Grimório', error);
-      }
-    };
-    void loadLearnedSpells();
-    return () => {
-      isCurrent = false;
-    };
-  }, [personagemId]);
-
-  const selectedPersonagem = listaPersonagens.find((personagem) => personagem.id === personagemId);
-  const selectCharacter = (id: string) => {
-    setPersonagemId(id);
-    setStoreCharacterId(id);
-  };
-
-  const school = grimorioAllSchools.find((item) => item.id === schoolId) ?? grimorioSchools[0];
-  const volumes = getSchoolVolumes(school.id);
-  const selectedVolume = volumes.find((volume) => volume.id === volumeId) ?? volumes[0];
-  const termoBusca = normalizarBusca(buscaDebounced);
-  const buscandoMagias = termoBusca.length >= TAMANHO_MINIMO_BUSCA;
-  const queryClient = useQueryClient();
-  const chaveConsultaGrimorio = useCallback((pagina: number) => chaveFolioGrimorio({
-    volumeId: selectedVolume?.id,
-    busca: buscandoMagias ? termoBusca : undefined,
-    page: pagina,
-  }), [buscandoMagias, termoBusca, selectedVolume?.id]);
-  const carregarPaginaGrimorio = useCallback((pagina: number) => carregarFolioGrimorio({
-    volumeId: selectedVolume?.id,
-    busca: buscandoMagias ? termoBusca : undefined,
-    page: pagina,
-  }), [buscandoMagias, termoBusca, selectedVolume?.id]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setBuscaDebounced(normalizarBusca(busca)), 300);
-    return () => window.clearTimeout(timeout);
-  }, [busca]);
-
-  const grimorioQuery = useQuery({
-    queryKey: chaveConsultaGrimorio(folioPage),
-    queryFn: () => carregarPaginaGrimorio(folioPage),
-    placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
-    enabled: buscandoMagias || Boolean(selectedVolume?.id),
+  const busca = useBuscaDeMagias({ onResetPagina: navegacao.irParaPrimeiroFolio });
+  const magias = useMagiasDoGrimorio({
+    volumeId: navegacao.selectedVolume?.id,
+    termoBusca: busca.termoBusca,
+    buscandoMagias: busca.buscandoMagias,
+    folioPage: navegacao.folioPage,
+    canManageCatalog,
+    canManageVisibility,
+    onMagiaExcluida: detalhes.limparSeMagiaAtual,
   });
-  const isLoadingGrimorio = grimorioQuery.isLoading;
-  const erroGrimorio = erroMutacaoGrimorio ?? (grimorioQuery.error
-    ? `Não foi possível carregar o grimório: ${grimorioQuery.error instanceof Error ? grimorioQuery.error.message : String(grimorioQuery.error)}`
-    : null);
-  const spells = grimorioQuery.data?.magias ?? [];
-  const hiddenSpellIds = grimorioQuery.data?.ocultas ?? [];
-  const totalMagias = grimorioQuery.data?.total ?? 0;
-  const bookSpells = spells.filter((spell) => canManageVisibility || !hiddenSpellIds.includes(spell.id));
-  const totalFolios = Math.ceil(totalMagias / TAMANHO_FOLIO);
+  const formulario = useMagiaForm({
+    canManageCatalog,
+    school: navegacao.school,
+    selectedVolume: navegacao.selectedVolume,
+    abrirTomo: navegacao.abrirTomo,
+    fecharDetalhes: detalhes.fecharDetalhes,
+    executarMutacaoGrimorio: magias.executarMutacaoGrimorio,
+  });
 
-  useEffect(() => {
-    if (grimorioQuery.isPlaceholderData || grimorioQuery.isFetching || grimorioQuery.isError || !grimorioQuery.data || folioPage >= totalFolios) return;
-    const proximaPagina = folioPage + 1;
-    void queryClient.prefetchQuery({
-      queryKey: chaveConsultaGrimorio(proximaPagina),
-      queryFn: () => carregarPaginaGrimorio(proximaPagina),
-      staleTime: 5 * 60 * 1000,
-    });
-  }, [grimorioQuery.isPlaceholderData, grimorioQuery.isFetching, grimorioQuery.isError, grimorioQuery.data, folioPage, totalFolios, queryClient, chaveConsultaGrimorio, carregarPaginaGrimorio]);
-
-  const isEditing = editingSpell !== null;
-
-  useEffect(() => {
-    setFolioPage(1);
-  }, [schoolId, selectedVolume?.id]);
-
-  const executarMutacaoGrimorio = async (acao: () => Promise<void>) => {
-    setErroMutacaoGrimorio(null);
-    try {
-      await acao();
-      await queryClient.invalidateQueries({ queryKey: ['grimorio'] });
-    } catch (error) {
-      setErroMutacaoGrimorio(error instanceof Error ? error.message : String(error));
-    }
+  // Ações compartilhadas por todos os cards de magia da tela.
+  const acoesDaMagia = {
+    learnedIds: aprendidas.learnedIds,
+    hiddenSpellIds: magias.hiddenSpellIds,
+    canManageCatalog,
+    canManageVisibility,
+    onOpenSpell: detalhes.abrirDetalhes,
+    onToggleLearned: aprendidas.toggleLearned,
+    onEdit: formulario.abrirEdicao,
+    onToggleHidden: magias.toggleHidden,
+    onDelete: magias.deleteSpell,
   };
 
-  const formSchool = grimorioAllSchools.find((item) => item.id === newSpellForm.schoolId);
-  const formSubcategoryCatalog = formSchool?.id === 'elementar' ? grimorioElementos : formSchool?.id === 'mentalizacao' ? grimorioMentalizacao : [];
-  const formDestinationSchool = resolveDestinationSchool(newSpellForm.schoolId, newSpellForm.subcategory) ?? formSchool ?? school;
-  const formVolumes = getSchoolVolumes(formDestinationSchool.id);
-  const formVolume = newSpellForm.bookVolume
-    ? formVolumes[newSpellForm.bookVolume - 1]
-    : formVolumes.find((volume) => volume.id === selectedVolume.id) ?? formVolumes[0];
-
-  const chooseSchool = (id: string, chosenBranch = '') => {
-    if (escolaBloqueada(id) && !podeVerBloqueado) {
-      const target = grimorioAllSchools.find((item) => item.id === id);
-      setBloqueioAviso(`O Mestre selou a escola ${target?.name ?? id}.`);
-      return;
-    }
-    setBloqueioAviso(null);
-    setSchoolId(id);
-    setBranch(chosenBranch);
-    setVolumeId('');
-    setFolioPage(1);
-    setView(id === 'elementar' ? 'element-tree' : id === 'mentalizacao' ? 'mental-tree' : 'tree');
-  };
-
-  const chooseElement = (id: string) => {
-    const element = grimorioElementos.find((item) => item.id === id);
-    if (!element) return;
-    if (escolaBloqueada(id) && !podeVerBloqueado) {
-      setBloqueioAviso(`O Mestre selou a escola ${element.name}.`);
-      return;
-    }
-    setBloqueioAviso(null);
-    setSchoolId(element.id);
-    setBranch(element.subtitle);
-    setVolumeId('');
-    setFolioPage(1);
-    setView('tree');
-  };
-
-  const chooseMentalizacaoSubcategory = (id: string) => {
-    const subcategory = grimorioMentalizacao.find((item) => item.id === id);
-    if (!subcategory) return;
-    if (escolaBloqueada(id) && !podeVerBloqueado) {
-      setBloqueioAviso(`O Mestre selou a escola ${subcategory.name}.`);
-      return;
-    }
-    setBloqueioAviso(null);
-    setSchoolId(subcategory.id);
-    setBranch(subcategory.subtitle);
-    setVolumeId('');
-    setFolioPage(1);
-    setView('tree');
-  };
-
-  const chooseVolume = (id: string) => {
-    const volume = grimorioVolumes.find((item) => item.id === id);
-    const bloqueado = volumeBloqueado(id) || escolaBloqueada(school.id);
-    if (bloqueado && !podeVerBloqueado) {
-      setBloqueioAviso(`O Mestre selou o tomo ${volume?.title ?? id} ou sua escola.`);
-      return;
-    }
-    setBloqueioAviso(null);
-    setVolumeId(id);
-    setFolioPage(1);
-    setView('book');
-  };
-
-  const goBack = () => {
-    if (view === 'book') setView('tree');
-    else if (view === 'tree') {
-      if (grimorioElementos.some((item) => item.id === schoolId)) {
-        setSchoolId('elementar');
-        setBranch('');
-        setVolumeId('');
-        setView('element-tree');
-      } else if (grimorioMentalizacao.some((item) => item.id === schoolId)) {
-        setSchoolId('mentalizacao');
-        setBranch('');
-        setVolumeId('');
-        setView('mental-tree');
-      } else {
-        setView('schools');
-      }
-    } else if (view === 'element-tree' || view === 'mental-tree') setView('schools');
-  };
-
-  const toggleLearned = (spellId: string) => {
-    const learned = !learnedIds.includes(spellId);
-    setLearnedIds((current) => learned ? [...current, spellId] : current.filter((id) => id !== spellId));
-    void setLearnedSpell(personagemId, spellId, learned).catch(async (error) => {
-      console.error('Erro ao atualizar magia aprendida no Grimório', error);
-      try {
-        setLearnedIds(await withTimeout(getLearnedSpellIds(personagemId)));
-      } catch (reloadError) {
-        console.error('Erro ao recarregar magias aprendidas do Grimório', reloadError);
-      }
-    });
-  };
-
-  const openEdit = (spell: GrimorioSpell) => {
-    if (!canManageCatalog) return;
-    const spellVolume = grimorioVolumes.find((volume) => volume.id === spell.volumeId);
-    const spellElement = grimorioElementos.find((item) => item.id === spell.schoolId);
-    const spellMentalizacaoSubcategory = grimorioMentalizacao.find((item) => item.id === spell.schoolId);
-    const hasCustomBookVolume = Object.prototype.hasOwnProperty.call(spell, 'bookVolume');
-    const bookVolume = hasCustomBookVolume ? (spell.bookVolume ?? '') : (spellVolume?.number === 'I' ? 1 : spellVolume?.number === 'II' ? 2 : spellVolume?.number === 'III' ? 3 : '');
-    const formSchoolId = spellMentalizacaoSubcategory ? 'mentalizacao' : spellElement ? 'elementar' : spell.schoolId;
-    const formSubcategory = spell.subcategory ?? spellMentalizacaoSubcategory?.name ?? spellElement?.name ?? '';
-    setSelectedSpell(null);
-    setEditingSpell(spell);
-    setNewSpellForm({
-      name: spell.name,
-      level: spell.level,
-      description: spell.description,
-      difficulty: spell.difficulty,
-      damage: spell.damage,
-      duration: spell.duration,
-      range: spell.range,
-      magicalEffects: spell.magicalEffects,
-      consumption: spell.consumption,
-      type: spell.type,
-      channeling: spell.channeling,
-      condition: spell.condition,
-      schoolId: formSchoolId || '',
-      subcategory: formSubcategory,
-      image: spell.image ?? '',
-      bookVolume,
-    });
-    setIsCreateOpen(true);
-  };
-
-  const toggleHidden = (spellId: string) => {
-    if (!canManageVisibility) return;
-    void executarMutacaoGrimorio(() => alternarOculta(spellId, !hiddenSpellIds.includes(spellId)));
-  };
-
-  const deleteSpell = (spell: GrimorioSpell) => {
-    if (!canManageCatalog || !window.confirm(`Excluir a magia "${spell.name || '-'}"? Esta ação não pode ser desfeita.`)) return;
-    void executarMutacaoGrimorio(() => excluirMagia(spell.id));
-    setSelectedSpell((current) => current?.id === spell.id ? null : current);
-  };
-
-  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setErroUploadImagem('Selecione um arquivo de imagem válido.');
-      return;
-    }
-
-    setErroUploadImagem(null);
-    setEnviandoImagem(true);
-    try {
-      const url = await enviarImagem(file, 'grimorio', { maxWidth: 600, maxHeight: 600, quality: 0.82 });
-      setNewSpellForm((current) => ({ ...current, image: url }));
-    } catch (error) {
-      setErroUploadImagem(error instanceof Error ? error.message : 'Não foi possível enviar a imagem.');
-    } finally {
-      setEnviandoImagem(false);
-    }
-  };
-
-  const handleSpellSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (enviandoImagem) return;
-    const destinationSchool = resolveDestinationSchool(newSpellForm.schoolId, newSpellForm.subcategory) ?? formSchool ?? school;
-    const destinationVolumes = getSchoolVolumes(destinationSchool.id);
-    const destinationVolume = newSpellForm.bookVolume
-      ? destinationVolumes[newSpellForm.bookVolume - 1]
-      : destinationVolumes.find((volume) => volume.id === selectedVolume.id) ?? destinationVolumes[0];
-
-    if (editingSpell) {
-      if (!canManageCatalog) return;
-      const spell = editingSpell;
-      const editedSpell: GrimorioSpell = {
-        ...spell,
-        schoolId: destinationSchool.id,
-        volumeId: destinationVolume.id,
-        name: newSpellForm.name.trim(),
-        level: newSpellForm.level,
-        description: newSpellForm.description,
-        difficulty: newSpellForm.difficulty,
-        damage: newSpellForm.damage,
-        duration: newSpellForm.duration,
-        range: newSpellForm.range,
-        magicalEffects: newSpellForm.magicalEffects,
-        consumption: newSpellForm.consumption,
-        type: newSpellForm.type,
-        channeling: newSpellForm.channeling,
-        condition: newSpellForm.condition,
-        subcategory: newSpellForm.subcategory || undefined,
-        image: newSpellForm.image || spell.image || undefined,
-        bookVolume: newSpellForm.bookVolume || undefined,
-      };
-      void executarMutacaoGrimorio(() => atualizarMagia(editedSpell));
-      setEditingSpell(null);
-      setNewSpellForm(initialNewSpellForm);
-      setIsCreateOpen(false);
-      setSchoolId(destinationSchool.id);
-      setBranch(newSpellForm.subcategory);
-      setVolumeId(destinationVolume.id);
-      setFolioPage(1);
-      setView('book');
-      return;
-    }
-
-    if (!canManageCatalog) return;
-    const id = `custom-spell-${Date.now()}`;
-    const newSpell: GrimorioSpell = {
-      id,
-      schoolId: destinationSchool.id,
-      volumeId: destinationVolume.id,
-      name: newSpellForm.name.trim(),
-      level: newSpellForm.level,
-      description: newSpellForm.description,
-      difficulty: newSpellForm.difficulty,
-      damage: newSpellForm.damage,
-      duration: newSpellForm.duration,
-      range: newSpellForm.range,
-      magicalEffects: newSpellForm.magicalEffects,
-      consumption: newSpellForm.consumption,
-      type: newSpellForm.type,
-      channeling: newSpellForm.channeling,
-      condition: newSpellForm.condition,
-      visual: destinationSchool.id === 'elementar' ? 'fire' : 'earth',
-      subcategory: newSpellForm.subcategory || undefined,
-      image: newSpellForm.image || undefined,
-      bookVolume: newSpellForm.bookVolume || undefined,
-    };
-    void executarMutacaoGrimorio(() => criarMagia(newSpell));
-    setNewSpellForm(initialNewSpellForm);
-    setIsCreateOpen(false);
-    setSchoolId(destinationSchool.id);
-    setBranch(newSpellForm.subcategory);
-    setVolumeId(destinationVolume.id);
-    setFolioPage(1);
-    setView('book');
-  };
-
-  const headerAction = (
-    <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-      {tenantId && <button
-        id="btn-abrir-modal-personagem-grimorio"
-        type="button"
-        onClick={() => setIsModalCompradorOpen(true)}
-        aria-label="Selecionar personagem para aprender magias"
-        title="Clique para selecionar o personagem das magias aprendidas"
-        className="flex h-10 w-full min-w-0 items-center justify-between gap-1.5 rounded-xs border border-[#5a4225] bg-[#120f0d]/95 px-2.5 text-left shadow-[0_2px_8px_rgba(0,0,0,0.8)] transition-all hover:border-[#c5a059] hover:bg-[#1c140d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c5a059] sm:w-auto sm:gap-2.5 sm:px-3"
-      >
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-          {selectedPersonagem?.imagem_url ? (
-            <img
-              src={selectedPersonagem.imagem_url}
-              alt={selectedPersonagem.nome}
-              className="h-6 w-6 shrink-0 rounded-xs border border-[#8c6b41] object-cover sm:h-7 sm:w-7"
-            />
-          ) : (
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-xs border border-[#5a4225] bg-[#24170d] text-[#c5a059] sm:h-7 sm:w-7">
-              <User size={13} />
-            </div>
-          )}
-          <div className="min-w-0">
-            <span className="mb-0.5 block font-cinzel text-[7.5px] uppercase leading-none tracking-wider text-[#8c6b41] sm:text-[8px]">Personagem</span>
-            <span className="block truncate font-cinzel text-[11px] font-bold leading-tight text-[#f2dfa8] sm:text-xs">
-              {selectedPersonagem?.nome ?? (isLoadingPersonagens ? 'Carregando…' : 'Selecionar')}
-            </span>
-          </div>
-        </div>
-        <Search size={13} className="ml-0.5 shrink-0 text-[#8c6b41]" />
-      </button>}
-      {tenantId && view !== 'schools' && <span className="text-[10px] uppercase tracking-widest text-[#8c6b41]">{ACTIVE_CHARACTER_LABEL}</span>}
-      {canManageCatalog && <GothicButton
-        type="button"
-        onClick={() => setIsCreateOpen(true)}
-        variant="primary"
-        size="xs"
-        width="100%"
-        height={30}
-        className="max-[639px]:!h-11 sm:!w-[125px]"
-        icon={<Plus size={14} />}
-      >
-        Criar magia
-      </GothicButton>}
-    </div>
-  );
+  const magiaSelecionada = detalhes.selectedSpell;
 
   return (
       <PageShell id="page-grimorio" variant="padrao"
         title={<h2 className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-[#a88d61]" /> Grimório de Magias</h2>}
         subtitle="Escolas arcanas, níveis de conjuração e rituais do sistema"
-        headerRight={headerAction}
+        headerRight={
+          <CabecalhoDoGrimorio
+            tenantId={tenantId}
+            selectedPersonagem={personagem.selectedPersonagem}
+            isLoadingPersonagens={personagem.isLoadingPersonagens}
+            exibirRotuloPersonagemAtivo={navegacao.view !== 'schools'}
+            canManageCatalog={canManageCatalog}
+            onAbrirSelecaoPersonagem={personagem.abrirSelecao}
+            onCriarMagia={formulario.abrirCriacao}
+          />
+        }
       >
         <div className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="grimorio-search" className="block text-[10px] uppercase tracking-[0.22em] text-[#8c6b41]">Buscar magia em todos os volumes</label>
-            <div className="flex items-center gap-2 border border-[#5a4225] bg-[#120d09] px-3 focus-within:border-[#c6a15b] focus-within:ring-1 focus-within:ring-[#c6a15b]">
-              <Search size={16} className="shrink-0 text-[#8c6b41]" aria-hidden="true" />
-              <input
-                id="grimorio-search"
-                type="search"
-                value={busca}
-                onChange={(event) => { setBusca(event.target.value); setFolioPage(1); }}
-                placeholder="Nome, efeito, escola…"
-                className="h-11 min-w-0 flex-1 bg-transparent text-sm text-[#e6ddc5] outline-none placeholder:text-[#74634d] focus-visible:outline-none"
-              />
-              {busca && <button
-                type="button"
-                onClick={() => { setBusca(''); setFolioPage(1); }}
-                aria-label="Limpar busca de magias"
-                className="flex h-8 w-8 shrink-0 items-center justify-center text-[#a88d61] transition hover:text-[#f1d994] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"
-              ><X size={16} /></button>}
-            </div>
-          </div>
+          <BarraDeBuscaDeMagias
+            busca={busca.busca}
+            onBuscaChange={busca.atualizarBusca}
+            onLimpar={busca.limparBusca}
+          />
           {canManageCatalog && imagensPesadas.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border border-[#5a4225] bg-[#1c140d] px-4 py-3">
-              <p className="text-xs text-[#c4b9a3]">
-                {imagensPesadas.length} imagens do grimório ainda estão no tamanho original ({(bytesPesados / 1048576).toFixed(1)} MB) e deixam a leitura do livro lenta.
-                {processando && <span className="ml-2 uppercase tracking-widest text-[#c6a15b]">Otimizando… {processadas}/{imagensPesadas.length}</span>}
-                {erroOtimizacao && <span className="ml-2 text-[#d98f6a]">{erroOtimizacao}</span>}
-              </p>
-              <GothicButton type="button" variant="secondary" size="xs" width={170} disabled={processando} onClick={() => void otimizarImagens()}>
-                {processando ? 'Otimizando…' : 'Otimizar imagens'}
-              </GothicButton>
-            </div>
+            <AvisoDeImagensPesadas
+              total={imagensPesadas.length}
+              bytesPesados={bytesPesados}
+              processando={processando}
+              processadas={processadas}
+              erroOtimizacao={erroOtimizacao}
+              onOtimizar={() => void otimizarImagens()}
+            />
           )}
-          {erroGrimorio && (
+          {magias.erroGrimorio && (
             <ErrorState
               title="Falha ao carregar o grimório"
-              description={erroGrimorio}
+              description={magias.erroGrimorio}
               className="py-6"
               onRetry={() => {
-                reloadPersonagens();
-                setErroMutacaoGrimorio(null);
-                void grimorioQuery.refetch();
+                personagem.reloadPersonagens();
+                magias.limparErroMutacao();
+                void magias.recarregarGrimorio();
               }}
             />
           )}
-          {!isLoadingGrimorio && !erroGrimorio && tenantId && !isLoadingPersonagens && erroPersonagens && (
+          {!magias.isLoadingGrimorio && !magias.erroGrimorio && tenantId && !personagem.isLoadingPersonagens && personagem.erroPersonagens && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#c4b9a3]" role="status">
-              <span>Não foi possível carregar a lista de personagens: {erroPersonagens}</span>
-              <button type="button" onClick={reloadPersonagens} className="text-[#d6b56a] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">
+              <span>Não foi possível carregar a lista de personagens: {personagem.erroPersonagens}</span>
+              <button type="button" onClick={personagem.reloadPersonagens} className="text-[#d6b56a] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">
                 Tentar novamente
               </button>
             </div>
           )}
-          {!isLoadingGrimorio && !erroGrimorio && tenantId && !isLoadingPersonagens && !erroPersonagens && listaPersonagens.length === 0 && (
+          {!magias.isLoadingGrimorio && !magias.erroGrimorio && tenantId && !personagem.isLoadingPersonagens && !personagem.erroPersonagens && personagem.listaPersonagens.length === 0 && (
             <p className="text-xs text-[#8c6b41]" role="status">
               Nenhum personagem encontrado. Crie um personagem na aba Personagens para vincular as magias aprendidas.
             </p>
           )}
-          {bloqueioAviso && <p role="status" className="border-l-2 border-[#a88d61] bg-[#21170e] px-3 py-2 text-xs text-[#c4b9a3]">{bloqueioAviso}</p>}
+          {navegacao.bloqueioAviso && <p role="status" className="border-l-2 border-[#a88d61] bg-[#21170e] px-3 py-2 text-xs text-[#c4b9a3]">{navegacao.bloqueioAviso}</p>}
 
-          {view !== 'schools' && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3a2c1d] pb-4">
-              <button type="button" onClick={goBack} className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#b49768] transition hover:text-[#f0d68b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"><ArrowLeft size={16} /> Voltar</button>
-              <p className="font-cinzel text-xs uppercase tracking-widest text-[#e6ddc5]">{school.name}{branch ? ` · ${branch}` : ''}{view === 'book' ? ` · ${selectedVolume.title}` : view === 'element-tree' ? ' · Seleção de elementos' : view === 'mental-tree' ? ' · Seleção de subcategorias' : ' · Árvore de volumes'}</p>
-            </div>
+          {navegacao.view !== 'schools' && (
+            <BarraDeNavegacao
+              schoolName={navegacao.school.name}
+              branch={navegacao.branch}
+              view={navegacao.view}
+              volumeTitle={navegacao.selectedVolume.title}
+              onVoltar={navegacao.goBack}
+            />
           )}
 
-          {!buscandoMagias && view === 'schools' && <SchoolsView onChoose={chooseSchool} bloqueadas={escolasBloqueadas} podeAbrirBloqueada={podeVerBloqueado} onCreate={canManageCatalog ? () => setIsCreateOpen(true) : undefined} />}
-          {!buscandoMagias && view === 'element-tree' && <ElementTreeView onChooseElement={chooseElement} bloqueadas={grimorioElementos.filter((item) => escolaBloqueada(item.id)).map((item) => item.id)} podeAbrirBloqueada={podeVerBloqueado} />}
-          {!buscandoMagias && view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={chooseMentalizacaoSubcategory} bloqueadas={grimorioMentalizacao.filter((item) => escolaBloqueada(item.id)).map((item) => item.id)} podeAbrirBloqueada={podeVerBloqueado} />}
-          {!buscandoMagias && view === 'tree' && <TreeView school={school} volumes={volumes} escolaEstaBloqueada={escolaBloqueada(school.id)} escolasBloqueadas={escolasBloqueadas} volumesBloqueados={volumesBloqueados} podeAbrirBloqueada={podeVerBloqueado} onChooseVolume={chooseVolume} />}
-          {!buscandoMagias && view === 'book' && !podeVerBloqueado && volumeBloqueado(selectedVolume.id) ? (
+          {!busca.buscandoMagias && navegacao.view === 'schools' && <SchoolsView onChoose={navegacao.chooseSchool} bloqueadas={bloqueios.escolasBloqueadas} podeAbrirBloqueada={podeVerBloqueado} onCreate={canManageCatalog ? formulario.abrirCriacao : undefined} />}
+          {!busca.buscandoMagias && navegacao.view === 'element-tree' && <ElementTreeView onChooseElement={navegacao.chooseElement} bloqueadas={navegacao.elementosBloqueados} podeAbrirBloqueada={podeVerBloqueado} />}
+          {!busca.buscandoMagias && navegacao.view === 'mental-tree' && <MentalizacaoTreeView onChooseSubcategory={navegacao.chooseMentalizacaoSubcategory} bloqueadas={navegacao.mentalizacoesBloqueadas} podeAbrirBloqueada={podeVerBloqueado} />}
+          {!busca.buscandoMagias && navegacao.view === 'tree' && <TreeView school={navegacao.school} volumes={navegacao.volumes} escolaEstaBloqueada={bloqueios.escolaBloqueada(navegacao.school.id)} escolasBloqueadas={bloqueios.escolasBloqueadas} volumesBloqueados={bloqueios.volumesBloqueados} podeAbrirBloqueada={podeVerBloqueado} onChooseVolume={navegacao.chooseVolume} />}
+          {!busca.buscandoMagias && navegacao.view === 'book' && !podeVerBloqueado && bloqueios.volumeBloqueado(navegacao.selectedVolume.id) ? (
             <EmptyState
               variant="plano"
               icon={<Lock className="h-8 w-8" aria-hidden="true" />}
               title="Volume selado pelo Mestre"
               description="O conteúdo deste tomo está selado para esta mesa."
             />
-          ) : !buscandoMagias && view === 'book' && (isLoadingGrimorio ? (
-            <div className="space-y-5">
-              <span role="status" aria-live="polite" className="sr-only">Consultando os arquivos arcanos…</span>
-              <FolioSkeleton />
-            </div>
-          ) : (
+          ) : !busca.buscandoMagias && navegacao.view === 'book' && (
             <BookView
-              school={school}
-              volume={selectedVolume}
-              spells={bookSpells}
-              allBookSpells={totalMagias}
-              page={folioPage}
-              totalPages={totalFolios}
-              onPageChange={setFolioPage}
-              learnedIds={learnedIds}
-              canManageCatalog={canManageCatalog}
-              canManageVisibility={canManageVisibility}
-              hiddenSpellIds={hiddenSpellIds}
-              onOpenSpell={setSelectedSpell}
-              onToggleLearned={toggleLearned}
-              onEdit={openEdit}
-              onToggleHidden={toggleHidden}
-              onDelete={deleteSpell}
+              carregando={magias.isLoadingGrimorio}
+              school={navegacao.school}
+              volume={navegacao.selectedVolume}
+              spells={magias.bookSpells}
+              allBookSpells={magias.totalMagias}
+              page={navegacao.folioPage}
+              totalPages={magias.totalFolios}
+              onPageChange={navegacao.irParaFolio}
+              acoes={acoesDaMagia}
             />
-          ))}
-          {buscandoMagias && (isLoadingGrimorio ? (
-            <div className="space-y-4">
-              <span role="status" aria-live="polite" className="sr-only">Consultando os arquivos arcanos…</span>
-              <FolioListaSkeleton />
-            </div>
-          ) : (
-            <section aria-labelledby="grimorio-search-results" className="space-y-4">
-              <p id="grimorio-search-results" className="border-b border-[#3a2c1d] pb-3 text-xs text-[#a88d61]" role="status">
-                Resultados da busca em todos os volumes para <strong className="text-[#e6ddc5]">“{termoBusca}”</strong> · {totalMagias} {totalMagias === 1 ? 'magia' : 'magias'}
-              </p>
-              {totalMagias === 0 ? (
-                <EmptyState
-                  variant="plano"
-                  title="Nenhuma magia encontrada"
-                  description="Não há fórmulas que correspondam a esta busca."
-                  action={<button type="button" onClick={() => { setBusca(''); setFolioPage(1); }} className="text-xs uppercase tracking-widest text-[#d6b56a] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]">Limpar busca</button>}
-                />
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    {bookSpells.map((spell) => <SpellCard
-                      key={spell.id}
-                      spell={spell}
-                      learned={learnedIds.includes(spell.id)}
-                      hidden={hiddenSpellIds.includes(spell.id)}
-                      canManage={canManageCatalog}
-                      canToggleHidden={canManageVisibility}
-                      onOpen={() => setSelectedSpell(spell)}
-                      onToggleLearned={() => toggleLearned(spell.id)}
-                      onEdit={() => openEdit(spell)}
-                      onToggleHidden={() => toggleHidden(spell.id)}
-                      onDelete={() => deleteSpell(spell)}
-                    />)}
-                  </div>
-                  {totalFolios > 1 && <nav aria-label="Navegação entre páginas dos resultados da busca" className="flex flex-wrap items-center justify-center gap-3">
-                    <GothicButton type="button" variant="secondary" size="xs" width={150} disabled={folioPage <= 1} onClick={() => setFolioPage(folioPage - 1)}>Página anterior</GothicButton>
-                    <span className="font-cinzel text-[10px] uppercase tracking-widest text-[#c6a15b]">Página {folioPage} de {totalFolios}</span>
-                    <GothicButton type="button" variant="secondary" size="xs" width={150} disabled={folioPage >= totalFolios} onClick={() => setFolioPage(folioPage + 1)}>Próxima página</GothicButton>
-                  </nav>}
-                </>
-              )}
-            </section>
-          ))}
+          )}
+          {busca.buscandoMagias && (
+            <ResultadosDaBusca
+              carregando={magias.isLoadingGrimorio}
+              termoBusca={busca.termoBusca}
+              totalMagias={magias.totalMagias}
+              spells={magias.bookSpells}
+              folioPage={navegacao.folioPage}
+              totalFolios={magias.totalFolios}
+              onPageChange={navegacao.irParaFolio}
+              onLimparBusca={busca.limparBusca}
+              acoes={acoesDaMagia}
+            />
+          )}
         </div>
 
-      {selectedSpell && (canManageVisibility || !hiddenSpellIds.includes(selectedSpell.id)) && (
+      {magiaSelecionada && (canManageVisibility || !magias.hiddenSpellIds.includes(magiaSelecionada.id)) && (
         <SharedSpellDetailsModal
-          spell={selectedSpell}
-          learned={learnedIds.includes(selectedSpell.id)}
+          spell={magiaSelecionada}
+          learned={aprendidas.learnedIds.includes(magiaSelecionada.id)}
           canManage={canManageCatalog}
           canToggleHidden={canManageVisibility}
-          hidden={hiddenSpellIds.includes(selectedSpell.id)}
-          onClose={() => setSelectedSpell(null)}
-          onToggleLearned={() => toggleLearned(selectedSpell.id)}
-          onEdit={() => openEdit(selectedSpell)}
-          onToggleHidden={() => toggleHidden(selectedSpell.id)}
-          onDelete={() => deleteSpell(selectedSpell)}
+          hidden={magias.hiddenSpellIds.includes(magiaSelecionada.id)}
+          onClose={detalhes.fecharDetalhes}
+          onToggleLearned={() => aprendidas.toggleLearned(magiaSelecionada.id)}
+          onEdit={() => formulario.abrirEdicao(magiaSelecionada)}
+          onToggleHidden={() => magias.toggleHidden(magiaSelecionada.id)}
+          onDelete={() => magias.deleteSpell(magiaSelecionada)}
         />
       )}
 
-      <Modal isOpen={isCreateOpen} onClose={() => { setIsCreateOpen(false); setEditingSpell(null); setNewSpellForm(initialNewSpellForm); }} title={isEditing ? 'Editar magia' : 'Inscrever nova magia'} subtitle={isEditing ? 'Alterar registro existente' : 'Adicionar ao volume selecionado'} maxWidth="max-w-[560px]">
-        <form onSubmit={handleSpellSubmit} className="space-y-5">
-          <p className="border-l-2 border-[#a88d61] bg-[#21170e] px-3 py-2 text-xs text-[#c4b9a3]">{isEditing ? 'As alterações serão salvas sobre esta fórmula em' : 'A nova fórmula será inserida em'} <strong className="text-[#e2c981]">{formDestinationSchool.name} · {formVolume?.title ?? selectedVolume.title}</strong>. Os dados originais permanecem intactos.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label htmlFor="new-spell-name" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Nome da magia<input id="new-spell-name" value={newSpellForm.name} onChange={(event) => setNewSpellForm((current) => ({ ...current, name: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" placeholder="Ex.: Lâmina do crepúsculo" /></label>
-            <label htmlFor="new-spell-level" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Nível<select id="new-spell-level" value={newSpellForm.level} onChange={(event) => setNewSpellForm((current) => ({ ...current, level: event.target.value as GrimorioLevel | '' }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]"><option value="">-</option>{GRIMORIO_LEVELS.map((level) => <option key={level}>{level}</option>)}</select></label>
-          </div>
-          <label htmlFor="new-spell-description" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Descrição<textarea id="new-spell-description" value={newSpellForm.description} onChange={(event) => setNewSpellForm((current) => ({ ...current, description: event.target.value }))} className="mt-1 min-h-20 w-full border border-[#5a4225] bg-[#120d09] px-3 py-2 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label htmlFor="new-spell-difficulty" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Dificuldade<input id="new-spell-difficulty" value={newSpellForm.difficulty} onChange={(event) => setNewSpellForm((current) => ({ ...current, difficulty: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-damage" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Dano<input id="new-spell-damage" value={newSpellForm.damage} onChange={(event) => setNewSpellForm((current) => ({ ...current, damage: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-duration" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Duração<input id="new-spell-duration" value={newSpellForm.duration} onChange={(event) => setNewSpellForm((current) => ({ ...current, duration: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-range" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Alcance<input id="new-spell-range" value={newSpellForm.range} onChange={(event) => setNewSpellForm((current) => ({ ...current, range: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-consumption" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Consumo<input id="new-spell-consumption" value={newSpellForm.consumption} onChange={(event) => setNewSpellForm((current) => ({ ...current, consumption: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-type" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Tipo<input id="new-spell-type" value={newSpellForm.type} onChange={(event) => setNewSpellForm((current) => ({ ...current, type: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-channeling" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Canalização<input id="new-spell-channeling" value={newSpellForm.channeling} onChange={(event) => setNewSpellForm((current) => ({ ...current, channeling: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-            <label htmlFor="new-spell-condition" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Condição<input id="new-spell-condition" value={newSpellForm.condition} onChange={(event) => setNewSpellForm((current) => ({ ...current, condition: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-          </div>
-          <label htmlFor="new-spell-effects" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Efeitos mágicos<textarea id="new-spell-effects" value={newSpellForm.magicalEffects} onChange={(event) => setNewSpellForm((current) => ({ ...current, magicalEffects: event.target.value }))} className="mt-1 min-h-20 w-full border border-[#5a4225] bg-[#120d09] px-3 py-2 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /></label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label htmlFor="new-spell-school" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Escola<select id="new-spell-school" value={newSpellForm.schoolId} onChange={(event) => setNewSpellForm((current) => ({ ...current, schoolId: event.target.value, subcategory: '' }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]"><option value="">-</option>{grimorioFormSchools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-            {(formSchool?.id === 'elementar' || formSchool?.id === 'mentalizacao') && <label htmlFor="new-spell-subcategory" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Subcategoria<input id="new-spell-subcategory" list="new-spell-subcategory-options" type="text" value={newSpellForm.subcategory} onChange={(event) => setNewSpellForm((current) => ({ ...current, subcategory: event.target.value }))} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]" /><datalist id="new-spell-subcategory-options">{formSubcategoryCatalog.map((item) => <option key={item.id} value={item.name}>{item.subtitle}</option>)}</datalist></label>}
-            <label htmlFor="new-spell-book-volume" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Livro Vol<select id="new-spell-book-volume" value={newSpellForm.bookVolume} onChange={(event) => { const value = event.target.value; const bookVolume: BookVolume | '' = value === '1' ? 1 : value === '2' ? 2 : value === '3' ? 3 : ''; setNewSpellForm((current) => ({ ...current, bookVolume })); }} className="mt-1 h-10 w-full border border-[#5a4225] bg-[#120d09] px-3 text-sm normal-case tracking-normal text-[#e6ddc5] outline-none focus-visible:border-[#c6a15b] focus-visible:ring-1 focus-visible:ring-[#c6a15b]"><option value="">-</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
-            <label htmlFor="new-spell-image" className="block text-[10px] uppercase tracking-widest text-[#8c6b41]">Imagem<input id="new-spell-image" type="file" accept="image/*" disabled={enviandoImagem} onChange={handleImageChange} className="mt-1 block h-10 w-full border border-[#5a4225] bg-[#120d09] px-2 py-2 text-xs normal-case tracking-normal text-[#e6ddc5] file:mr-2 file:border-0 file:bg-[#5a4225] file:px-2 file:py-1 file:text-xs file:text-[#f1d994] disabled:opacity-60" />{enviandoImagem && <span className="mt-1 block normal-case tracking-normal text-[#d4af37]" role="status">Enviando imagem…</span>}</label>
-          </div>
-          {erroUploadImagem && <p className="border-l-2 border-[#b56a55] bg-[#2a120d] px-3 py-2 text-xs text-[#f0b09b]" role="alert">{erroUploadImagem}</p>}
-          <div className="flex justify-end gap-2 border-t border-[#3a2c1d] pt-4"><button type="button" onClick={() => { setIsCreateOpen(false); setEditingSpell(null); setNewSpellForm(initialNewSpellForm); }} className="flex items-center gap-1.5 border border-[#4a351f] px-4 py-2 text-xs uppercase tracking-widest text-[#a88d61] hover:text-[#e6ddc5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a]"><X size={14} /> Cancelar</button><button type="submit" disabled={enviandoImagem} className="flex items-center gap-1.5 border border-[#a88d61] bg-[#5a4225]/40 px-4 py-2 text-xs uppercase tracking-widest text-[#f1d994] hover:bg-[#765b36] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] disabled:cursor-not-allowed disabled:opacity-60"><WandSparkles size={14} /> {enviandoImagem ? 'Enviando imagem…' : isEditing ? 'Salvar alterações' : 'Inscrever magia'}</button></div>
-        </form>
-      </Modal>
+      <MagiaFormModal
+        isOpen={formulario.isCreateOpen}
+        isEditing={formulario.isEditing}
+        form={formulario.newSpellForm}
+        onFormChange={formulario.setNewSpellForm}
+        onSubmit={formulario.handleSpellSubmit}
+        onClose={formulario.fecharFormulario}
+        enviandoImagem={formulario.enviandoImagem}
+        erroUploadImagem={formulario.erroUploadImagem}
+        onImageChange={formulario.handleImageChange}
+        formSchool={formulario.formSchool}
+        formSubcategoryCatalog={formulario.formSubcategoryCatalog}
+        formDestinationSchool={formulario.formDestinationSchool}
+        formVolume={formulario.formVolume}
+        volumeTitle={navegacao.selectedVolume?.title ?? ''}
+      />
 
       <ModalSelecionarComprador
-        isOpen={isModalCompradorOpen}
-        onClose={() => setIsModalCompradorOpen(false)}
-        personagens={listaPersonagens}
-        personagemSelecionadoId={personagemId}
-        onSelecionar={selectCharacter}
+        isOpen={personagem.selecaoAberta}
+        onClose={personagem.fecharSelecao}
+        personagens={personagem.listaPersonagens}
+        personagemSelecionadoId={personagem.personagemId}
+        onSelecionar={personagem.selectCharacter}
       />
       </PageShell>
-  );
-};
-
-const SchoolsView = ({ onChoose, onCreate, bloqueadas, podeAbrirBloqueada }: { onChoose: (schoolId: string, branch?: string) => void; onCreate?: () => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => {
-  return (
-    <>
-      <section aria-labelledby="schools-heading" className="space-y-5 max-[639px]:space-y-7">
-    <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-3"><div><p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Círculo de conhecimento</p><h3 id="schools-heading" className="mt-1 font-cinzel text-lg uppercase tracking-wider text-[#e6ddc5]">Escolha uma escola arcana</h3></div><p className="max-w-none text-left text-xs italic text-[#8f806a] sm:max-w-xs sm:text-right">Cada círculo guarda três volumes de fórmulas e segredos.</p></div>
-    <div className="relative mx-auto flex aspect-square w-full max-w-[580px] items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(216,184,107,0.16),transparent_58%),#0c0907] shadow-[0_0_50px_rgba(0,0,0,0.8)] max-[639px]:my-2 max-[639px]:max-w-[360px]">
-      <div className="absolute inset-[6%] rounded-full border border-[#6b4f2d]/70" /><div className="absolute inset-[16%] rounded-full border border-[#8c6b41]/60" /><div className="absolute inset-[29%] rotate-45 border border-[#8c6b41]/40" /><div className="absolute inset-[29%] -rotate-45 border border-[#8c6b41]/40" /><div className="absolute left-1/2 top-[10%] h-[80%] w-px bg-[#6b4f2d]/40" /><div className="absolute left-[10%] top-1/2 h-px w-[80%] bg-[#6b4f2d]/40" />
-      <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 size-[42%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(216,184,107,0.14),transparent_68%)]" aria-hidden="true" />
-      <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <circle cx="50" cy="50" r="43" fill="none" stroke="#8c6b41" strokeOpacity="0.5" strokeWidth="0.35" strokeDasharray="0.7 21.81" />
-        {[{ x: 29, y: 29 }, { x: 71, y: 29 }, { x: 71, y: 71 }, { x: 29, y: 71 }, { x: 50, y: 29 }, { x: 71, y: 50 }, { x: 50, y: 71 }, { x: 29, y: 50 }].map((ponto) => <circle key={`escola-no-${ponto.x}-${ponto.y}`} cx={ponto.x} cy={ponto.y} r="0.7" fill="#d8b86b" fillOpacity="0.5" />)}
-      </svg>
-      <div className="relative z-10 flex h-32 w-32 flex-col items-center justify-center rounded-full border border-[#a88d61] bg-[#1a110a] text-center shadow-[0_0_25px_rgba(168,141,97,0.2)] max-[639px]:h-20 max-[639px]:w-20"><BrandMark variant="arvore" altura={30} decorativa className="mb-1" /><span className="font-cinzel text-[11px] uppercase tracking-widest text-[#e6ddc5] max-[639px]:text-[9px]">Círculo Menor</span></div>
-      {grimorioSchools.map((item, index) => {
-        const position = [{ top: '2%', left: '50%', transform: 'translateX(-50%)' }, { top: '19%', right: '3%' }, { top: '61%', right: '3%' }, { bottom: '2%', left: '50%', transform: 'translateX(-50%)' }, { top: '61%', left: '3%' }, { top: '19%', left: '3%' }, { top: '41%', left: '50%', transform: 'translate(-50%, -50%)' }][index];
-        const bloqueada = bloqueadas.includes(item.id);
-        return (
-          <button key={item.id} type="button" onClick={() => onChoose(item.id)} aria-disabled={bloqueada && !podeAbrirBloqueada} aria-label={`Escolher ${item.name}${bloqueada ? ' — Selado pelo Mestre' : ''}`} title={bloqueada ? 'Selado pelo Mestre' : item.description} style={{ ...position, borderColor: item.accent }} className={`absolute z-20 flex size-[105px] -translate-y-1/2 flex-col items-center justify-center rounded-full border bg-[#17100b] px-3 py-2 text-center shadow-lg transition hover:-translate-y-2 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] max-[639px]:size-[60px] max-[639px]:px-0.5 max-[639px]:leading-[1.05] max-[639px]:text-[7px] sm:size-[125px] ${index === 2 || index === 4 ? 'max-[639px]:!top-[73%]' : index === 6 ? 'max-[639px]:!top-[35%]' : ''}`}>
-            {bloqueada && <Lock className="absolute right-2 top-2 h-4 w-4 text-[#d6b56a] max-[639px]:right-1 max-[639px]:top-1 max-[639px]:h-3 max-[639px]:w-3" aria-hidden="true" />}
-            <span className="block break-words font-cinzel text-[10px] uppercase leading-tight tracking-wide text-[#eadfc8] max-[639px]:text-[7px]">{item.name}</span><span className="mt-1 block break-words text-[10px] italic leading-tight text-[#9d896b] max-[639px]:text-[7px]">{item.subtitle}</span>{item.id !== 'elementar' && item.branches && <span className="mt-1 block break-words text-[9px] leading-tight text-[#c6a15b] max-[639px]:text-[7px]">Fogo · Água · Ar · Terra</span>}
-          </button>
-        );
-      })}
-    </div>
-    {onCreate && <div className="flex justify-center border-t border-[#3a2c1d] pt-4"><button type="button" onClick={onCreate} className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#b49768] hover:text-[#f0d68b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d6b56a] max-[639px]:min-h-11 max-[639px]:px-3"><Plus size={15} /> Inscrever uma magia pessoal</button></div>}
-      </section>
-      <ExpandedCirclesView onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
-    </>
-  );
-};
-
-const RevealCircle = ({ children }: { children: React.ReactNode }) => {
-  const circleRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const element = circleRef.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.unobserve(element);
-      }
-    }, { threshold: 0.14 });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  return <div ref={circleRef} className={`transition duration-1000 ease-out motion-reduce:transition-none ${isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-10 scale-95 opacity-0'}`}>{children}</div>;
-};
-
-/** Figura geométrica de fundo que amarra as escolas do círculo. */
-type CirculoFigura = 'pentagrama' | 'octagrama' | 'hexagrama';
-
-const pontosDoCaminho = (pontos: { x: number; y: number }[]) => pontos.map((ponto) => `${ponto.x.toFixed(2)},${ponto.y.toFixed(2)}`).join(' ');
-
-/** Traça a figura sobre os vértices onde as escolas se assentam, para que ela una os círculos em vez de flutuar ao fundo. */
-const figuraGeometrica = (figura: CirculoFigura, positions: { x: number; y: number }[]): string[] => {
-  const anel = pontosDoCaminho(positions);
-  const pelosIndices = (indices: number[]) => pontosDoCaminho(indices.map((indice) => positions[indice]));
-
-  if (figura === 'pentagrama' && positions.length === 5) return [anel, pelosIndices([0, 2, 4, 1, 3])];
-  if (figura === 'hexagrama' && positions.length === 6) return [anel, pelosIndices([0, 2, 4]), pelosIndices([1, 3, 5])];
-  if (figura === 'octagrama' && positions.length === 4) {
-    const girado = positions.map((_, indice) => {
-      const angulo = -Math.PI / 4 + (indice * Math.PI) / 2;
-      return { x: 50 + Math.cos(angulo) * 40, y: 50 + Math.sin(angulo) * 40 };
-    });
-    return [anel, pontosDoCaminho(girado)];
-  }
-  return [anel];
-};
-
-/** Pontos médios entre escolas: onde a figura cruza o vazio, para os nós do diagrama. */
-const pontosMedios = (positions: { x: number; y: number }[]) =>
-  positions.map((ponto, indice) => {
-    const proximo = positions[(indice + 1) % positions.length];
-    return { x: (ponto.x + proximo.x) / 2, y: (ponto.y + proximo.y) / 2 };
-  });
-
-interface ExpandedCircleSectionProps {
-  id: string;
-  title: string;
-  description: string;
-  schools: typeof grimorioAdditionalSchools;
-  circleClassName: string;
-  /** Figura geométrica de fundo que amarra as escolas do círculo. */
-  figura: CirculoFigura;
-  /** Brilho de fundo e borda próprios do círculo. */
-  tom: string;
-  onChoose: (schoolId: string) => void;
-  bloqueadas: string[];
-  podeAbrirBloqueada: boolean;
-}
-
-const ExpandedCircleSection = ({ id, title, description, schools, circleClassName, figura, tom, onChoose, bloqueadas, podeAbrirBloqueada }: ExpandedCircleSectionProps) => {
-  const positions = schools.map((_, index) => {
-    const angle = -Math.PI / 2 + (index * Math.PI * 2) / schools.length;
-    return { x: 50 + Math.cos(angle) * 40, y: 50 + Math.sin(angle) * 40 };
-  });
-
-  return (
-    <RevealCircle>
-      <section aria-labelledby={`${id}-heading`} className="relative pt-10">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-10 w-px -translate-x-1/2 bg-gradient-to-b from-[#8c6b41]/70 to-[#8c6b41]/20" aria-hidden="true" />
-      <div className="mb-5 text-center">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Círculo revelado</p>
-        <h3 id={`${id}-heading`} className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">{title}</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">{description}</p>
-      </div>
-      <div className={`relative mx-auto aspect-square w-full ${circleClassName} overflow-hidden rounded-full border ${tom} shadow-[inset_0_0_55px_rgba(0,0,0,0.75)]`} aria-label={`Círculo ${title} com ${schools.length} escolas`}>
-        <div className="pointer-events-none absolute inset-[5%] rounded-full border border-[#6b4f2d]/70" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-[17%] rounded-full border border-dashed border-[#8c6b41]/35" aria-hidden="true" />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 size-[56%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(216,184,107,0.16),transparent_68%)]" aria-hidden="true" />
-        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <circle cx="50" cy="50" r="43.6" fill="none" stroke="#8c6b41" strokeOpacity="0.55" strokeWidth="0.4" strokeDasharray="0.7 22.13" />
-          {figuraGeometrica(figura, positions).map((pontos, index) => <polygon key={`${id}-figura-${index}`} points={pontos} fill="none" stroke="#c6a15b" strokeOpacity="0.34" strokeWidth="0.3" />)}
-          {positions.map((position, index) => <line key={`${schools[index].id}-connection`} x1="50" y1="50" x2={position.x} y2={position.y} stroke="#9b7748" strokeWidth="0.34" strokeOpacity="0.72" />)}
-          {pontosMedios(positions).map((ponto, index) => <circle key={`${id}-no-${index}`} cx={ponto.x} cy={ponto.y} r="0.8" fill="#d8b86b" fillOpacity="0.55" />)}
-        </svg>
-        <div className="absolute left-1/2 top-1/2 z-10 flex size-[96px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-[#c6a15b]/70 bg-[#1a110a] px-2 text-center shadow-[0_0_30px_rgba(216,184,107,0.25)] sm:size-[120px] lg:size-[136px]" aria-hidden="true">
-          <BrandMark variant="arvore" altura={32} decorativa className="mb-1" />
-          <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[1.05] tracking-[0.15em] text-[#d8b86b] sm:text-[9px] lg:text-[10px]">{title}</span>
-        </div>
-        {schools.map((school, index) => {
-          const bloqueada = bloqueadas.includes(school.id);
-          return (
-          <button
-            key={school.id}
-            type="button"
-            onClick={() => onChoose(school.id)}
-            aria-disabled={bloqueada && !podeAbrirBloqueada}
-            aria-label={`Escolher ${school.name}${school.subtitle ? ` (${school.subtitle})` : ''}${bloqueada ? ' — Selado pelo Mestre' : ''}`}
-            title={bloqueada ? 'Selado pelo Mestre' : school.description}
-            style={{ left: `${positions[index].x}%`, top: `${positions[index].y}%`, borderColor: school.accent }}
-            className="absolute z-20 flex size-[68px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-2 text-center shadow-[0_0_18px_rgba(0,0,0,0.75)] transition hover:scale-105 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:size-[58px] max-[639px]:px-0.5 sm:size-[104px] lg:size-[118px]"
-          >
-            {bloqueada && <Lock className="absolute right-2 top-2 h-4 w-4 text-[#d6b56a] max-[639px]:right-1 max-[639px]:top-1 max-[639px]:h-3 max-[639px]:w-3" aria-hidden="true" />}
-            <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[0.95] tracking-wide text-[#eadfc8] max-[639px]:text-[6px] sm:text-[10px] lg:text-[11px]">{school.name}</span>
-            <span className="mt-1 block max-w-full break-words text-[7px] italic leading-[0.95] text-[#c6a15b] max-[639px]:text-[6px] sm:text-[9px] lg:text-[10px]">{school.subtitle}</span>
-          </button>
-          );
-        })}
-      </div>
-      </section>
-    </RevealCircle>
-  );
-};
-
-const ExpandedCirclesView = ({ onChoose, bloqueadas, podeAbrirBloqueada }: { onChoose: (schoolId: string, branch?: string) => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => (
-  <div className="relative space-y-10 pt-2">
-    <div className="pointer-events-none absolute bottom-12 left-1/2 top-12 z-0 w-px -translate-x-1/2 bg-gradient-to-b from-[#8c6b41]/55 via-[#8c6b41]/25 to-[#8c6b41]/55" aria-hidden="true" />
-    <ExpandedCircleSection id="circulo-maior" title="Círculo Maior" description="Tradições vastas para aqueles que já atravessaram o primeiro limiar." schools={grimorioMaiorSchools} circleClassName="max-w-[680px] max-[639px]:max-w-[360px]" figura="pentagrama" tom="border-[#4d3822] bg-[radial-gradient(circle_at_center,rgba(216,184,107,0.22),transparent_58%),#0e0a07]" onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
-    <ExpandedCircleSection id="circulo-exoterico" title="Círculo Exotérico" description="Artes veladas que sondam a mente, os sonhos e os sinais do mundo." schools={grimorioExotericoSchools} circleClassName="max-w-[790px] max-[639px]:max-w-[360px]" figura="octagrama" tom="border-[#43394f] bg-[radial-gradient(circle_at_center,rgba(154,127,157,0.22),transparent_58%),#0e0a07]" onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
-    <ExpandedCircleSection id="circulo-cosmico" title="Círculo Cósmico" description="Forças primordiais que regem o espaço, a matéria, a luz e o tempo." schools={grimorioCosmicoSchools} circleClassName="max-w-[900px] max-[639px]:max-w-[360px]" figura="hexagrama" tom="border-[#394154] bg-[radial-gradient(circle_at_center,rgba(119,107,148,0.24),transparent_58%),#0e0a07]" onChoose={onChoose} bloqueadas={bloqueadas} podeAbrirBloqueada={podeAbrirBloqueada} />
-  </div>
-);
-
-const MentalizacaoTreeView = ({ onChooseSubcategory, bloqueadas, podeAbrirBloqueada }: { onChooseSubcategory: (id: string) => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => {
-  const positions = [
-    { top: '20%', left: '50%', transform: 'translate(-50%, -50%)' },
-    { top: '72%', left: '25%', transform: 'translate(-50%, -50%)' },
-    { top: '72%', left: '75%', transform: 'translate(-50%, -50%)' },
-  ];
-
-  return (
-    <section aria-labelledby="mental-tree-heading" className="space-y-6">
-      <div className="text-center">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Árvore da mentalização</p>
-        <h3 id="mental-tree-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">Escolha um caminho mental</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">Cada círculo guarda os três volumes de uma subcategoria.</p>
-      </div>
-      <div className="relative mx-auto aspect-square w-full max-w-[580px] overflow-hidden rounded-full border border-[#4d3822] bg-[radial-gradient(circle_at_center,rgba(72,91,133,0.25),transparent_58%),#0e0a07] shadow-[inset_0_0_45px_rgba(0,0,0,0.7)] max-[639px]:max-w-[360px]" aria-label="Círculo de subcategorias da Mentalização">
-        <div className="pointer-events-none absolute inset-[6%] rounded-full border border-[#6b4f2d]/70" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-[20%] rounded-full border border-dashed border-[#8c6b41]/35" aria-hidden="true" />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 size-[56%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(216,184,107,0.16),transparent_68%)]" aria-hidden="true" />
-        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <circle cx="50" cy="50" r="42" fill="none" stroke="#8c6b41" strokeOpacity="0.55" strokeWidth="0.4" strokeDasharray="0.7 21.29" />
-          <line x1="50" y1="20" x2="25" y2="72" stroke="#9b7748" strokeWidth="0.4" strokeOpacity="0.72" />
-          <line x1="50" y1="20" x2="75" y2="72" stroke="#9b7748" strokeWidth="0.4" strokeOpacity="0.72" />
-          <line x1="25" y1="72" x2="75" y2="72" stroke="#9b7748" strokeWidth="0.4" strokeOpacity="0.72" />
-        </svg>
-        <div className="absolute left-1/2 top-1/2 z-10 flex size-[92px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-[#c6a15b]/70 bg-[#1a110a] px-2 text-center shadow-[0_0_30px_rgba(216,184,107,0.25)] sm:size-[112px]" aria-hidden="true">
-          <BrandMark variant="arvore" altura={32} decorativa className="mb-1" />
-          <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[1.05] tracking-[0.15em] text-[#d8b86b] sm:text-[9px]">Mentalização</span>
-        </div>
-        {grimorioMentalizacao.map((item, index) => {
-          const bloqueada = bloqueadas.includes(item.id);
-          return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onChooseSubcategory(item.id)}
-            aria-disabled={bloqueada && !podeAbrirBloqueada}
-            aria-label={`Escolher ${item.name}${bloqueada ? ' — Selado pelo Mestre' : ''}`}
-            title={bloqueada ? 'Selado pelo Mestre' : item.description}
-            style={{ ...positions[index], borderColor: item.accent }}
-            className="absolute z-20 flex size-[112px] flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-2 text-center shadow-[0_0_18px_rgba(0,0,0,0.7)] transition hover:scale-105 hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:size-[76px] max-[639px]:px-1"
-          >
-            {bloqueada && <Lock className="absolute right-2 top-2 h-4 w-4 text-[#d6b56a] max-[639px]:right-1 max-[639px]:top-1 max-[639px]:h-3 max-[639px]:w-3" aria-hidden="true" />}
-            <span className="block break-words font-cinzel text-[10px] uppercase leading-tight tracking-wide text-[#eadfc8] max-[639px]:text-[8px]">{item.name}</span>
-            <span className="mt-1 block break-words text-[9px] italic leading-tight text-[#c6a15b] max-[639px]:text-[7px]">({item.subtitle})</span>
-          </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-};
-
-const ElementTreeView = ({ onChooseElement, bloqueadas, podeAbrirBloqueada }: { onChooseElement: (id: string) => void; bloqueadas: string[]; podeAbrirBloqueada: boolean }) => {
-  const elementNodes = [
-    { id: 'piromancia', x: 14, y: 28, kind: 'base' },
-    { id: 'hidromancia', x: 38, y: 28, kind: 'base' },
-    { id: 'geomancia', x: 62, y: 30, kind: 'base' },
-    { id: 'aeromancia', x: 86, y: 28, kind: 'base' },
-    { id: 'eletromancia', x: 14, y: 48, kind: 'branch' },
-    { id: 'criromancia', x: 32, y: 46, kind: 'branch' },
-    { id: 'magmancia', x: 50, y: 51, kind: 'branch' },
-    { id: 'arenomancia', x: 68, y: 47, kind: 'branch' },
-    { id: 'metalomancia', x: 86, y: 50, kind: 'branch' },
-    { id: 'dinamancia', x: 11, y: 69, kind: 'branch' },
-    { id: 'atmomancia', x: 31, y: 65, kind: 'branch' },
-    { id: 'fitocinese', x: 50, y: 71, kind: 'branch' },
-    { id: 'pneumamancia', x: 69, y: 67, kind: 'branch' },
-    { id: 'oximancia', x: 89, y: 70, kind: 'branch' },
-    { id: 'plasmamancia', x: 14, y: 89, kind: 'terminal' },
-    { id: 'nihilmancia', x: 31, y: 89, kind: 'terminal' },
-    { id: 'magnetomancia', x: 86, y: 88, kind: 'terminal' },
-    { id: 'eteromancia', x: 62, y: 86, kind: 'terminal' },
-  ] as const;
-  const connections = [
-    ['root', 'piromancia'], ['root', 'hidromancia'], ['root', 'geomancia'], ['root', 'aeromancia'],
-    ['piromancia', 'eletromancia'], ['piromancia', 'magmancia'], ['hidromancia', 'eletromancia'], ['hidromancia', 'criromancia'],
-    ['geomancia', 'magmancia'], ['geomancia', 'arenomancia'], ['geomancia', 'metalomancia'], ['aeromancia', 'arenomancia'],
-    ['aeromancia', 'pneumamancia'], ['eletromancia', 'dinamancia'], ['criromancia', 'atmomancia'], ['magmancia', 'dinamancia'],
-    ['arenomancia', 'fitocinese'], ['arenomancia', 'pneumamancia'], ['metalomancia', 'fitocinese'], ['metalomancia', 'magnetomancia'],
-    ['dinamancia', 'plasmamancia'], ['atmomancia', 'nihilmancia'], ['fitocinese', 'eteromancia'], ['pneumamancia', 'nihilmancia'],
-    ['pneumamancia', 'eteromancia'], ['nihilmancia', 'eteromancia'],
-  ] as const;
-  const root = { id: 'root', x: 50, y: 9 };
-  const getPosition = (id: string) => id === root.id ? root : elementNodes.find((node) => node.id === id)!;
-
-  return (
-    <section aria-labelledby="element-tree-heading" className="space-y-6">
-      <div className="text-center">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Árvore dos elementos</p>
-        <h3 id="element-tree-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">Escolha um caminho elemental</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">Cada círculo guarda os três volumes de um elemento.</p>
-      </div>
-      <div className="relative mx-auto aspect-[1.55] w-full max-w-5xl overflow-hidden rounded-sm border border-[#4d3822] bg-[radial-gradient(circle_at_center,rgba(176,112,58,0.24),transparent_58%),#0e0a07] shadow-[inset_0_0_45px_rgba(0,0,0,0.7)] max-[639px]:aspect-[0.78]" aria-label={`Rede de caminhos elementais com ${GRIMORIO_ELEMENT_TREE.flat().length} círculos`}>
-        <div className="pointer-events-none absolute inset-[3%] rounded-full border border-[#6b4f2d]/30" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-[12%] rounded-full border border-dashed border-[#8c6b41]/20" aria-hidden="true" />
-        <div className="pointer-events-none absolute left-1/2 top-[9%] z-0 size-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(216,184,107,0.2),transparent_70%)]" aria-hidden="true" />
-        <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <circle cx="50" cy="50" r="46" fill="none" stroke="#8c6b41" strokeOpacity="0.45" strokeWidth="0.35" strokeDasharray="0.7 23.4" />
-          {connections.map(([from, to]) => {
-            const start = getPosition(from);
-            const end = getPosition(to);
-            return <line key={`${from}-${to}`} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="#9b7748" strokeWidth="0.34" strokeOpacity="0.72" />;
-          })}
-          {elementNodes.map((node) => <circle key={`junction-${node.id}`} cx={node.x} cy={node.y} r="1.1" fill="#d0a85c" fillOpacity="0.72" />)}
-          <circle cx={root.x} cy={root.y} r="3.2" fill="#d8b86b" fillOpacity="0.15" stroke="#c6a15b" strokeOpacity="0.7" strokeWidth="0.35" />
-        </svg>
-        <div className="absolute left-1/2 top-[9%] z-10 flex size-[5.75rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 border-[#d8b86b] bg-[#1a110a] px-1 text-center shadow-[0_0_28px_rgba(216,184,107,0.3)] max-[639px]:size-16">
-          <BrandMark variant="arvore" altura={22} decorativa className="mb-0.5" />
-          <span className="font-cinzel text-[9px] uppercase leading-tight tracking-widest text-[#f1d994] max-[639px]:text-[8px]">Círculo Elementar</span>
-        </div>
-        {elementNodes.map((node) => {
-          const element = grimorioElementos.find((item) => item.id === node.id)!;
-          const sizeClass = node.kind === 'base' ? 'size-14 sm:size-[6.7rem]' : 'size-[2.875rem] sm:size-[6.4rem]';
-          const bloqueada = bloqueadas.includes(element.id);
-          return (
-            <button
-              key={element.id}
-              type="button"
-              onClick={() => onChooseElement(element.id)}
-              aria-disabled={bloqueada && !podeAbrirBloqueada}
-              aria-label={`Escolher ${element.name} (${element.subtitle})${bloqueada ? ' — Selado pelo Mestre' : ''}`}
-              title={bloqueada ? 'Selado pelo Mestre' : element.description}
-              style={{ borderColor: element.accent, left: `${node.x}%`, top: `${node.y}%` }}
-              className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex ${sizeClass} flex-col items-center justify-center rounded-full border-2 bg-[#17100b] px-1.5 text-center shadow-[0_0_18px_rgba(0,0,0,0.7)] transition hover:-translate-y-[calc(50%+0.25rem)] hover:bg-[#2a1d12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] focus-visible:outline-offset-2 max-[639px]:px-0.5`}
-            >
-              {bloqueada && <Lock className="absolute right-1 top-1 h-3 w-3 text-[#d6b56a]" aria-hidden="true" />}
-              <span className="block max-w-full break-words font-cinzel text-[8px] uppercase leading-[0.95] tracking-wide text-[#eadfc8] sm:text-[10px]">{element.name}</span>
-              <span className="mt-1 block max-w-full break-words text-[8px] italic leading-[0.95] text-[#c6a15b] sm:text-[10px]">({element.subtitle})</span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-};
-
-const TreeView = ({ school, volumes, onChooseVolume, escolaEstaBloqueada, escolasBloqueadas, volumesBloqueados, podeAbrirBloqueada }: { school: typeof grimorioAllSchools[number]; volumes: typeof grimorioVolumes; onChooseVolume: (id: string) => void; escolaEstaBloqueada: boolean; escolasBloqueadas: string[]; volumesBloqueados: string[]; podeAbrirBloqueada: boolean }) => (
-  <section aria-labelledby="tree-heading" className="space-y-6"><div className="text-center"><p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Árvore de volumes</p><h3 id="tree-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">Os tomos de {school.name}</h3><p className="mx-auto mt-2 max-w-xl text-sm italic text-[#9f9077]">Selecione um volume para abrir suas páginas e consultar as magias guardadas.</p></div><div className="relative mx-auto max-w-3xl py-5"><div className="absolute bottom-10 left-1/2 top-10 hidden w-px -translate-x-1/2 bg-[#6b4f2d] sm:block" /><div className="space-y-4">{volumes.map((volume, index) => {
-    const bloqueado = escolaEstaBloqueada || escolasBloqueadas.includes(volume.schoolId) || volumesBloqueados.includes(volume.id);
-    return <div key={volume.id} className={`relative flex items-center gap-3 sm:gap-6 ${index % 2 ? 'sm:flex-row-reverse' : ''}`}><div className="hidden h-px flex-1 bg-[#6b4f2d]/70 sm:block" /><button type="button" onClick={() => onChooseVolume(volume.id)} aria-disabled={bloqueado && !podeAbrirBloqueada} aria-label={`${volume.title}${bloqueado ? ' — Selado pelo Mestre' : ''}`} title={bloqueado ? 'Selado pelo Mestre' : volume.description} className="group relative z-10 flex w-full items-center gap-4 border border-[#654b2c] bg-[#1a120c] p-4 text-left shadow-[0_7px_18px_rgba(0,0,0,0.4)] transition hover:border-[#c19a57] hover:bg-[#25190e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f1d994] sm:w-[45%]"><span className="flex h-14 w-14 shrink-0 items-center justify-center border border-[#9b7c43] bg-[#2b1d10] font-cinzel text-xl text-[#d7b866]">{volume.number}</span><span className="min-w-0"><span className="block font-cinzel text-sm uppercase tracking-wider text-[#e6ddc5] group-hover:text-[#f0d68b]">{volume.title}</span><span className="mt-1 block text-xs italic text-[#a88d61]">{volume.subtitle}</span><span className="mt-2 block text-[10px] text-[#8f806a]">{volume.description}</span>{bloqueado && <span className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-[#d6b56a]"><Lock size={12} aria-hidden="true" /> Selado</span>}</span>{bloqueado && <Lock className="ml-auto h-4 w-4 shrink-0 text-[#d6b56a]" aria-hidden="true" />}</button><div className="hidden flex-1 sm:block" /></div>;
-  })}</div></div></section>
-);
-
-const FolioSkeleton = () => (
-  <section className="space-y-5" aria-hidden="true">
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="space-y-2">
-        <Skeleton className="h-3 w-40" />
-        <Skeleton className="h-7 w-56 max-w-full" />
-        <Skeleton className="h-4 w-72 max-w-full" />
-      </div>
-      <Skeleton className="h-9 w-36" />
-    </div>
-    <div className="relative overflow-hidden rounded-sm border-2 border-[#654522] bg-[#2a1b0f] p-1.5 shadow-[0_12px_30px_rgba(0,0,0,0.55)] sm:p-3">
-      <div className="pointer-events-none absolute inset-1 border border-[#a88d61]/40 sm:inset-2" />
-      <div className="relative grid overflow-hidden border border-[#80603b] md:grid-cols-2 md:divide-x md:divide-[#80603b]">
-        {[0, 1].map((page) => (
-          <div key={page} className="flex min-w-0 flex-col bg-[#d4bb84] p-4 sm:p-5 lg:p-6">
-            <div className="space-y-2 border-b border-[#80603b]/60 pb-3">
-              <Skeleton className="mx-auto h-3 w-36" />
-              <Skeleton className="mx-auto h-5 w-48 max-w-full" />
-            </div>
-            <div className="mt-4 flex flex-1 flex-col gap-2.5">
-              {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-16 shrink-0 border-[#80603b]/50 bg-[#80603b]/20" />)}
-            </div>
-            <Skeleton className="mt-4 h-4 w-20 self-center border-transparent bg-[#80603b]/20" />
-          </div>
-        ))}
-        <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-[#5a3d22]/80 shadow-[0_0_8px_rgba(42,25,12,0.7)] md:block" />
-      </div>
-    </div>
-  </section>
-);
-
-const FolioListaSkeleton = () => (
-  <div className="space-y-3" aria-hidden="true">
-    {Array.from({ length: 10 }).map((_, index) => <Skeleton key={index} className="h-24" />)}
-  </div>
-);
-
-interface BookViewProps {
-  school: typeof grimorioAllSchools[number]; volume: typeof grimorioVolumes[number]; spells: GrimorioSpell[]; allBookSpells: number; page: number; totalPages: number; onPageChange: (page: number) => void; learnedIds: string[]; canManageCatalog: boolean; canManageVisibility: boolean; hiddenSpellIds: string[]; onOpenSpell: (spell: GrimorioSpell) => void; onToggleLearned: (id: string) => void; onEdit: (spell: GrimorioSpell) => void; onToggleHidden: (id: string) => void; onDelete: (spell: GrimorioSpell) => void;
-}
-
-const BookView = ({ school, volume, spells, allBookSpells, page, totalPages, onPageChange, learnedIds, canManageCatalog, canManageVisibility, hiddenSpellIds, onOpenSpell, onToggleLearned, onEdit, onToggleHidden, onDelete }: BookViewProps) => {
-  const leftPageSpells = spells.slice(0, 5);
-  const rightPageSpells = spells.slice(5, 10);
-  // As primeiras magias do fólio ficam com a arte pronta para quem abre sem passar o mouse (toque/teclado).
-  const alvosPreCarregamento = spells.slice(0, 3).map((spell) => spell.image ?? '').filter(Boolean).join('|');
-
-  useEffect(() => {
-    const urls = alvosPreCarregamento.split('|').filter(Boolean);
-    if (!urls.length) return;
-    return agendarEmOciosidade(() => urls.forEach((url) => precarregarImagem(url)));
-  }, [alvosPreCarregamento]);
-
-  const renderPage = (pageSpells: GrimorioSpell[], pageLabel: string, pageNumber: string, headingId: string) => (
-    <section aria-labelledby={headingId} className="relative flex min-w-0 flex-col bg-gradient-to-br from-[#e1cc9a] via-[#d4bb84] to-[#b89862] p-4 text-[#382313] sm:p-5 lg:p-6">
-      <div className="pointer-events-none absolute inset-2 border border-[#8d6a3e]/50" />
-      <header className="relative border-b border-[#80603b]/60 pb-3 text-center">
-        <div className="flex items-center justify-center gap-3 text-[#76552e]" aria-hidden="true"><span className="h-px w-10 bg-[#80603b]/60" /><Sparkles size={14} /><span className="h-px w-10 bg-[#80603b]/60" /></div>
-        <p className="mt-2 text-[9px] uppercase tracking-[0.28em] text-[#76552e]">{pageLabel}</p>
-        <h4 id={headingId} className="mt-1 font-cinzel text-sm uppercase tracking-[0.18em] text-[#382313]">Registro de fórmulas</h4>
-      </header>
-      <div className="relative mt-4 flex flex-1 flex-col gap-2.5">
-        {pageSpells.length ? pageSpells.map((spell) => <SpellCard key={spell.id} spell={spell} learned={learnedIds.includes(spell.id)} hidden={hiddenSpellIds.includes(spell.id)} canManage={canManageCatalog} canToggleHidden={canManageVisibility} onOpen={() => onOpenSpell(spell)} onToggleLearned={() => onToggleLearned(spell.id)} onEdit={() => onEdit(spell)} onToggleHidden={() => onToggleHidden(spell.id)} onDelete={() => onDelete(spell)} />) : <div className="flex min-h-40 flex-1 flex-col items-center justify-center border border-dashed border-[#80603b]/70 px-4 py-8 text-center"><WandSparkles className="text-[#80603b]" size={28} /><p className="mt-3 font-cinzel text-xs uppercase tracking-wider text-[#76552e]">Este volume ainda não possui fórmulas</p><p className="mt-1 text-xs text-[#76552e]/80">As páginas deste tomo estão vazias.</p></div>}
-      </div>
-      <footer className="relative mt-4 border-t border-[#80603b]/60 pt-2 text-center text-[9px] uppercase tracking-[0.25em] text-[#76552e]">— {pageNumber} —</footer>
-    </section>
-  );
-
-  return <section aria-labelledby="book-heading" className="space-y-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.3em] text-[#8c6b41]">Livro aberto · {school.name}</p><h3 id="book-heading" className="mt-1 font-cinzel text-xl uppercase tracking-wider text-[#e6ddc5]">{volume.title}</h3><p className="mt-1 text-sm italic text-[#a79780]">{volume.subtitle} · {volume.description}</p></div><span className="border border-[#5a4225] bg-[#21170e] px-3 py-2 text-xs text-[#c6a15b]">{spells.length} de {allBookSpells} fórmulas</span></div>
-    <div className="relative overflow-hidden rounded-sm border-2 border-[#654522] bg-[#2a1b0f] p-1.5 shadow-[0_12px_30px_rgba(0,0,0,0.55)] sm:p-3">
-      <div className="pointer-events-none absolute inset-1 border border-[#a88d61]/40 sm:inset-2" />
-      <div className="relative grid overflow-hidden border border-[#80603b] md:grid-cols-2 md:divide-x md:divide-[#80603b]">
-        {renderPage(leftPageSpells, `Página esquerda · fólio ${page}`, String((page - 1) * 2 + 1), 'book-left-heading')}
-        {renderPage(rightPageSpells, `Página direita · fólio ${page}`, String((page - 1) * 2 + 2), 'book-right-heading')}
-        <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-[#5a3d22]/80 shadow-[0_0_8px_rgba(42,25,12,0.7)] md:block" aria-hidden="true" />
-      </div>
-    </div>
-    {allBookSpells > 10 && <nav aria-label="Navegação entre fólios" className="flex flex-wrap items-center justify-center gap-3">
-      <GothicButton type="button" variant="secondary" size="xs" width={150} disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Fólio anterior</GothicButton>
-      <span className="font-cinzel text-[10px] uppercase tracking-widest text-[#c6a15b]">Fólio {page} de {totalPages}</span>
-      <GothicButton type="button" variant="secondary" size="xs" width={150} disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Próximo fólio</GothicButton>
-    </nav>}
-  </section>;
-};
-
-
-const SpellDetails = ({ spell }: { spell: GrimorioSpell }) => {
-  const spellSchool = grimorioAllSchools.find((item) => item.id === spell.schoolId);
-  const spellVolume = grimorioVolumes.find((volume) => volume.id === spell.volumeId);
-  const hasCustomBookVolume = Object.prototype.hasOwnProperty.call(spell, 'bookVolume');
-  const bookVolume = hasCustomBookVolume
-    ? (spell.bookVolume === undefined ? undefined : String(spell.bookVolume))
-    : spellVolume?.number === 'I' ? '1' : spellVolume?.number === 'II' ? '2' : spellVolume?.number === 'III' ? '3' : undefined;
-
-  return (
-  <div className="order-2 min-w-0 space-y-2">
-    <section id="spell-overview" className="border-b border-[#49351f] pb-1.5" aria-labelledby="spell-overview-heading">
-      <h3 id="spell-overview-heading" className="flex items-center gap-1.5 font-cinzel text-[9px] uppercase tracking-[0.14em] text-[#4a2b12] sm:text-[10px] sm:tracking-[0.16em]">
-        <BookOpen size={12} /> Descrição
-      </h3>
-      <blockquote className="relative mt-1 border-l-2 border-[#c6a15b] bg-[#1a110b]/85 px-2 py-1.5 text-[10px] italic leading-3.5 text-[#d8cbb1] shadow-[inset_0_0_18px_rgba(0,0,0,0.2)] sm:text-xs sm:leading-4">
-        <CircleDot className="absolute -left-[8px] top-2 h-3.5 w-3.5 bg-[#100b07] text-[#c6a15b]" size={12} />
-        “{spell.description || '-'}”
-      </blockquote>
-    </section>
-
-    <section id="spell-technical" className="border-b border-[#49351f] py-1.5" aria-labelledby="spell-stats-heading">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h3 id="spell-stats-heading" className="flex items-center gap-1.5 font-cinzel text-[9px] uppercase tracking-[0.14em] text-[#4a2b12] sm:text-[10px] sm:tracking-[0.16em]">
-          <Sparkles size={12} /> Propriedades Mágicas
-        </h3>
-        <span className="text-[7px] uppercase tracking-[0.1em] text-[#80643c] sm:text-[8px] sm:tracking-[0.12em]">Dados do registro</span>
-      </div>
-      <dl className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-        <Field label="Escola" value={spellSchool?.name} />
-        <Field label="Subcategoria" value={spell.subcategory} />
-        <Field label="Livro Vol" value={bookVolume} />
-        <Field label="Nível" value={spell.level} />
-        <Field label="Consumo" value={spell.consumption} />
-        <Field label="Tipo" value={spell.type} />
-        <Field label="Dificuldade" value={spell.difficulty} />
-        <Field label="Dano" value={spell.damage} />
-        <Field label="Duração" value={spell.duration} />
-        <Field label="Alcance" value={spell.range} />
-        <Field label="Canalização" value={spell.channeling} />
-        <Field label="Condição" value={spell.condition} />
-      </dl>
-    </section>
-
-    <section id="spell-effects" className="border border-[#a88d61]/70 bg-gradient-to-br from-[#2a1b0f] via-[#1c130c] to-[#140c08] p-2 shadow-[inset_0_0_24px_rgba(198,161,91,0.08)]" aria-labelledby="spell-effects-heading">
-      <div className="flex items-center gap-1.5 border-b border-[#765b36]/60 pb-1.5">
-        <Sparkles size={13} className="text-[#f1d994]" />
-        <h3 id="spell-effects-heading" className="font-cinzel text-[9px] uppercase tracking-[0.14em] text-[#f1d994] sm:text-[10px] sm:tracking-[0.16em]">Efeitos mágicos</h3>
-        <span className="ml-auto text-[7px] uppercase tracking-[0.1em] text-[#a88d61] sm:text-[8px] sm:tracking-[0.12em]">Campo arcano</span>
-      </div>
-      <p className="mt-1.5 text-[10px] leading-3.5 text-[#e1d4b8] sm:text-xs sm:leading-4">{spell.magicalEffects || '-'}</p>
-    </section>
-  </div>
   );
 };
 
