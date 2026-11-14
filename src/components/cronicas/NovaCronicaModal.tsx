@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock3, ImagePlus, Send } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { CategoriaDeCronica } from '@/types';
+import type { CategoriaCronica } from '@/types';
 import { GothicButton } from '../GothicButton';
 import { Modal } from '../Modal';
 import type { CampoDoFormulario, ModoDePublicacao, NovaCronicaForm } from './useCronicaForm';
@@ -19,7 +19,7 @@ export interface NovaCronicaModalProps {
   onFormChange: (field: CampoDoFormulario, value: string) => void;
   onCategoriaChange: (value: string) => void;
   onNotasVisiveisChange: (value: boolean) => void;
-  categorias: CategoriaDeCronica[];
+  categorias: CategoriaCronica[];
   /** A crônica tem checklist: o progresso passa a ser calculado, não digitado. */
   temChecklist: boolean;
   editando: boolean;

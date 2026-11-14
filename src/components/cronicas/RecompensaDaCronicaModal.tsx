@@ -51,6 +51,7 @@ export const RecompensaDaCronicaModal: React.FC<RecompensaDaCronicaModalProps> =
 }) => {
   const [tipo, setTipo] = useState<TipoRecompensaCronica>('dinheiro');
   const [valor, setValor] = useState('');
+  const [quantidade, setQuantidade] = useState('1');
   const [descricao, setDescricao] = useState('');
   const [objetivoId, setObjetivoId] = useState('');
   const [termo, setTermo] = useState('');
@@ -65,6 +66,7 @@ export const RecompensaDaCronicaModal: React.FC<RecompensaDaCronicaModalProps> =
   useEffect(() => {
     setTipo(recompensa?.tipo ?? 'dinheiro');
     setValor(recompensa ? String(recompensa.valor) : '');
+    setQuantidade(recompensa ? String(recompensa.quantidade) : '1');
     setDescricao(recompensa?.descricao ?? '');
     setObjetivoId(recompensa?.objetivoId ?? '');
     setEscolhidoId(recompensa?.itemId ?? recompensa?.spellId ?? '');
@@ -124,7 +126,9 @@ export const RecompensaDaCronicaModal: React.FC<RecompensaDaCronicaModalProps> =
     try {
       await onSave({
         tipo,
-        valor: Number(valor) || 0,
+        // Mercadoria usa `quantidade`; dinheiro e XP usam `valor`.
+        valor: tipo === 'item' ? 0 : Number(valor) || 0,
+        quantidade: tipo === 'item' ? Math.max(1, Number(quantidade) || 1) : 1,
         descricao: descricao.trim(),
         objetivoId: objetivoId || undefined,
         itemId: tipo === 'item' ? escolhidoId : undefined,
@@ -178,9 +182,21 @@ export const RecompensaDaCronicaModal: React.FC<RecompensaDaCronicaModalProps> =
           </label>
         </div>
 
-        {precisaDeValor && (
+        {tipo === 'item' ? (
           <label className="block font-cinzel text-[10px] uppercase tracking-wider text-[#c9aa68]">
-            {tipo === 'item' ? 'Quantidade' : tipo === 'xp' ? 'Pontos de experiência' : 'Moedas'}
+            Quantidade
+            <input
+              required
+              type="number"
+              min="1"
+              value={quantidade}
+              onChange={(event) => setQuantidade(event.target.value)}
+              className={inputClassName}
+            />
+          </label>
+        ) : precisaDeValor ? (
+          <label className="block font-cinzel text-[10px] uppercase tracking-wider text-[#c9aa68]">
+            {tipo === 'xp' ? 'Pontos de experiência' : 'Moedas'}
             <input
               required
               type="number"
@@ -190,7 +206,7 @@ export const RecompensaDaCronicaModal: React.FC<RecompensaDaCronicaModalProps> =
               className={inputClassName}
             />
           </label>
-        )}
+        ) : null}
 
         {buscaNoCatalogo && (
           <div className="space-y-2">

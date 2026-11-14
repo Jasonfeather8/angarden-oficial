@@ -21,7 +21,7 @@ export interface RecompensasDaCronicaPanelProps {
 
 function descreverValor(recompensa: RecompensaDaCronica): string {
   if (recompensa.tipo === 'item') {
-    return `${recompensa.itemNome ?? recompensa.itemId ?? 'Mercadoria'} × ${recompensa.valor}`;
+    return `${recompensa.itemNome ?? recompensa.itemId ?? 'Mercadoria'} × ${recompensa.quantidade}`;
   }
   if (recompensa.tipo === 'dinheiro') return `${recompensa.valor} moedas`;
   if (recompensa.tipo === 'xp') return `${recompensa.valor} XP`;

@@ -1,7 +1,7 @@
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { cacheKeys } from '@/services/cacheKeys';
 import { cronicaService } from '@/services/cronicaService';
-import type { CategoriaDeCronica } from '@/types';
+import type { CategoriaCronica } from '@/types';
 
 export function useCategoriasDaCronica(tenantId: string | null) {
   const { data, isLoading, error, reload } = useAsyncData(
@@ -9,5 +9,5 @@ export function useCategoriasDaCronica(tenantId: string | null) {
     [tenantId],
     { cacheKey: cacheKeys.cronicaCategorias(tenantId), enabled: Boolean(tenantId) },
   );
-  return { categorias: data ?? [] as CategoriaDeCronica[], isLoading, error, reload };
+  return { categorias: data ?? [] as CategoriaCronica[], isLoading, error, reload };
 }

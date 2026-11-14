@@ -93,14 +93,14 @@ export const ParticipantesDaCronicaPanel: React.FC<ParticipantesDaCronicaPanelPr
                   <div className="flex flex-wrap gap-2">
                     {participante.status !== 'aprovado' && (
                       <ToolbarButton
-                        onClick={() => void executar(() => cronicaService.definirSituacaoParticipante(participante.id, 'aprovado'))}
+                        onClick={() => void executar(() => cronicaService.aprovarParticipante(participante.id))}
                       >
                         Aprovar
                       </ToolbarButton>
                     )}
                     {participante.status !== 'recusado' && (
                       <ToolbarButton
-                        onClick={() => void executar(() => cronicaService.definirSituacaoParticipante(participante.id, 'recusado'))}
+                        onClick={() => void executar(() => cronicaService.recusarParticipante(participante.id))}
                       >
                         Recusar
                       </ToolbarButton>

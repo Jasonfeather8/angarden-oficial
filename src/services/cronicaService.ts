@@ -61,6 +61,16 @@ function invalidarCache(): void {
   invalidateAsyncDataCache(cacheKeyPrefixes.cronicas);
 }
 
+/** Aprovação ou recusa de uma inscrição; só o Mestre autor passa pela RLS. */
+async function definirSituacaoDoParticipante(participantId: string, status: SituacaoParticipante): Promise<void> {
+  try { tenantId(); } catch (cause) { throw erro('atualizar a situação do participante', String(cause)); }
+  const { error } = await withTimeout(Promise.resolve(supabase.rpc('set_chronicle_participant_status', {
+    p_participant_id: participantId, p_status: status,
+  })));
+  if (error) throw erro('atualizar a situação do participante', error.message);
+  invalidarCache();
+}
+
 function erro(acao: string, message: string): Error {
   return new Error(`Não foi possível ${acao}: ${message}`);
 }
@@ -126,7 +136,7 @@ export const cronicaService = {
     try { clienteId = tenantId(); criadorId = usuarioId(); }
     catch (cause) { throw erro('criar a crônica', cause instanceof Error ? cause.message : String(cause)); }
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicles')
-      .insert({ ...valoresCronica(dados), tenant_id: clienteId, created_by: criadorId })
+      .insert({ ...valoresCronica(dados), tenant_id: clienteId, created_by: criadorId, campanha_id: dados.campanhaId ?? null })
       .select(COLUNAS_CRONICA).single()));
     if (error) throw erro('criar a crônica', error.message);
     invalidarCache();
@@ -136,6 +146,7 @@ export const cronicaService = {
   atualizar: async (id: string, dados: NovaCronica): Promise<Cronica> => {
     let clienteId: string;
     try { clienteId = tenantId(); } catch (cause) { throw erro('atualizar a crônica', String(cause)); }
+    // O vínculo com campanha não é editado pela tela: a coluna fica como está.
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicles')
       .update(valoresCronica(dados)).eq('id', id).eq('tenant_id', clienteId)
       .select(COLUNAS_CRONICA).single()));
@@ -178,7 +189,7 @@ export const cronicaService = {
     invalidarCache();
   },
 
-  listarCategorias: async (): Promise<CategoriaDeCronica[]> => {
+  listarCategorias: async (): Promise<CategoriaCronica[]> => {
     let clienteId: string;
     try { clienteId = tenantId(); } catch (cause) { throw erro('carregar as categorias', String(cause)); }
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_categories')
@@ -187,7 +198,7 @@ export const cronicaService = {
     return ((data ?? []) as CategoriaRow[]);
   },
 
-  criarCategoria: async (nome: string): Promise<CategoriaDeCronica> => {
+  criarCategoria: async (nome: string): Promise<CategoriaCronica> => {
     let clienteId: string; let criadorId: string;
     try { clienteId = tenantId(); criadorId = usuarioId(); } catch (cause) { throw erro('criar a categoria', String(cause)); }
     const { data: rows, error: listError } = await withTimeout(Promise.resolve(supabase.from('chronicle_categories')
@@ -198,7 +209,7 @@ export const cronicaService = {
       .select('id, nome, ordem').single()));
     if (error) throw erro('criar a categoria', error.message);
     invalidarCache();
-    return data as CategoriaDeCronica;
+    return data as CategoriaCronica;
   },
 
   renomearCategoria: async (id: string, nome: string): Promise<void> => {
@@ -303,7 +314,7 @@ export const cronicaService = {
 
   listarRecompensas: async (cronicaId: string): Promise<RecompensaDaCronica[]> => {
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_rewards')
-      .select('id, objective_id, tipo, descricao, valor, item_id, spell_id').eq('chronicle_id', cronicaId)));
+      .select('id, objective_id, tipo, descricao, valor, quantidade, item_id, spell_id').eq('chronicle_id', cronicaId)));
     if (error) throw erro('carregar as recompensas', error.message);
     const rows = (data ?? []) as RecompensaRow[];
     if (rows.length === 0) return [];
@@ -322,7 +333,8 @@ export const cronicaService = {
     const nomesItens = new Map(((itemsResult.data ?? []) as { id: string; nome: string }[]).map((row) => [row.id, row.nome]));
     const nomesMagias = new Map(((spellsResult.data ?? []) as { id: string; nome: string }[]).map((row) => [row.id, row.nome]));
     return rows.map((row) => ({ id: row.id, objetivoId: row.objective_id ?? undefined, tipo: row.tipo,
-      descricao: row.descricao, valor: Number(row.valor), itemId: row.item_id ?? undefined, spellId: row.spell_id ?? undefined,
+      descricao: row.descricao, valor: Number(row.valor), quantidade: Number(row.quantidade),
+      itemId: row.item_id ?? undefined, spellId: row.spell_id ?? undefined,
       itemNome: row.item_id ? nomesItens.get(row.item_id) : undefined, spellNome: row.spell_id ? nomesMagias.get(row.spell_id) : undefined,
       entreguesA: grants.filter((grant) => grant.reward_id === row.id).map((grant) => grant.character_id) }));
   },
@@ -332,7 +344,8 @@ export const cronicaService = {
     try { clienteId = tenantId(); } catch (cause) { throw erro('criar a recompensa', String(cause)); }
     const { error } = await withTimeout(Promise.resolve(supabase.from('chronicle_rewards').insert({
       chronicle_id: cronicaId, tenant_id: clienteId, objective_id: dados.objetivoId ?? null, tipo: dados.tipo,
-      descricao: dados.descricao, valor: dados.valor, item_id: dados.itemId ?? null, spell_id: dados.spellId ?? null,
+      descricao: dados.descricao, valor: dados.valor, quantidade: dados.quantidade,
+      item_id: dados.itemId ?? null, spell_id: dados.spellId ?? null,
     })));
     if (error) throw erro('criar a recompensa', error.message);
     invalidarCache();
@@ -343,7 +356,7 @@ export const cronicaService = {
     try { clienteId = tenantId(); } catch (cause) { throw erro('atualizar a recompensa', String(cause)); }
     const { error } = await withTimeout(Promise.resolve(supabase.from('chronicle_rewards').update({
       objective_id: dados.objetivoId ?? null, tipo: dados.tipo, descricao: dados.descricao, valor: dados.valor,
-      item_id: dados.itemId ?? null, spell_id: dados.spellId ?? null,
+      quantidade: dados.quantidade, item_id: dados.itemId ?? null, spell_id: dados.spellId ?? null,
     }).eq('id', id).eq('tenant_id', clienteId)));
     if (error) throw erro('atualizar a recompensa', error.message);
     invalidarCache();
@@ -388,12 +401,11 @@ export const cronicaService = {
     invalidarCache();
   },
 
-  definirSituacaoParticipante: async (participantId: string, status: SituacaoParticipante): Promise<void> => {
-    try { tenantId(); } catch (cause) { throw erro('atualizar a situação do participante', String(cause)); }
-    const { error } = await withTimeout(Promise.resolve(supabase.rpc('set_chronicle_participant_status', { p_participant_id: participantId, p_status: status })));
-    if (error) throw erro('atualizar a situação do participante', error.message);
-    invalidarCache();
-  },
+  aprovarParticipante: (participantId: string): Promise<void> =>
+    definirSituacaoDoParticipante(participantId, 'aprovado'),
+
+  recusarParticipante: (participantId: string): Promise<void> =>
+    definirSituacaoDoParticipante(participantId, 'recusado'),
 
   removerParticipante: async (participantId: string): Promise<void> => {
     const { error } = await withTimeout(Promise.resolve(supabase.from('chronicle_participants').delete().eq('id', participantId)));

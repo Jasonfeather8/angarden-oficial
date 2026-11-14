@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { cronicaService } from '@/services/cronicaService';
-import type { CategoriaDeCronica } from '@/types';
+import type { CategoriaCronica } from '@/types';
 import { GothicButton } from '../GothicButton';
 import { Modal } from '../Modal';
 import { ToolbarButton } from '../ui/ToolbarButton';
@@ -12,7 +12,7 @@ const inputClassName =
 export interface GerenciarCategoriasModalProps {
   isOpen: boolean;
   onClose: () => void;
-  categorias: CategoriaDeCronica[];
+  categorias: CategoriaCronica[];
   /** Recarrega as categorias e as crônicas (a lista usa o nome da categoria). */
   onAlteradas: () => void;
 }
@@ -26,7 +26,7 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
 }) => {
   const [nome, setNome] = useState('');
   const [editando, setEditando] = useState<string | null>(null);
-  const [excluindo, setExcluindo] = useState<CategoriaDeCronica | null>(null);
+  const [excluindo, setExcluindo] = useState<CategoriaCronica | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState('');
 

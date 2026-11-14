@@ -1,12 +1,12 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { Settings2 } from 'lucide-react';
-import type { CategoriaDeCronica } from '@/types';
+import type { CategoriaCronica } from '@/types';
 
 export type FiltroDeCategoriasAtivo = 'todas' | 'sem' | string;
 
 export interface FiltroDeCategoriasProps {
-  categorias: CategoriaDeCronica[];
+  categorias: CategoriaCronica[];
   ativo: FiltroDeCategoriasAtivo;
   /** Quantas crônicas por categoria; a chave `sem` conta as sem categoria. */
   contagens: Record<string, number>;
