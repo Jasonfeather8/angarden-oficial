@@ -288,14 +288,6 @@ export const cronicaService = {
     invalidarCache();
   },
 
-  renomearObjetivo: async (id: string, titulo: string): Promise<void> => {
-    let clienteId: string;
-    try { clienteId = tenantId(); } catch (cause) { throw erro('renomear o objetivo', String(cause)); }
-    const { error } = await withTimeout(Promise.resolve(supabase.from('chronicle_objectives').update({ titulo: titulo.trim() }).eq('id', id).eq('tenant_id', clienteId)));
-    if (error) throw erro('renomear o objetivo', error.message);
-    invalidarCache();
-  },
-
   excluirObjetivo: async (id: string): Promise<void> => {
     let clienteId: string;
     try { clienteId = tenantId(); } catch (cause) { throw erro('excluir o objetivo', String(cause)); }

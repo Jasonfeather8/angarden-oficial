@@ -80,6 +80,8 @@ export const NovaCronicaModal: React.FC<NovaCronicaModalProps> = ({
   }, [isOpen, recemCriada]);
 
   const enviar = (event: React.FormEvent<HTMLFormElement>) => {
+    // Ignora o envio propagado por um formulário de modal interno.
+    if (event.target !== event.currentTarget) return;
     if (!form.titulo.trim() || !form.dataAventura) {
       event.preventDefault();
       setAba('relato');

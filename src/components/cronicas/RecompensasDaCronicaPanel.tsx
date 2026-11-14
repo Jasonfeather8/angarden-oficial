@@ -18,7 +18,6 @@ import { useRecompensasDaCronica } from './useRecompensasDaCronica';
 export interface RecompensasDaCronicaPanelProps {
   cronica: Cronica;
   podeGerir: boolean;
-  somenteLeitura?: boolean;
   onCronicaAlterada?: () => void;
 }
 
@@ -36,9 +35,7 @@ function descreverValor(recompensa: RecompensaDaCronica): string {
  * vinculadas. O Mestre autor entrega aos personagens aprovados; o jogador
  * resgata para os próprios personagens quando a recompensa é liberada.
  */
-export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps> = ({ cronica, podeGerir, somenteLeitura = false, onCronicaAlterada }) => {
-  // Na tela da crônica o painel é leitura; o Mestre gere as recompensas no modal.
-  const podeEditar = podeGerir && !somenteLeitura;
+export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps> = ({ cronica, podeGerir, onCronicaAlterada }) => {
   const { userId } = useAuthorization();
   const { recompensas, isLoading, error, reload } = useRecompensasDaCronica(cronica.id);
   const objetivos = useObjetivosDaCronica(cronica.id);
@@ -137,7 +134,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
               Receberam: {recebedores.length ? recebedores.join(', ') : 'ninguém ainda'}
             </p>
           </div>
-          {podeEditar && (
+          {podeGerir && (
             <div className="flex flex-wrap gap-2">
               <ToolbarButton
                 onClick={() => {
@@ -194,7 +191,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
         title="Recompensas e mercadorias"
         icon={<Gift className="h-4 w-4" />}
         extra={
-          podeEditar ? (
+          podeGerir ? (
             <ToolbarButton
               variant="primary"
               onClick={() => {
@@ -227,7 +224,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
                 <h3 className="font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#c6a66d]">
                   Mercadorias vinculadas
                 </h3>
-                {podeEditar && (
+                {podeGerir && (
                   <ToolbarButton
                     icon={<Package className="h-3.5 w-3.5" />}
                     onClick={() => setSelecionandoLoot(true)}

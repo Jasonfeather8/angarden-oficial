@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
 import { molduraAcento, molduraCanto, molduraExterna, molduraInterna, posicoesDeCanto, texturaDaMoldura } from './moldura';
 import { Portal } from './ui/Portal';
@@ -16,6 +16,13 @@ export interface ModalProps {
   zIndex?: string;
 }
 
+/**
+ * Modais abertos, do mais antigo ao mais recente. Com um modal sobre o outro
+ * (o progresso sobre a crônica, por exemplo), o Escape fecha apenas a camada de
+ * cima, sem derrubar o formulário que está por baixo.
+ */
+const modaisAbertos: symbol[] = [];
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -27,16 +34,29 @@ export const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   zIndex = 'z-50',
 }) => {
+  const fecharAtual = useRef(onClose);
+
+  useEffect(() => {
+    fecharAtual.current = onClose;
+  }, [onClose]);
+
   // Close on Escape key press
   useEffect(() => {
+    if (!isOpen) return undefined;
+    const token = Symbol('modal');
+    modaisAbertos.push(token);
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (e.key === 'Escape' && modaisAbertos[modaisAbertos.length - 1] === token) {
+        fecharAtual.current();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      const indice = modaisAbertos.indexOf(token);
+      if (indice >= 0) modaisAbertos.splice(indice, 1);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -8,7 +8,7 @@ import { CronicaAcoesBar } from '@/components/cronicas/CronicaAcoesBar';
 import { ExcluirCronicaModal } from '@/components/cronicas/ExcluirCronicaModal';
 import { NotasDaCronicaPanel } from '@/components/cronicas/NotasDaCronicaPanel';
 import { NovaCronicaModal } from '@/components/cronicas/NovaCronicaModal';
-import { RecompensasDaCronicaPanel } from '@/components/cronicas/RecompensasDaCronicaPanel';
+import { ProgressoDaCronicaPanel } from '@/components/cronicas/ProgressoDaCronicaPanel';
 import { RegistroSelecionadoPanel } from '@/components/cronicas/RegistroSelecionadoPanel';
 import { useCategoriasDaCronica } from '@/components/cronicas/useCategoriasDaCronica';
 import { useCronicaForm } from '@/components/cronicas/useCronicaForm';
@@ -33,9 +33,6 @@ export const CronicaDetalhePage: React.FC = () => {
   const [compartilhando, setCompartilhando] = useState(false);
   const formulario = useCronicaForm({ onSalva: () => reload() });
 
-  const nomesDeCategoria = Object.fromEntries(
-    categorias.categorias.map((categoria) => [categoria.id, categoria.nome]),
-  );
   const podeGerir = Boolean(cronica && (isAdmin || cronica.criadaPor === userId));
   const voltar = () => navigate(ROUTES.cronicas);
 
@@ -47,10 +44,10 @@ export const CronicaDetalhePage: React.FC = () => {
         title={
           <h1 className="flex items-center gap-2">
             <ScrollText className="h-5 w-5 text-[#a88d61]" aria-hidden="true" />
-            Crônicas
+            Crônicas da Campanha
           </h1>
         }
-        subtitle="Relato da sessão, recompensas e as notas do Mestre"
+        subtitle="Linha do tempo narrativa das sessões de Angarden"
         headerRight={
           <ToolbarButton icon={<ArrowLeft className="h-4 w-4" />} onClick={voltar}>
             Voltar às crônicas
@@ -77,30 +74,26 @@ export const CronicaDetalhePage: React.FC = () => {
         ) : participantes.error ? (
           <ErrorState onRetry={participantes.reload} description={participantes.error} />
         ) : (
-          <>
-            <CronicaAcoesBar
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(200px,0.7fr)_minmax(320px,1.9fr)_minmax(200px,0.7fr)]">
+            <ProgressoDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={reload} />
+            <RegistroSelecionadoPanel
               cronica={cronica}
-              podeGerir={podeGerir}
-              abrirEdicao={formulario.abrirEdicao}
-              abrirCompartilhar={() => setCompartilhando(true)}
-              abrirExclusao={() => setExcluindo(true)}
-              onAlterada={reload}
-            />
-            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
-              <div className="min-w-0 space-y-5">
-                <RegistroSelecionadoPanel
+              participantes={participantes.participantes}
+              acoes={
+                <CronicaAcoesBar
                   cronica={cronica}
-                  participantes={participantes.participantes}
-                  nomesDeCategoria={nomesDeCategoria}
+                  podeGerir={podeGerir}
+                  abrirEdicao={formulario.abrirEdicao}
+                  abrirCompartilhar={() => setCompartilhando(true)}
+                  abrirExclusao={() => setExcluindo(true)}
+                  onAlterada={reload}
                 />
-                <RecompensasDaCronicaPanel cronica={cronica} podeGerir={podeGerir} somenteLeitura />
-                <NotasDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={reload} />
-              </div>
-              <div className="min-w-0">
-                <CapaDaSessaoPanel cronica={cronica} />
-              </div>
-            </div>
-          </>
+              }
+            >
+              <NotasDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={reload} />
+            </RegistroSelecionadoPanel>
+            <CapaDaSessaoPanel cronica={cronica} />
+          </div>
         )}
       </PageShell>
 
