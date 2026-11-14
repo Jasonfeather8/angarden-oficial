@@ -10,7 +10,13 @@ export interface LeitorPergaminhoProps {
   onFechar: () => void;
 }
 
-/** Lê um pergaminho: o Markdown do acervo sobre a superfície de papel antigo. */
+/**
+ * Lê um pergaminho: o Markdown do acervo sobre a superfície de papel antigo.
+ * O corpo do leitor é um flex de linha única com a altura da janela, então o
+ * `self-start` no artigo é obrigatório: sem ele o papel é esticado até essa
+ * altura e o texto transborda para fora dele. O `min-h-full` mantém a folha
+ * inteira quando o texto é curto.
+ */
 export const LeitorPergaminho: React.FC<LeitorPergaminhoProps> = ({ item, onFechar }) => (
   <OverlayLeitor
     titulo={item.titulo}
@@ -19,7 +25,7 @@ export const LeitorPergaminho: React.FC<LeitorPergaminhoProps> = ({ item, onFech
     onFechar={onFechar}
     corpoClassName="overflow-y-auto bg-[#241f18] p-3 sm:p-6"
   >
-    <article className="mx-auto w-full max-w-[820px] border-2 border-[#b38b4d] bg-[#f7efe0] px-5 py-8 shadow-[0_6px_28px_rgba(0,0,0,0.55)] sm:px-10 sm:py-12">
+    <article className="mx-auto w-full max-w-[820px] self-start min-h-full border-2 border-[#b38b4d] bg-[#f7efe0] px-5 py-8 shadow-[0_6px_28px_rgba(0,0,0,0.55)] sm:px-10 sm:py-12">
       <header className="mb-6 border-b border-[#7a4c25]/40 pb-4 text-center">
         <h1 className="font-cinzel text-2xl font-bold uppercase tracking-wide text-[#2c1d0f]">{item.titulo}</h1>
         {item.subtitulo && <p className="mt-1 font-serif text-sm italic text-[#5a3a1d]">{item.subtitulo}</p>}
