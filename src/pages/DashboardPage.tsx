@@ -94,7 +94,7 @@ export const DashboardPage: React.FC = () => {
             Início / Dashboard Geral
           </h2>
         }
-        subtitle="Visão panorâmica da campanha e status do reino"
+        subtitle="Visão panorâmica da mesa e status do reino"
         headerRight={
           cliente ? (
             <div className="text-xs italic font-serif text-[#8c6b41]">Cliente · {cliente.nome}</div>

@@ -1,0 +1,1 @@
+create policy "chronicle_notes_insert" on public.chronicle_notes for insert to authenticated with check (public.pode_gerir_cronica(chronicle_id) and tenant_id = (select c.tenant_id from public.chronicles c where c.id = chronicle_id))

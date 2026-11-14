@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Campaign, CampaignMember, UserRole, type FichaCompleta } from '../types';
-import { FichaAccessOptions, policies } from '../auth/policies';
+import { UserRole, type FichaCompleta } from '../types';
+import { policies } from '../auth/policies';
 import { useSessionStore } from '../store/useSessionStore';
 
 export interface Authorization {
@@ -19,11 +19,8 @@ export interface Authorization {
     accessArcanoMarket: (ficha?: FichaCompleta | null) => boolean;
     accessLegendaryMarket: (ficha?: FichaCompleta | null) => boolean;
     buyInMarket: (ficha?: FichaCompleta | null) => boolean;
-    createCampaign: boolean;
-    viewFicha: (ficha: FichaCompleta, options?: FichaAccessOptions) => boolean;
+    viewFicha: (ficha: FichaCompleta) => boolean;
     editFicha: (ficha: FichaCompleta) => boolean;
-    viewCampaign: (campaign: Campaign, members?: CampaignMember[]) => boolean;
-    manageCampaign: (campaign: Campaign) => boolean;
   };
 }
 
@@ -48,11 +45,8 @@ export function useAuthorization(): Authorization {
         accessArcanoMarket: (ficha) => policies.canAccessArcanoMarket(session, ficha),
         accessLegendaryMarket: (ficha) => policies.canAccessLegendaryMarket(session, ficha),
         buyInMarket: (ficha) => policies.canBuyInMarket(session, ficha),
-        createCampaign: policies.canCreateCampaign(session),
-        viewFicha: (ficha, options) => policies.canViewFicha(session, ficha, options),
+        viewFicha: (ficha) => policies.canViewFicha(session, ficha),
         editFicha: (ficha) => policies.canEditFicha(session, ficha),
-        viewCampaign: (campaign, members) => policies.canViewCampaign(session, campaign, members),
-        manageCampaign: (campaign) => policies.canManageCampaign(session, campaign),
       },
     }),
     [session]

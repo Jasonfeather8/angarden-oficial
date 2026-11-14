@@ -1,0 +1,1 @@
+alter policy "chronicles_delete" on public.chronicles using (is_admin() or (is_mestre() and tenant_id = current_tenant_id() and created_by = auth.uid()))

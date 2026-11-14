@@ -1,0 +1,1 @@
+grant execute on function public.create_chronicle_invite(uuid), public.get_chronicle_invite_preview(text), public.accept_chronicle_invite(text, text[]), public.set_chronicle_participant_status(uuid, text), public.grant_chronicle_reward(uuid, text[]), public.claim_chronicle_reward(uuid, text) to authenticated, service_role

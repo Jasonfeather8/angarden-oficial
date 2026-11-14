@@ -1,0 +1,1 @@
+create unique index chronicle_participants_unico_idx on public.chronicle_participants (chronicle_id, character_id)

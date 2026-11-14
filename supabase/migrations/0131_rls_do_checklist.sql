@@ -1,0 +1,1 @@
+alter table public.chronicle_objectives enable row level security

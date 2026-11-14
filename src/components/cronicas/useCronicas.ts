@@ -9,7 +9,7 @@ import { cronicaService } from '@/services/cronicaService';
  * leitura. A seleção vive na URL (`?cronica=<id>`), então o relato aberto
  * sobrevive ao F5 e ao compartilhamento do endereço.
  */
-export function useCronicasDaCampanha(tenantId: string | null) {
+export function useCronicas(tenantId: string | null) {
   const { data, isLoading, error, reload } = useAsyncData(
     () => cronicaService.listar(),
     [tenantId],

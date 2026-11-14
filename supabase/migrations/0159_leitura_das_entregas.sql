@@ -1,0 +1,1 @@
+create policy "chronicle_reward_grants_select" on public.chronicle_reward_grants for select to authenticated using (is_admin() or tenant_id = current_tenant_id() or granted_by = auth.uid() or character_id in (select p.character_id from public.chronicle_participants p where p.user_id = auth.uid()))

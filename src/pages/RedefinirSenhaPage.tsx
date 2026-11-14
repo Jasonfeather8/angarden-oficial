@@ -4,7 +4,7 @@ import { GothicButton } from '../components/GothicButton';
 import { BrandMark } from '../components/BrandMark';
 import { MedievalFrame } from '../components/MedievalFrame';
 import { LoadingState } from '../components/ui/Skeleton';
-import { supabase } from '../integrations/supabase/client';
+import { authService } from '../services/authService';
 import { ROUTES } from '../routes/paths';
 import { useSessionStore } from '../store/useSessionStore';
 
@@ -27,7 +27,7 @@ export const RedefinirSenhaPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password: senha });
+      const { error: updateError } = await authService.atualizarSenha(senha);
       if (updateError) {
         setError('Não foi possível atualizar sua senha. Solicite um novo link de recuperação.');
         return;

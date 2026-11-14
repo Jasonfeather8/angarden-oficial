@@ -60,7 +60,7 @@ export const PainelMestrePage: React.FC = () => {
     <>
       <PageShell id="page-painel-mestre" variant="padrao"
         title={<h2 className="flex items-center gap-2"><Crown className="h-5 w-5 text-[#a88d61]" /> Painel Administrativo do Mestre</h2>}
-        subtitle="Monitoramento consolidado da mesa e permissões da campanha"
+        subtitle="Monitoramento consolidado da mesa e permissões dos aventureiros"
         headerRight={
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-xs border border-[#8c6b41] bg-[#2a1d10] px-2.5 py-0.5 text-xs font-cinzel text-[#d4af37]"><ShieldCheck size={12} /><span>Acesso Restrito</span></div>

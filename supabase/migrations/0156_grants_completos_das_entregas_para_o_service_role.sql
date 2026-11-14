@@ -1,0 +1,1 @@
+grant select, insert, update, delete on table public.chronicle_reward_grants to service_role

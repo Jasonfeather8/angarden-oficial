@@ -1,0 +1,1 @@
+create policy "chronicle_participants_select" on public.chronicle_participants for select to authenticated using (is_admin() or tenant_id = current_tenant_id() or user_id = auth.uid())

@@ -1,0 +1,1 @@
+alter table public.chronicles add column categoria_id uuid references public.chronicle_categories(id) on delete set null, add column concluida_em timestamptz, add column notas_visiveis boolean not null default false

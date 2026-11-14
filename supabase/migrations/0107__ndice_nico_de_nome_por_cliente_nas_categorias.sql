@@ -1,0 +1,1 @@
+create unique index chronicle_categories_tenant_nome_idx on public.chronicle_categories (tenant_id, lower(nome))

@@ -1,0 +1,1 @@
+create policy "chronicle_categories_select" on public.chronicle_categories for select to authenticated using (is_admin() or tenant_id = current_tenant_id())

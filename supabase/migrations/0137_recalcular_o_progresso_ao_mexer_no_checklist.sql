@@ -1,0 +1,1 @@
+create trigger chronicle_objectives_progresso after insert or update of concluido or delete on public.chronicle_objectives for each row execute function public.recalcular_progresso_da_cronica()

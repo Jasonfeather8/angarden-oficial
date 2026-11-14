@@ -1,0 +1,1 @@
+create policy "chronicle_rewards_update" on public.chronicle_rewards for update to authenticated using (public.pode_gerir_cronica(chronicle_id)) with check (public.pode_gerir_cronica(chronicle_id))

@@ -7,7 +7,7 @@ export interface CapaDaSessaoPanelProps {
   cronica: Cronica;
 }
 
-/** Coluna lateral: capa da sessão e progresso da campanha. */
+/** Coluna lateral: capa da sessão e progresso da crônica. */
 export const CapaDaSessaoPanel: React.FC<CapaDaSessaoPanelProps> = ({ cronica }) => (
   <aside aria-label="Resumo da crônica" className="min-w-0">
     <div className="mb-3 flex items-center justify-between border-b border-[#3a2c1d] pb-2">
@@ -17,7 +17,7 @@ export const CapaDaSessaoPanel: React.FC<CapaDaSessaoPanelProps> = ({ cronica })
     <ArteDaCronica title={cronica.titulo} capaUrl={cronica.capaUrl} />
     <div className="mt-4 border border-[#4b3823] bg-[#120d09] p-3">
       <div className="flex items-center justify-between font-cinzel text-[10px] uppercase tracking-wider text-[#a88d61]">
-        <span>Progresso da campanha</span>
+        <span>Progresso da crônica</span>
         <span className="text-[#e0bd71]">{cronica.progresso}%</span>
       </div>
       <div className="mt-2 h-2 overflow-hidden border border-[#3a2c1d] bg-[#0a0705] p-px">

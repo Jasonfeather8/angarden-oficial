@@ -1,39 +1,18 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Menu, Shield, Sparkles, User } from 'lucide-react';
+import { Crown, Menu, Shield, User } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAuthorization } from '../hooks/useAuthorization';
-import { useAsyncData } from '../hooks/useAsyncData';
-import { campaignService } from '../services/campaignService';
-import { cacheKeys } from '../services/cacheKeys';
 import { ROLE_LABELS } from '../auth/policies';
 import { preloadRoute } from '../routes/lazyPages';
 import { ROUTES } from '../routes/paths';
 
 export const Topbar: React.FC = () => {
   const toggleMobileOpen = useAppStore((state) => state.toggleMobileOpen);
-  const activeCampaignId = useAppStore((state) => state.activeCampaignId);
-  const setActiveCampaignId = useAppStore((state) => state.setActiveCampaignId);
   const session = useSessionStore((state) => state.session);
   const { role, isAdmin, isMestre } = useAuthorization();
   const navigate = useNavigate();
-
-  // Campanhas reais acessíveis ao usuário (do seu cliente ou por convite).
-  const { data } = useAsyncData(
-    () => campaignService.listAccessible(),
-    [session?.user.id],
-    { enabled: Boolean(session), cacheKey: cacheKeys.campanhasAcessiveis(session?.user.id) }
-  );
-  const campaigns = data?.campaigns ?? [];
-  const activeCampaign = campaigns.find((campaign) => campaign.id === activeCampaignId) ?? null;
-
-  useEffect(() => {
-    if (!activeCampaign && campaigns.length > 0) {
-      setActiveCampaignId(campaigns[0].id);
-    }
-  }, [activeCampaign, campaigns, setActiveCampaignId]);
-
   const user = session?.user ?? null;
   const initials = (user?.nome_completo ?? '?')
     .split(' ')
@@ -73,28 +52,6 @@ export const Topbar: React.FC = () => {
           {role ? ROLE_LABELS[role] : '—'}
         </span>
       </div>
-
-      {/* Centro: seletor de campanha ativa — só existe quando há mais de uma campanha. */}
-      {campaigns.length > 1 && (
-        <div className="hidden lg:flex items-center space-x-2 px-3 py-1 border border-[#3a2c1d] bg-black/40 rounded-sm">
-          <Sparkles className="w-3.5 h-3.5 text-[#a88d61]" aria-hidden="true" />
-          <label htmlFor="topbar-active-campaign" className="sr-only">
-            Selecionar campanha ativa
-          </label>
-          <select
-            id="topbar-active-campaign"
-            value={activeCampaignId ?? ''}
-            onChange={(event) => setActiveCampaignId(event.target.value)}
-            className="max-w-[220px] bg-transparent text-xs font-serif italic text-[#c4b9a3] outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37]"
-          >
-            {campaigns.map((campaign) => (
-              <option key={campaign.id} value={campaign.id} className="bg-[#120f0d] not-italic">
-                {campaign.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Direita: Perfil */}
       <div className="flex items-center space-x-2.5 sm:space-x-3">

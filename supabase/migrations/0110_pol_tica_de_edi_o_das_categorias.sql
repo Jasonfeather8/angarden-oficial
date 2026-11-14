@@ -1,0 +1,1 @@
+create policy "chronicle_categories_update" on public.chronicle_categories for update to authenticated using (is_admin() or (is_mestre() and tenant_id = current_tenant_id())) with check (is_admin() or (is_mestre() and tenant_id = current_tenant_id()))

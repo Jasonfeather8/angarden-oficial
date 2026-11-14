@@ -1,0 +1,1 @@
+alter table public.chronicle_categories enable row level security

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { GothicButton } from '../components/GothicButton';
 import { BrandMark } from '../components/BrandMark';
 import { MedievalFrame } from '../components/MedievalFrame';
-import { supabase } from '../integrations/supabase/client';
+import { authService } from '../services/authService';
 import { ROUTES } from '../routes/paths';
 
 const inputClassName = 'w-full rounded-sm border border-[#5a4225] bg-[#0d0a08]/90 px-3 py-2.5 text-sm text-[#f0e2c0] placeholder:text-[#806d52] outline-none transition-colors focus:border-[#b89558] focus:ring-2 focus:ring-[#8c6b41]/40';
@@ -18,9 +18,10 @@ export const RecuperarSenhaPage: React.FC = () => {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: new URL(ROUTES.redefinirSenha, window.location.origin).href,
-      });
+      await authService.solicitarRecuperacao(
+        email.trim(),
+        new URL(ROUTES.redefinirSenha, window.location.origin).href,
+      );
     } catch {
       // Keep the response neutral whether the address exists or the request fails.
     } finally {

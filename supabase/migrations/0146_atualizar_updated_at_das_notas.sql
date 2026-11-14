@@ -1,0 +1,1 @@
+create trigger chronicle_notes_set_updated_at before update on public.chronicle_notes for each row execute function public.set_updated_at()

@@ -1,0 +1,1 @@
+create policy "chronicle_categories_insert" on public.chronicle_categories for insert to authenticated with check (is_admin() or (is_mestre() and tenant_id = current_tenant_id()))

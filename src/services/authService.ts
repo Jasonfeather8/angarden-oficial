@@ -25,6 +25,29 @@ function validateProfileInput(input: AtualizacaoPerfil): string | null {
 }
 
 export const authService = {
+  cadastrar: async (
+    { email, senha, nomeCompleto, whatsapp }: { email: string; senha: string; nomeCompleto: string; whatsapp: string },
+    emailRedirectTo: string,
+  ): Promise<{ session: boolean; error?: string }> => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: senha,
+      options: { data: { nome_completo: nomeCompleto, whatsapp }, emailRedirectTo },
+    });
+    if (error) return { session: false, error: error.message };
+    return { session: Boolean(data.session) };
+  },
+
+  solicitarRecuperacao: async (email: string, redirectTo: string): Promise<void> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  },
+
+  atualizarSenha: async (senha: string): Promise<{ error?: string }> => {
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    return error ? { error: error.message } : {};
+  },
+
   atualizarUsuario: async (userId: string, input: AtualizacaoPerfil): Promise<AuthResult> => {
     void userId;
     const validationError = validateProfileInput(input);

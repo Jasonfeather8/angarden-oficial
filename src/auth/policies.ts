@@ -1,4 +1,4 @@
-import { Campaign, CampaignMember, Session, UserRole, type FichaCompleta } from '../types';
+import { Session, UserRole, type FichaCompleta } from '../types';
 
 /** Rótulos de exibição dos papéis da plataforma. */
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -22,17 +22,9 @@ export const ROLE_LABELS: Record<UserRole, string> = {
  * | canAccessArcanoMarket      | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_arcano`                |
  * | canAccessLegendaryMarket   | `role IN ('admin','mestre') OR ficha.identidade.acesso_mercado_lendario`              |
  * | canBuyInMarket             | `role IN ('admin','mestre') OR ficha.identidade.pode_comprar`                         |
- * | canCreateCampaign          | `role IN ('admin','mestre') AND tenant_id IS NOT NULL`                                 |
  * | canViewFicha               | `user_id = auth.uid() OR (is_mestre AND tenant_id = current_tenant())`                 |
  * | canEditFicha               | `canViewFicha AND (edicao_liberada OR is_mestre OR is_admin)`                          |
- * | canViewCampaign            | `tenant_id = current_tenant() OR EXISTS (member ativo)`                                |
- * | canManageCampaign          | `mestre_user_id = auth.uid() OR tenant_id = current_tenant()`                          |
  */
-
-export interface FichaAccessOptions {
-  /** Campanhas em que o usuário atua como mestre — libera ver a ficha de participantes. */
-  mestreCampaignIds?: string[];
-}
 
 const isAdmin = (session: Session | null): boolean => session?.user.role === 'admin';
 const isMestre = (session: Session | null): boolean => session?.user.role === 'mestre';
@@ -70,18 +62,7 @@ export const policies = {
   canBuyInMarket: (session: Session | null, ficha?: FichaCompleta | null): boolean =>
     isAdmin(session) || isMestre(session) || (ficha ? ficha.identidade?.pode_comprar !== false : true),
 
-  /**
-   * Campanhas pertencem a um cliente (tenant). Só quem tem cliente vinculado cria —
-   * o administrador da plataforma não possui tenant (`profiles_admin_sem_tenant`).
-   */
-  canCreateCampaign: (session: Session | null): boolean =>
-    (isAdmin(session) || isMestre(session)) && Boolean(session?.user.tenant_id),
-
-  canViewFicha: (
-    session: Session | null,
-    ficha: FichaCompleta,
-    options: FichaAccessOptions = {}
-  ): boolean => {
+  canViewFicha: (session: Session | null, ficha: FichaCompleta): boolean => {
     if (!session) return false;
     if (isAdmin(session)) return true;
 
@@ -89,14 +70,6 @@ export const policies = {
     if (identidade.user_id === session.user.id) return true;
 
     if (isMestre(session) && identidade.tenant_id && identidade.tenant_id === session.user.tenant_id) {
-      return true;
-    }
-
-    if (
-      isMestre(session) &&
-      identidade.campanha_id &&
-      options.mestreCampaignIds?.includes(identidade.campanha_id)
-    ) {
       return true;
     }
 
@@ -117,26 +90,6 @@ export const policies = {
     if (isMestre(session) && identidade.tenant_id === session.user.tenant_id) return true;
 
     return false;
-  },
-
-  canViewCampaign: (
-    session: Session | null,
-    campaign: Campaign,
-    members: CampaignMember[] = []
-  ): boolean => {
-    if (!session) return false;
-    if (isAdmin(session)) return true;
-    if (campaign.tenant_id === session.user.tenant_id) return true;
-    return members.some(
-      (member) => member.campaign_id === campaign.id && member.user_id === session.user.id
-    );
-  },
-
-  canManageCampaign: (session: Session | null, campaign: Campaign): boolean => {
-    if (!session) return false;
-    if (isAdmin(session)) return true;
-    if (campaign.mestre_user_id === session.user.id) return true;
-    return isMestre(session) && campaign.tenant_id === session.user.tenant_id;
   },
 };
 

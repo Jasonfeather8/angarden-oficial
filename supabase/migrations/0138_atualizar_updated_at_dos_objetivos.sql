@@ -1,0 +1,1 @@
+create trigger chronicle_objectives_set_updated_at before update on public.chronicle_objectives for each row execute function public.set_updated_at()

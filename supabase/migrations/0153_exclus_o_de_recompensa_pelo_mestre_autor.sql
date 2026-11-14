@@ -1,0 +1,1 @@
+create policy "chronicle_rewards_delete" on public.chronicle_rewards for delete to authenticated using (public.pode_gerir_cronica(chronicle_id))

@@ -1,0 +1,1 @@
+alter table public.chronicle_reward_grants enable row level security

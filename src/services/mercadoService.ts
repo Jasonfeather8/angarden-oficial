@@ -206,6 +206,17 @@ export async function listarItens(filtros: MercadoFiltros): Promise<MercadoPagin
   return { itens: ((data ?? []) as MarketRow[]).map(fromRow), total: count ?? 0 };
 }
 
+export async function buscarItens(filtros: { busca: string; page: number; pageSize: number }): Promise<MercadoPagina> {
+  let query = supabase.from('market_items').select(COLUNAS_LISTAGEM, { count: 'exact' })
+    .order('ordem', { ascending: true }).order('created_at', { ascending: false }).order('id', { ascending: true });
+  const termoBusca = normalizarBusca(filtros.busca);
+  if (termoBusca.length >= TAMANHO_MINIMO_BUSCA) query = query.ilike('busca', `%${termoBusca}%`);
+  const inicio = (filtros.page - 1) * filtros.pageSize;
+  const { data, count, error } = await query.range(inicio, inicio + filtros.pageSize - 1);
+  if (error) throw new Error('Não foi possível buscar itens do mercado: ' + error.message);
+  return { itens: ((data ?? []) as MarketRow[]).map(fromRow), total: count ?? 0 };
+}
+
 export async function carregarLookupDeItens(refs: MercadoLookupRef[]): Promise<void> {
   const ids = new Set<string>();
   const nomes = new Set<string>();
@@ -300,6 +311,7 @@ async function upsertMercadoria(item: MercadoItem, operation: 'criar' | 'atualiz
 
 export const mercadoService = {
   listarItens,
+  buscarItens,
   listarNovidades,
   contarItens,
   getItensPorCategoria,

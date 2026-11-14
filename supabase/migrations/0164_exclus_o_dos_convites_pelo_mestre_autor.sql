@@ -1,0 +1,1 @@
+create policy "chronicle_invites_delete" on public.chronicle_invites for delete to authenticated using (is_admin() or public.pode_gerir_cronica(chronicle_id))

@@ -1,0 +1,1 @@
+create policy "chronicle_objectives_update" on public.chronicle_objectives for update to authenticated using (public.pode_gerir_cronica(chronicle_id)) with check (public.pode_gerir_cronica(chronicle_id))

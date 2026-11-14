@@ -45,7 +45,7 @@ const SessionCountdown = React.memo(({ dataHora }: { dataHora: string }) => {
       </p>
       {hasSessionStarted ? (
         <p className="text-center font-serif text-sm italic text-[#e0bd71]">
-          Confira os registros da campanha após a aventura.
+          Confira os registros da crônica após a aventura.
         </p>
       ) : (
         <div className="flex justify-center gap-2">

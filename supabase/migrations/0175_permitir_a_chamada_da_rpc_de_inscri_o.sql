@@ -1,0 +1,1 @@
+grant execute on function public.add_chronicle_participant(uuid, text, text) to authenticated, service_role

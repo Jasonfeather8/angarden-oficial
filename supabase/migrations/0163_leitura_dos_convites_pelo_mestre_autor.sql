@@ -1,0 +1,1 @@
+create policy "chronicle_invites_select" on public.chronicle_invites for select to authenticated using (is_admin() or public.pode_gerir_cronica(chronicle_id))

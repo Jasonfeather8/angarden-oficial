@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AdminRoute, GuestRoute, ProtectedRoute } from './components/RouteGuards';
 import { LoadingState } from './components/ui/Skeleton';
 import { AppLayout } from './layouts/AppLayout';
@@ -17,8 +17,8 @@ import {
   AuthCallbackPage,
   BibliotecaPage,
   CadastroPage,
-  ConvitePage,
   CronicasPage,
+  ConviteCronicaPage,
   DashboardPage,
   FichaTecnicaPage,
   GrimorioPage,
@@ -103,11 +103,7 @@ export default function App() {
           <Route path={ROUTES.grimorio} element={<GrimorioPage />} />
           <Route path={ROUTES.biblioteca} element={<BibliotecaPage />} />
           <Route path={ROUTES.cronicas} element={<CronicasPage />} />
-          {/* Tela de Campanhas oculta no momento: o código continua em
-              src/pages/CampanhasPage.tsx, mas nenhum papel a renderiza. Para reativar,
-              basta devolver o import em routes/lazyPages.tsx e o elemento aqui. */}
-          <Route path={ROUTES.campanhas} element={<Navigate to={ROUTES.dashboard} replace />} />
-          <Route path={ROUTES.convite} element={<ConvitePage />} />
+          <Route path={ROUTES.conviteCronica} element={<ConviteCronicaPage />} />
           <Route
             path={ROUTES.painelMestre}
             element={

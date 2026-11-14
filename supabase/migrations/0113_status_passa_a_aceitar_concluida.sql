@@ -1,0 +1,1 @@
+alter table public.chronicles drop constraint chronicles_status_valido, add constraint chronicles_status_valido check (status in ('PUBLICADA','AGENDADA','CONCLUIDA'))

@@ -354,30 +354,89 @@ export interface MercadoMagia {
   imagem_url?: string;
 }
 
-export type CronicaStatus = 'PUBLICADA' | 'AGENDADA';
+export type CronicaStatus = 'PUBLICADA' | 'AGENDADA' | 'CONCLUIDA';
 
 /** Relato de uma sessão, guardado por cliente (`chronicles`). */
 export interface Cronica {
   id: string;
   titulo: string;
-  /** Data da aventura no formato `YYYY-MM-DD`. */
   dataAventura: string;
   local: string;
   relato: string;
-  /** Progresso da campanha em 0–100. */
   progresso: number;
-  /** Nomes dos personagens presentes no relato. */
   personagens: string[];
   status: CronicaStatus;
-  /** ISO 8601 (UTC) da publicação agendada; ausente quando publicada. */
   agendadaPara?: string;
   capaUrl?: string;
-  /** ISO 8601 (UTC) do registro. */
   criadaEm: string;
+  categoriaId?: string;
+  concluidaEm?: string;
+  notasVisiveis: boolean;
+  criadaPor?: string;
 }
 
-/** Crônica ainda não gravada. */
 export type NovaCronica = Omit<Cronica, 'id' | 'criadaEm'>;
+
+export interface CategoriaDeCronica {
+  id: string;
+  nome: string;
+  ordem: number;
+}
+
+export interface ObjetivoDaCronica {
+  id: string;
+  titulo: string;
+  concluido: boolean;
+  ordem: number;
+}
+
+export interface NotaDaCronica {
+  id: string;
+  titulo: string;
+  conteudo: string;
+  visivelJogadores: boolean;
+  criadaEm: string;
+  autorId?: string;
+}
+
+export type TipoRecompensaCronica = 'dinheiro' | 'xp' | 'magia' | 'item';
+
+export interface RecompensaDaCronica {
+  id: string;
+  objetivoId?: string;
+  tipo: TipoRecompensaCronica;
+  descricao: string;
+  valor: number;
+  itemId?: string;
+  spellId?: string;
+  itemNome?: string;
+  spellNome?: string;
+  entreguesA: string[];
+}
+
+export type NovaRecompensaCronica = Omit<RecompensaDaCronica, 'id' | 'entreguesA' | 'itemNome' | 'spellNome'>;
+
+export type SituacaoParticipante = 'pendente' | 'aprovado' | 'recusado';
+
+export interface ParticipanteDaCronica {
+  id: string;
+  userId: string;
+  characterId: string;
+  nomePersonagem: string;
+  nomeJogador: string;
+  status: SituacaoParticipante;
+}
+
+export interface ConviteDaCronicaPreview {
+  chronicleId: string;
+  titulo: string;
+  dataAventura: string;
+  local: string;
+  relato: string;
+  cliente: string;
+  mestre: string;
+  jaParticipa: boolean;
+}
 
 export interface Sessao {
   id: string;

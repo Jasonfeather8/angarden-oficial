@@ -1,0 +1,1 @@
+grant select on table public.chronicle_reward_grants to authenticated

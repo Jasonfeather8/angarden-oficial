@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { GothicButton } from '../components/GothicButton';
 import { BrandMark } from '../components/BrandMark';
 import { MedievalFrame } from '../components/MedievalFrame';
-import { supabase } from '../integrations/supabase/client';
+import { authService } from '../services/authService';
 import { ROUTES } from '../routes/paths';
 
 const inputClassName = 'w-full rounded-sm border border-[#5a4225] bg-[#0d0a08]/90 px-3 py-2.5 text-sm text-[#f0e2c0] placeholder:text-[#806d52] outline-none transition-colors focus:border-[#b89558] focus:ring-2 focus:ring-[#8c6b41]/40';
@@ -42,17 +42,15 @@ export const CadastroPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { session, error: signUpError } = await authService.cadastrar({
         email: normalizedEmail,
-        password: senha,
-        options: {
-          data: { nome_completo: normalizedName, whatsapp: normalizedWhatsapp },
-          emailRedirectTo: new URL(ROUTES.authCallback, window.location.origin).href,
-        },
-      });
+        senha,
+        nomeCompleto: normalizedName,
+        whatsapp: normalizedWhatsapp,
+      }, new URL(ROUTES.authCallback, window.location.origin).href);
 
       if (signUpError) {
-        const message = signUpError.message.toLowerCase();
+        const message = signUpError.toLowerCase();
         setError(
           message.includes('already registered') || message.includes('already been registered')
             ? 'Este email já possui uma conta.'
@@ -62,7 +60,7 @@ export const CadastroPage: React.FC = () => {
       }
 
       setSuccess(
-        data.session
+        session
           ? 'Cadastro registrado! Aguarde a aprovação do administrador.'
           : 'Cadastro registrado! Confirme o link enviado para o seu email e aguarde a aprovação do administrador.'
       );

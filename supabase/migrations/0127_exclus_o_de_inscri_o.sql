@@ -1,0 +1,1 @@
+create policy "chronicle_participants_delete" on public.chronicle_participants for delete to authenticated using (public.pode_gerir_cronica(chronicle_id) or (user_id = auth.uid() and status <> 'aprovado'))

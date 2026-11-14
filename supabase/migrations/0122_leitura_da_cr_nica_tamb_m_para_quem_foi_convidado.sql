@@ -1,0 +1,1 @@
+alter policy "chronicles_select" on public.chronicles using (is_admin() or (tenant_id = current_tenant_id() and (is_mestre() or status in ('PUBLICADA','CONCLUIDA') or agendada_para <= now())) or public.is_chronicle_participant(id))

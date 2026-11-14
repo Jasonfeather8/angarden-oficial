@@ -1,0 +1,1 @@
+create index chronicle_participants_cronica_idx on public.chronicle_participants (chronicle_id, status)

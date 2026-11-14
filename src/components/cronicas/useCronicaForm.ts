@@ -4,7 +4,6 @@ import { cronicaService } from '@/services/cronicaService';
 import { enviarImagem } from '@/services/mediaService';
 import type { Cronica, NovaCronica } from '@/types';
 
-/** Campos de texto do formulário, na ordem em que a tela os edita. */
 export type CampoDoFormulario =
   | 'titulo'
   | 'dataAventura'
@@ -13,7 +12,6 @@ export type CampoDoFormulario =
   | 'local'
   | 'agendadaPara';
 
-/** Publicar de imediato ou deixar a crônica guardada até a hora marcada. */
 export type ModoDePublicacao = 'now' | 'schedule';
 
 export interface NovaCronicaForm {
@@ -23,8 +21,9 @@ export interface NovaCronicaForm {
   progresso: string;
   local: string;
   agendadaPara: string;
-  personagens: string[];
   capaUrl?: string;
+  categoriaId: string;
+  notasVisiveis: boolean;
 }
 
 const formularioInicial: NovaCronicaForm = {
@@ -34,35 +33,61 @@ const formularioInicial: NovaCronicaForm = {
   progresso: '0',
   local: '',
   agendadaPara: '',
-  personagens: [],
   capaUrl: undefined,
+  categoriaId: '',
+  notasVisiveis: false,
 };
 
 interface UseCronicaFormOptions {
-  /** Chamado depois de gravar, para a tela abrir a crônica recém-criada. */
-  onCriada: (cronica: Cronica) => void;
+  /** Chamado depois de criar ou editar, com a crônica gravada. */
+  onSalva: (cronica: Cronica) => void;
 }
 
 /**
- * Estado do formulário de nova crônica: abertura do modal, campos, capa,
- * modo de publicação e o envio ao serviço, com o upload da imagem de capa.
+ * Formulário de crônica em criação e em edição. A presença dos personagens não
+ * é mais escolhida aqui: a companhia vem das inscrições da crônica.
  */
-export function useCronicaForm({ onCriada }: UseCronicaFormOptions) {
+export function useCronicaForm({ onSalva }: UseCronicaFormOptions) {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [cronicaEmEdicao, setCronicaEmEdicao] = useState<Cronica | null>(null);
   const [publishMode, setPublishMode] = useState<ModoDePublicacao>('now');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [arquivoCapa, setArquivoCapa] = useState<File | null>(null);
   const [form, setForm] = useState<NovaCronicaForm>(formularioInicial);
 
-  const abrirCriacao = () => setCreateModalOpen(true);
-
   const resetForm = () => {
     if (arquivoCapa && form.capaUrl) URL.revokeObjectURL(form.capaUrl);
     setArquivoCapa(null);
     setForm(formularioInicial);
     setPublishMode('now');
+    setCronicaEmEdicao(null);
     setSaveError(null);
+  };
+
+  const abrirCriacao = () => {
+    resetForm();
+    setCreateModalOpen(true);
+  };
+
+  const abrirEdicao = (cronica: Cronica) => {
+    resetForm();
+    setCronicaEmEdicao(cronica);
+    setForm({
+      titulo: cronica.titulo,
+      dataAventura: cronica.dataAventura,
+      relato: cronica.relato,
+      progresso: String(cronica.progresso),
+      local: cronica.local,
+      agendadaPara: cronica.agendadaPara
+        ? new Date(cronica.agendadaPara).toISOString().slice(0, 16)
+        : '',
+      capaUrl: cronica.capaUrl,
+      categoriaId: cronica.categoriaId ?? '',
+      notasVisiveis: cronica.notasVisiveis,
+    });
+    setPublishMode(cronica.status === 'AGENDADA' ? 'schedule' : 'now');
+    setCreateModalOpen(true);
   };
 
   const fecharFormulario = () => {
@@ -75,14 +100,11 @@ export function useCronicaForm({ onCriada }: UseCronicaFormOptions) {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const toggleCharacter = (character: string) => {
-    setForm((current) => ({
-      ...current,
-      personagens: current.personagens.includes(character)
-        ? current.personagens.filter((item) => item !== character)
-        : [...current.personagens, character],
-    }));
-  };
+  const setCategoriaId = (categoriaId: string) =>
+    setForm((current) => ({ ...current, categoriaId }));
+
+  const setNotasVisiveis = (notasVisiveis: boolean) =>
+    setForm((current) => ({ ...current, notasVisiveis }));
 
   const handleCoverChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -97,30 +119,40 @@ export function useCronicaForm({ onCriada }: UseCronicaFormOptions) {
     setIsSaving(true);
     setSaveError(null);
     try {
+      const editando = cronicaEmEdicao;
       const dados: NovaCronica = {
         titulo: form.titulo.trim(),
         dataAventura: form.dataAventura,
         relato: form.relato.trim(),
         local: form.local.trim(),
         progresso: Math.min(100, Math.max(0, Number(form.progresso) || 0)),
-        personagens: form.personagens,
-        status: publishMode === 'schedule' ? 'AGENDADA' : 'PUBLICADA',
+        // O legado `personagens` é preservado; a companhia viva está nas inscrições.
+        personagens: editando?.personagens ?? [],
+        status: editando?.status === 'CONCLUIDA'
+          ? 'CONCLUIDA'
+          : publishMode === 'schedule'
+            ? 'AGENDADA'
+            : 'PUBLICADA',
         agendadaPara: publishMode === 'schedule' ? new Date(form.agendadaPara).toISOString() : undefined,
         capaUrl: form.capaUrl,
+        categoriaId: form.categoriaId || undefined,
+        notasVisiveis: form.notasVisiveis,
       };
 
       if (arquivoCapa) {
         const capaUrl = await enviarImagem(arquivoCapa, 'cronicas');
         if (form.capaUrl) URL.revokeObjectURL(form.capaUrl);
         setArquivoCapa(null);
-        setForm((current) => ({ ...current, capaUrl }));
         dados.capaUrl = capaUrl;
       }
 
-      const criada = await cronicaService.criar(dados);
+      const salva = editando
+        ? await cronicaService.atualizar(editando.id, dados)
+        : await cronicaService.criar(dados);
+
       setCreateModalOpen(false);
       resetForm();
-      onCriada(criada);
+      onSalva(salva);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Não foi possível salvar a crônica.');
     } finally {
@@ -130,11 +162,14 @@ export function useCronicaForm({ onCriada }: UseCronicaFormOptions) {
 
   return {
     isCreateModalOpen,
+    cronicaEmEdicao,
     abrirCriacao,
+    abrirEdicao,
     fecharFormulario,
     form,
     updateForm,
-    toggleCharacter,
+    setCategoriaId,
+    setNotasVisiveis,
     handleCoverChange,
     publishMode,
     setPublishMode,

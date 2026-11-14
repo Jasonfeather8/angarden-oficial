@@ -1,0 +1,1 @@
+create policy "chronicle_notes_update" on public.chronicle_notes for update to authenticated using (public.pode_gerir_cronica(chronicle_id)) with check (public.pode_gerir_cronica(chronicle_id))

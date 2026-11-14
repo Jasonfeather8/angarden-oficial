@@ -58,7 +58,7 @@ export const AventureirosDaMesaPanel: React.FC<AventureirosDaMesaPanelProps> = (
         variant="plano"
         icon={<Users className="h-8 w-8" aria-hidden="true" />}
         title="Nenhuma ficha disponível"
-        description="Nenhum personagem foi encontrado para monitoramento nesta campanha."
+        description="Nenhum personagem foi encontrado para monitoramento nesta mesa."
       />
     ) : (
       <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">

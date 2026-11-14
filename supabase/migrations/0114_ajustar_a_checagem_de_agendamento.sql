@@ -1,0 +1,1 @@
+alter table public.chronicles drop constraint chronicles_agendamento_valido, add constraint chronicles_agendamento_valido check (status <> 'AGENDADA' or agendada_para is not null)

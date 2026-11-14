@@ -12,8 +12,7 @@ export const ROUTES = {
   grimorio: '/grimorio',
   biblioteca: '/biblioteca',
   cronicas: '/cronicas',
-  campanhas: '/campanhas',
-  convite: '/convites/:token',
+  conviteCronica: '/cronicas/convite/:token',
   painelMestre: '/painel-mestre',
   perfil: '/perfil',
   acessoNegado: '/acesso-negado',
@@ -36,8 +35,8 @@ export const fichaPath = (characterId: string): string =>
 export const cronicaPath = (cronicaId: string): string =>
   `${ROUTES.cronicas}?cronica=${encodeURIComponent(cronicaId)}`;
 
-/** Monta a URL pública de aceite de convite de campanha. */
-export const convitePath = (token: string): string => `/convites/${encodeURIComponent(token)}`;
+export const conviteCronicaPath = (token: string): string =>
+  `/cronicas/convite/${encodeURIComponent(token)}`;
 
 /** O menu "Personagens" permanece ativo enquanto uma ficha estiver aberta. */
 export const isFichaRoute = (pathname: string): boolean => pathname.startsWith('/ficha/');

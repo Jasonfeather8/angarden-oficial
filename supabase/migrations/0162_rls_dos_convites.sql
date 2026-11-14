@@ -1,0 +1,1 @@
+alter table public.chronicle_invites enable row level security

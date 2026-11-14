@@ -1,0 +1,1 @@
+create trigger chronicle_participants_set_updated_at before update on public.chronicle_participants for each row execute function public.set_updated_at()

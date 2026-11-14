@@ -1,31 +1,8 @@
-import type { Campaign, CampaignMember } from '../types';
 import { prewarmAsyncDataCache } from '../hooks/useAsyncData';
 import { useSessionStore } from '../store/useSessionStore';
 import { useAppStore } from '../store/useAppStore';
-import { campaignService } from './campaignService';
 import { cacheKeys } from './cacheKeys';
 import { queryClient } from './queryClient';
-
-/**
- * Dados da tela de Campanhas — hoje oculta em App.tsx, mas preservada para quando
- * a tela voltar. Por isso não é mais pré-aquecida no boot.
- */
-export async function loadCampaignPageData(): Promise<{
-  campaigns: Campaign[];
-  members: CampaignMember[];
-  userNames: Record<string, string>;
-}> {
-  const { profileService } = await import('./profileService');
-  const [access, profiles] = await Promise.all([
-    campaignService.listAccessible(),
-    profileService.listProfiles(),
-  ]);
-  return {
-    campaigns: access.campaigns,
-    members: access.members,
-    userNames: Object.fromEntries(profiles.map((profile) => [profile.id, profile.nome_completo])),
-  };
-}
 
 export async function prewarmAcervoDoCliente(tenantId: string): Promise<void> {
   try {

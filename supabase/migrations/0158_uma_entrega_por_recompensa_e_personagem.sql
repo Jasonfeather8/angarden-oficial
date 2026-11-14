@@ -1,0 +1,1 @@
+create unique index chronicle_reward_grants_unico_idx on public.chronicle_reward_grants (reward_id, character_id)

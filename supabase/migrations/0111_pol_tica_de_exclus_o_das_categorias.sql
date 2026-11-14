@@ -1,0 +1,1 @@
+create policy "chronicle_categories_delete" on public.chronicle_categories for delete to authenticated using (is_admin() or (is_mestre() and tenant_id = current_tenant_id()))

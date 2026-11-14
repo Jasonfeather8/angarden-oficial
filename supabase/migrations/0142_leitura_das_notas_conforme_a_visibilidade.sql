@@ -1,0 +1,1 @@
+create policy "chronicle_notes_select" on public.chronicle_notes for select to authenticated using (is_admin() or (tenant_id = current_tenant_id() and is_mestre()) or (visivel_jogadores and exists (select 1 from public.chronicles c where c.id = chronicle_id and c.notas_visiveis and (c.tenant_id = current_tenant_id() or public.is_chronicle_participant(c.id)))))

@@ -1,0 +1,1 @@
+grant select, insert, update, delete on table public.chronicle_invites to authenticated, service_role

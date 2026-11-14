@@ -3014,7 +3014,7 @@ export const FichaTecnicaPage: React.FC = () => {
                 <textarea
                   value={ficha.suporte.anotacoes || ''}
                   onChange={(e) => handleSuporteChange('anotacoes', e.target.value)}
-                  placeholder="Anotações gerais e eventos da campanha..."
+                  placeholder="Anotações gerais e eventos da mesa..."
                   className={`w-full h-full bg-transparent ${theme.textBody} font-serif text-xs leading-relaxed outline-none resize-none custom-scrollbar`}
                 />
               </div>
