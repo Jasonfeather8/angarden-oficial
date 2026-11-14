@@ -370,6 +370,8 @@ export interface Cronica {
   capaUrl?: string;
   criadaEm: string;
   categoriaId?: string;
+  /** Vínculo opcional com uma campanha; a interface ainda não o define. */
+  campanhaId?: string;
   concluidaEm?: string;
   notasVisiveis: boolean;
   criadaPor?: string;
@@ -377,7 +379,7 @@ export interface Cronica {
 
 export type NovaCronica = Omit<Cronica, 'id' | 'criadaEm'>;
 
-export interface CategoriaDeCronica {
+export interface CategoriaCronica {
   id: string;
   nome: string;
   ordem: number;
@@ -406,7 +408,10 @@ export interface RecompensaDaCronica {
   objetivoId?: string;
   tipo: TipoRecompensaCronica;
   descricao: string;
+  /** Quantia de dinheiro, pontos de XP ou quantidade de mercadoria. */
   valor: number;
+  /** Quantidade de mercadoria entregue; 1 nos demais tipos. */
+  quantidade: number;
   itemId?: string;
   spellId?: string;
   itemNome?: string;

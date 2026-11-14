@@ -2,7 +2,7 @@ import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { supabase } from '../integrations/supabase/client';
 import { useSessionStore } from '../store/useSessionStore';
 import type {
-  CategoriaDeCronica,
+  CategoriaCronica,
   ConviteDaCronicaPreview,
   Cronica,
   CronicaStatus,
@@ -17,19 +17,19 @@ import type {
 import { withTimeout } from '../utils/withTimeout';
 import { cacheKeyPrefixes } from './cacheKeys';
 
-const COLUNAS_CRONICA = 'id, titulo, data_aventura, local, relato, progresso, personagens, status, agendada_para, capa_url, categoria_id, concluida_em, notas_visiveis, created_by, created_at';
+const COLUNAS_CRONICA = 'id, titulo, data_aventura, local, relato, progresso, personagens, status, agendada_para, capa_url, categoria_id, campanha_id, concluida_em, notas_visiveis, created_by, created_at';
 
 type CronicaRow = {
   id: string; titulo: string; data_aventura: string; local: string; relato: string;
   progresso: number; personagens: string[] | null; status: string; agendada_para: string | null;
-  capa_url: string | null; categoria_id: string | null; concluida_em: string | null;
+  capa_url: string | null; categoria_id: string | null; campanha_id: string | null; concluida_em: string | null;
   notas_visiveis: boolean; created_by: string | null; created_at: string;
 };
 
 type CategoriaRow = { id: string; nome: string; ordem: number };
 type ObjetivoRow = { id: string; titulo: string; concluido: boolean; ordem: number };
 type NotaRow = { id: string; titulo: string; conteudo: string; visivel_jogadores: boolean; created_at: string; autor_id: string | null };
-type RecompensaRow = { id: string; objective_id: string | null; tipo: RecompensaDaCronica['tipo']; descricao: string; valor: number | string; item_id: string | null; spell_id: string | null };
+type RecompensaRow = { id: string; objective_id: string | null; tipo: RecompensaDaCronica['tipo']; descricao: string; valor: number | string; quantidade: number | string; item_id: string | null; spell_id: string | null };
 type ParticipanteRow = { id: string; user_id: string; character_id: string; nome_personagem: string; nome_jogador: string; status: SituacaoParticipante };
 type InvitePreviewRow = { chronicle_id: string; titulo: string; data_aventura: string; local: string; relato: string; cliente: string; mestre: string; ja_participa: boolean };
 
@@ -51,7 +51,8 @@ function mapearCronica(row: CronicaRow): Cronica {
     relato: row.relato, progresso: row.progresso, personagens: row.personagens ?? [],
     status: row.status as CronicaStatus, agendadaPara: row.agendada_para ?? undefined,
     capaUrl: row.capa_url ?? undefined, criadaEm: row.created_at,
-    categoriaId: row.categoria_id ?? undefined, concluidaEm: row.concluida_em ?? undefined,
+    categoriaId: row.categoria_id ?? undefined, campanhaId: row.campanha_id ?? undefined,
+    concluidaEm: row.concluida_em ?? undefined,
     notasVisiveis: row.notas_visiveis, criadaPor: row.created_by ?? undefined,
   };
 }
