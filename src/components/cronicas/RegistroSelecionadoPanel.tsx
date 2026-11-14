@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { CalendarDays, Check, ChevronDown, ChevronUp, Clock3, FileText, MapPin, Users } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronUp, Clock3, FileText, MapPin, Users } from 'lucide-react';
 import { formatScheduledDate, formatSessionDate } from './formatters';
 import type { Cronica, ParticipanteDaCronica } from '@/types';
+import { RetratoDePresenca } from '@/components/ui/RetratoDePresenca';
 
 export interface RegistroSelecionadoPanelProps {
   cronica: Cronica;
@@ -19,9 +20,14 @@ export const RegistroSelecionadoPanel: React.FC<RegistroSelecionadoPanelProps> =
 }) => {
   const [companhiaExpandida, setCompanhiaExpandida] = useState(true);
   const aprovados = participantes.filter((participante) => participante.status === 'aprovado');
-  const companhia = participantes.length
-    ? aprovados.map((participante) => participante.nomePersonagem)
-    : cronica.personagens;
+  // Todos os itens da seção estão presentes na sessão; o retrato carrega o selo.
+  const companhia: { nome: string; imagemUrl?: string; confirmado: boolean }[] = participantes.length
+    ? aprovados.map((participante) => ({
+        nome: participante.nomePersonagem,
+        imagemUrl: participante.imagemUrl,
+        confirmado: true,
+      }))
+    : cronica.personagens.map((nome) => ({ nome, confirmado: true }));
   const estadoDoRegistro =
     cronica.status === 'AGENDADA' && cronica.agendadaPara
       ? `Agendada para ${formatScheduledDate(cronica.agendadaPara)}`
@@ -81,15 +87,14 @@ export const RegistroSelecionadoPanel: React.FC<RegistroSelecionadoPanelProps> =
           {companhiaExpandida ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
         </button>
         {companhiaExpandida && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {companhia.map((nome, index) => (
-              <span
-                key={`${nome}-${index}`}
-                className="inline-flex items-center gap-1.5 border border-[#5a4225] bg-[#1b120b] px-2.5 py-1 font-serif text-xs text-[#cdb887]"
-              >
-                <Check className="h-3 w-3 text-[#c6a35e]" aria-hidden="true" />
-                {nome}
-              </span>
+          <div className="mt-3 flex flex-wrap items-start gap-3">
+            {companhia.map((personagem, index) => (
+              <RetratoDePresenca
+                key={`${personagem.nome}-${index}`}
+                nome={personagem.nome}
+                imagemUrl={personagem.imagemUrl}
+                confirmado={personagem.confirmado}
+              />
             ))}
           </div>
         )}

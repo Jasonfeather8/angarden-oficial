@@ -434,6 +434,7 @@ export interface ParticipanteDaCronica {
   nomePersonagem: string;
   nomeJogador: string;
   status: SituacaoParticipante;
+  imagemUrl?: string;
 }
 
 export interface ConviteDaCronicaPreview {

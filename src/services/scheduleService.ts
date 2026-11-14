@@ -38,13 +38,36 @@ export const scheduleService = {
       .order('created_at', { ascending: true });
 
     if (error) throw new Error('Não foi possível carregar as presenças: ' + error.message);
-    return (data ?? []).map((linha) => {
+    const presencas = (data ?? []).map((linha) => {
       const perfil = linha.profiles as unknown as { nome_completo: string | null } | null;
       return {
         userId: linha.user_id,
         nome: perfil?.nome_completo ?? 'Aventureiro',
       };
     });
+
+    const userIds = presencas.map((presenca) => presenca.userId);
+    if (!userIds.length) return presencas;
+
+    const { data: personagens, error: erroPersonagens } = await supabase
+      .from('characters')
+      .select('created_by, imagem_url, ordem')
+      .eq('tenant_id', tenantId)
+      .in('created_by', userIds)
+      .order('ordem', { ascending: true, nullsFirst: false });
+
+    if (erroPersonagens) throw new Error('Não foi possível carregar as presenças: ' + erroPersonagens.message);
+    const imagensPorUsuario = new Map<string, string>();
+    for (const personagem of personagens ?? []) {
+      if (personagem.created_by && personagem.imagem_url && !imagensPorUsuario.has(personagem.created_by)) {
+        imagensPorUsuario.set(personagem.created_by, personagem.imagem_url);
+      }
+    }
+
+    return presencas.map((presenca) => ({
+      ...presenca,
+      imagemUrl: imagensPorUsuario.get(presenca.userId),
+    }));
   },
 
   /** Confirma a presença do usuário atual na sessão. */

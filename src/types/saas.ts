@@ -34,7 +34,7 @@ export interface SessaoDaMesa {
 export type DadosDaSessao = Omit<SessaoDaMesa, 'id'>;
 
 /** Presença confirmada de um membro em uma sessão da mesa. */
-export interface PresencaNaSessao { userId: string; nome: string; }
+export interface PresencaNaSessao { userId: string; nome: string; imagemUrl?: string; }
 
 /** Fronteira de isolamento de dados. `individual` = tenant de uma pessoa. */
 export interface Tenant {

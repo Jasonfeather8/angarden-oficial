@@ -7,6 +7,7 @@ import { ErrorState } from '../ui/ErrorState';
 import { PainelSecao } from '../ui/PainelSecao';
 import { Skeleton } from '../ui/Skeleton';
 import { ToolbarButton } from '../ui/ToolbarButton';
+import { RetratoDePresenca } from '../ui/RetratoDePresenca';
 import { contar, formatCountdown, formatSessionDate } from './formatters';
 
 const CountdownUnit: React.FC<{ value: number; label: string }> = ({ value, label }) => (
@@ -203,11 +204,15 @@ export const ProximaSessaoPanel: React.FC<ProximaSessaoPanelProps> = ({
                     <ToolbarButton onClick={presencasQuery.reload}>Tentar de novo</ToolbarButton>
                   </div>
                 ) : presencasQuery.data?.length ? (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-start gap-3">
                     {presencasQuery.data.map((presenca) => (
-                      <span key={presenca.userId} className="rounded-xs border border-[#4b3823] bg-[#150f0a] px-2 py-0.5 font-serif text-xs text-[#d6c4ae]">
-                        {presenca.nome}
-                      </span>
+                      <RetratoDePresenca
+                        key={presenca.userId}
+                        tamanho="sm"
+                        nome={presenca.nome}
+                        imagemUrl={presenca.imagemUrl}
+                        confirmado
+                      />
                     ))}
                   </div>
                 ) : (
