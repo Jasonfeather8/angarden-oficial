@@ -4,6 +4,7 @@ import { cronicaService } from '@/services/cronicaService';
 import { fichaService } from '@/services/fichaService';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import type { Cronica, NovaRecompensaCronica, RecompensaDaCronica } from '@/types';
+import { MolduraDeItem } from '../MolduraDeItem';
 import { ErrorState } from '../ui/ErrorState';
 import { PainelSecao } from '../ui/PainelSecao';
 import { LoadingState } from '../ui/Skeleton';
@@ -124,36 +125,45 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
 
     return (
       <li key={recompensa.id} className="border border-[#3a2c1d] bg-[#120d09] p-3">
-        <div className="flex flex-wrap items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="font-cinzel text-sm font-bold text-[#e0bd71]">{descreverValor(recompensa)}</p>
-            {recompensa.descricao && (
-              <p className="mt-1 font-serif text-sm text-[#c4b9a3]">{recompensa.descricao}</p>
-            )}
-            <p className="mt-1 font-serif text-xs italic text-[#8f795e]">
-              Receberam: {recebedores.length ? recebedores.join(', ') : 'ninguém ainda'}
-            </p>
-          </div>
-          {podeGerir && (
-            <div className="flex flex-wrap gap-2">
-              <ToolbarButton
-                onClick={() => {
-                  setEditando(recompensa);
-                  setFormularioAberto(true);
-                }}
-              >
-                Editar
-              </ToolbarButton>
-              <ToolbarButton onClick={() => void excluir(recompensa)}>Excluir</ToolbarButton>
-              <ToolbarButton
-                variant="primary"
-                icon={<HandCoins className="h-3.5 w-3.5" />}
-                onClick={() => setEntregando(recompensa)}
-              >
-                Entregar
-              </ToolbarButton>
-            </div>
+        <div className="flex items-start gap-2">
+          {recompensa.tipo === 'item' && (
+            <MolduraDeItem
+              type={recompensa.itemIconeTipo ?? ''}
+              imageUrl={recompensa.itemImagemUrl}
+              className="w-12 h-12"
+            />
           )}
+          <div className="flex min-w-0 flex-1 flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-cinzel text-sm font-bold text-[#e0bd71]">{descreverValor(recompensa)}</p>
+              {recompensa.descricao && (
+                <p className="mt-1 font-serif text-sm text-[#c4b9a3]">{recompensa.descricao}</p>
+              )}
+              <p className="mt-1 font-serif text-xs italic text-[#8f795e]">
+                Receberam: {recebedores.length ? recebedores.join(', ') : 'ninguém ainda'}
+              </p>
+            </div>
+            {podeGerir && (
+              <div className="flex flex-wrap gap-2">
+                <ToolbarButton
+                  onClick={() => {
+                    setEditando(recompensa);
+                    setFormularioAberto(true);
+                  }}
+                >
+                  Editar
+                </ToolbarButton>
+                <ToolbarButton onClick={() => void excluir(recompensa)}>Excluir</ToolbarButton>
+                <ToolbarButton
+                  variant="primary"
+                  icon={<HandCoins className="h-3.5 w-3.5" />}
+                  onClick={() => setEntregando(recompensa)}
+                >
+                  Entregar
+                </ToolbarButton>
+              </div>
+            )}
+          </div>
         </div>
         {!podeGerir && liberada(recompensa) && meusElegiveis.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">

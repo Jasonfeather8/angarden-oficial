@@ -419,11 +419,13 @@ export interface RecompensaDaCronica {
   itemId?: string;
   spellId?: string;
   itemNome?: string;
+  itemImagemUrl?: string;
+  itemIconeTipo?: string;
   spellNome?: string;
   entreguesA: string[];
 }
 
-export type NovaRecompensaCronica = Omit<RecompensaDaCronica, 'id' | 'entreguesA' | 'itemNome' | 'spellNome'>;
+export type NovaRecompensaCronica = Omit<RecompensaDaCronica, 'id' | 'entreguesA' | 'itemNome' | 'itemImagemUrl' | 'itemIconeTipo' | 'spellNome'>;
 
 export type SituacaoParticipante = 'pendente' | 'aprovado' | 'recusado';
 
