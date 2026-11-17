@@ -421,6 +421,7 @@ export interface RecompensaDaCronica {
   itemNome?: string;
   itemImagemUrl?: string;
   itemIconeTipo?: string;
+  itemMercado?: MercadoItem;
   spellNome?: string;
   spellImagemUrl?: string;
   spellVisual?: string;
@@ -428,7 +429,7 @@ export interface RecompensaDaCronica {
   destaque: boolean;
 }
 
-export type NovaRecompensaCronica = Omit<RecompensaDaCronica, 'id' | 'entreguesA' | 'destaque' | 'itemNome' | 'itemImagemUrl' | 'itemIconeTipo' | 'spellNome' | 'spellImagemUrl' | 'spellVisual'>;
+export type NovaRecompensaCronica = Omit<RecompensaDaCronica, 'id' | 'entreguesA' | 'destaque' | 'itemNome' | 'itemImagemUrl' | 'itemIconeTipo' | 'itemMercado' | 'spellNome' | 'spellImagemUrl' | 'spellVisual'>;
 
 export type SituacaoParticipante = 'pendente' | 'aprovado' | 'recusado';
 

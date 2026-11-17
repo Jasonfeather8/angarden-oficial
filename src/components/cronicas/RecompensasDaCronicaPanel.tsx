@@ -3,7 +3,9 @@ import { Gift, HandCoins, Package, Star } from 'lucide-react';
 import { cronicaService } from '@/services/cronicaService';
 import { fichaService } from '@/services/fichaService';
 import { useAuthorization } from '@/hooks/useAuthorization';
-import type { Cronica, NovaRecompensaCronica, RecompensaDaCronica } from '@/types';
+import { DetalhesDaMercadoriaModal } from '@/components/mercado/DetalhesDaMercadoriaModal';
+import { preloadModalDetalhesCompra } from '@/components/mercado/modalDetalhesCompraLazy';
+import type { Cronica, MercadoItem, NovaRecompensaCronica, RecompensaDaCronica } from '@/types';
 import { MiniaturaDeMagia } from '../MiniaturaDeMagia';
 import { MolduraDeItem } from '../MolduraDeItem';
 import { ErrorState } from '../ui/ErrorState';
@@ -49,6 +51,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
 
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [editando, setEditando] = useState<RecompensaDaCronica | undefined>(undefined);
+  const [itemSelecionado, setItemSelecionado] = useState<MercadoItem | undefined>();
   const [entregando, setEntregando] = useState<RecompensaDaCronica | undefined>(undefined);
   const [selecionandoLoot, setSelecionandoLoot] = useState(false);
   const [meusPersonagens, setMeusPersonagens] = useState<Array<{ id: string; nome: string }>>([]);
@@ -142,11 +145,28 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
       <li key={recompensa.id} className="border border-[#3a2c1d] bg-[#120d09] p-3">
         <div className="flex items-start gap-2">
           {recompensa.tipo === 'item' && (
-            <MolduraDeItem
-              type={recompensa.itemIconeTipo ?? ''}
-              imageUrl={recompensa.itemImagemUrl}
-              className="w-12 h-12"
-            />
+            recompensa.itemMercado ? (
+              <button
+                type="button"
+                onClick={() => setItemSelecionado(recompensa.itemMercado)}
+                onMouseEnter={preloadModalDetalhesCompra}
+                aria-label={`Ver detalhes de ${recompensa.itemNome ?? 'mercadoria'}`}
+                title="Ver detalhes"
+                className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1a85a]"
+              >
+                <MolduraDeItem
+                  type={recompensa.itemIconeTipo ?? ''}
+                  imageUrl={recompensa.itemImagemUrl}
+                  className="w-12 h-12"
+                />
+              </button>
+            ) : (
+              <MolduraDeItem
+                type={recompensa.itemIconeTipo ?? ''}
+                imageUrl={recompensa.itemImagemUrl}
+                className="w-12 h-12"
+              />
+            )
           )}
           {recompensa.tipo === 'magia' && (
             <MiniaturaDeMagia
@@ -309,6 +329,10 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
         )}
         {erro && <p role="alert" className="mt-3 font-serif text-sm text-red-300">{erro}</p>}
       </PainelSecao>
+
+      {itemSelecionado && (
+        <DetalhesDaMercadoriaModal item={itemSelecionado} onClose={() => setItemSelecionado(undefined)} />
+      )}
 
       <RecompensaDaCronicaModal
         isOpen={formularioAberto}

@@ -362,6 +362,7 @@ export const cronicaService = {
         descricao: row.descricao, valor: Number(row.valor), quantidade: Number(row.quantidade),
         itemId: row.item_id ?? undefined, spellId: row.spell_id ?? undefined,
         itemNome: item?.nome, itemImagemUrl: item?.imagem_url, itemIconeTipo: item?.icone_tipo,
+        itemMercado: item,
         spellNome: row.spell_id ? magiasPorId.get(row.spell_id)?.name : undefined,
         spellImagemUrl: row.spell_id ? magiasPorId.get(row.spell_id)?.image : undefined,
         spellVisual: row.spell_id ? magiasPorId.get(row.spell_id)?.visual : undefined,
