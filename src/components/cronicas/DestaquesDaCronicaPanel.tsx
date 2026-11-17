@@ -10,10 +10,12 @@ import type { MercadoItem } from '@/types';
 
 export interface DestaquesDaCronicaPanelProps {
   cronicaId: string;
+  /** Sobe quando uma escrita na crônica pode ter mudado os destaques. */
+  versao?: number;
 }
 
-export const DestaquesDaCronicaPanel: React.FC<DestaquesDaCronicaPanelProps> = ({ cronicaId }) => {
-  const { recompensas, isLoading, error, reload } = useRecompensasDaCronica(cronicaId);
+export const DestaquesDaCronicaPanel: React.FC<DestaquesDaCronicaPanelProps> = ({ cronicaId, versao }) => {
+  const { recompensas, isLoading, error, reload } = useRecompensasDaCronica(cronicaId, versao);
   const [selecionado, setSelecionado] = useState<MercadoItem | undefined>();
 
   if (isLoading) return null;

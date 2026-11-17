@@ -32,7 +32,14 @@ export const CronicaDetalhePage: React.FC = () => {
   const navigate = useNavigate();
   const [excluindo, setExcluindo] = useState(false);
   const [compartilhando, setCompartilhando] = useState(false);
-  const formulario = useCronicaForm({ onSalva: () => reload() });
+  // Escritas na crônica podem mexer nas recompensas (o destaque das mercadorias,
+  // por exemplo): a coluna dos destaques revalida junto com a lista.
+  const [versaoDasRecompensas, setVersaoDasRecompensas] = useState(0);
+  const recarregarComRecompensas = () => {
+    reload();
+    setVersaoDasRecompensas((versao) => versao + 1);
+  };
+  const formulario = useCronicaForm({ onSalva: recarregarComRecompensas });
 
   const podeGerir = Boolean(cronica && (isAdmin || cronica.criadaPor === userId));
   const voltar = () => navigate(ROUTES.cronicas);
@@ -76,7 +83,7 @@ export const CronicaDetalhePage: React.FC = () => {
           <ErrorState onRetry={participantes.reload} description={participantes.error} />
         ) : (
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(200px,0.7fr)_minmax(320px,1.9fr)_minmax(200px,0.7fr)]">
-            <ProgressoDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={reload} />
+            <ProgressoDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={recarregarComRecompensas} />
             <RegistroSelecionadoPanel
               cronica={cronica}
               participantes={participantes.participantes}
@@ -87,15 +94,15 @@ export const CronicaDetalhePage: React.FC = () => {
                   abrirEdicao={formulario.abrirEdicao}
                   abrirCompartilhar={() => setCompartilhando(true)}
                   abrirExclusao={() => setExcluindo(true)}
-                  onAlterada={reload}
+                  onAlterada={recarregarComRecompensas}
                 />
               }
             >
-              <NotasDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={reload} />
+              <NotasDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={recarregarComRecompensas} />
             </RegistroSelecionadoPanel>
             <div className="min-w-0 space-y-4">
               <CapaDaSessaoPanel cronica={cronica} />
-              <DestaquesDaCronicaPanel cronicaId={cronica.id} />
+              <DestaquesDaCronicaPanel cronicaId={cronica.id} versao={versaoDasRecompensas} />
             </div>
           </div>
         )}
@@ -119,7 +126,7 @@ export const CronicaDetalhePage: React.FC = () => {
         onPublishModeChange={formulario.setPublishMode}
         isSaving={formulario.isSaving}
         saveError={formulario.saveError}
-        onCronicaAlterada={reload}
+        onCronicaAlterada={recarregarComRecompensas}
       />
 
       {cronica && (
