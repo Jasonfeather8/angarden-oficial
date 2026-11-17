@@ -4,6 +4,7 @@ import { cronicaService } from '@/services/cronicaService';
 import { fichaService } from '@/services/fichaService';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import type { Cronica, NovaRecompensaCronica, RecompensaDaCronica } from '@/types';
+import { MiniaturaDeMagia } from '../MiniaturaDeMagia';
 import { MolduraDeItem } from '../MolduraDeItem';
 import { ErrorState } from '../ui/ErrorState';
 import { PainelSecao } from '../ui/PainelSecao';
@@ -130,6 +131,13 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
             <MolduraDeItem
               type={recompensa.itemIconeTipo ?? ''}
               imageUrl={recompensa.itemImagemUrl}
+              className="w-12 h-12"
+            />
+          )}
+          {recompensa.tipo === 'magia' && (
+            <MiniaturaDeMagia
+              imageUrl={recompensa.spellImagemUrl}
+              visual={recompensa.spellVisual}
               className="w-12 h-12"
             />
           )}

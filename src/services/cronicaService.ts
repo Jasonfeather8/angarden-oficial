@@ -17,6 +17,7 @@ import type {
 import { withTimeout } from '../utils/withTimeout';
 import { cacheKeyPrefixes } from './cacheKeys';
 import { fichaService } from './fichaService';
+import { listarMagiasPorIds } from './grimorioService';
 import { carregarLookupDeItens, consultarLookupDeItens } from './mercadoService';
 
 const COLUNAS_CRONICA = 'id, titulo, data_aventura, local, relato, progresso, personagens, status, agendada_para, capa_url, categoria_id, campanha_id, concluida_em, notas_visiveis, created_by, created_at';
@@ -343,22 +344,27 @@ export const cronicaService = {
     const rewardIds = rows.map((row) => row.id);
     const itemIds = [...new Set(rows.flatMap((row) => row.item_id ? [row.item_id] : []))];
     const spellIds = [...new Set(rows.flatMap((row) => row.spell_id ? [row.spell_id] : []))];
-    const [grantsResult, spellsResult] = await Promise.all([
+    const [grantsResult, magiasResult] = await Promise.all([
       withTimeout(Promise.resolve(supabase.from('chronicle_reward_grants').select('reward_id, character_id').in('reward_id', rewardIds))),
-      spellIds.length ? withTimeout(Promise.resolve(supabase.from('grimorio_spells').select('id, nome').in('id', spellIds))) : Promise.resolve({ data: [], error: null }),
+      spellIds.length
+        ? listarMagiasPorIds(spellIds).catch((cause) => {
+          throw erro('carregar as magias da crônica', cause instanceof Error ? cause.message : String(cause));
+        })
+        : Promise.resolve({ magias: [], ocultas: [] }),
     ]);
     await carregarLookupDeItens(itemIds.map((id) => ({ id })));
     if (grantsResult.error) throw erro('carregar as recompensas', grantsResult.error.message);
-    if (spellsResult.error) throw erro('carregar os nomes das magias', spellsResult.error.message);
     const grants = (grantsResult.data ?? []) as { reward_id: string; character_id: string }[];
-    const nomesMagias = new Map(((spellsResult.data ?? []) as { id: string; nome: string }[]).map((row) => [row.id, row.nome]));
+    const magiasPorId = new Map(magiasResult.magias.map((magia) => [magia.id, magia] as const));
     return rows.map((row) => {
       const item = row.item_id ? consultarLookupDeItens(row.item_id) : undefined;
       return { id: row.id, objetivoId: row.objective_id ?? undefined, tipo: row.tipo,
         descricao: row.descricao, valor: Number(row.valor), quantidade: Number(row.quantidade),
         itemId: row.item_id ?? undefined, spellId: row.spell_id ?? undefined,
         itemNome: item?.nome, itemImagemUrl: item?.imagem_url, itemIconeTipo: item?.icone_tipo,
-        spellNome: row.spell_id ? nomesMagias.get(row.spell_id) : undefined,
+        spellNome: row.spell_id ? magiasPorId.get(row.spell_id)?.name : undefined,
+        spellImagemUrl: row.spell_id ? magiasPorId.get(row.spell_id)?.image : undefined,
+        spellVisual: row.spell_id ? magiasPorId.get(row.spell_id)?.visual : undefined,
         entreguesA: grants.filter((grant) => grant.reward_id === row.id).map((grant) => grant.character_id) };
     });
   },
