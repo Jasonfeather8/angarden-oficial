@@ -10,7 +10,6 @@ import { HistoricoXpPanel } from '../components/dashboard/HistoricoXpPanel';
 import { MetricasDoReinoPanel } from '../components/dashboard/MetricasDoReinoPanel';
 import { NovidadesMercadoPanel } from '../components/dashboard/NovidadesMercadoPanel';
 import { PendenciasPanel } from '../components/dashboard/PendenciasPanel';
-import { ProgressoArcanoPanel } from '../components/dashboard/ProgressoArcanoPanel';
 import { ProximaSessaoPanel } from '../components/dashboard/ProximaSessaoPanel';
 import { SessaoFormModal } from '../components/dashboard/SessaoFormModal';
 import { formatToday } from '../components/dashboard/formatters';
@@ -21,7 +20,6 @@ import { useGovernancaDaMesa } from '../components/dashboard/useGovernancaDaMesa
 import { useHistoricoDeXp } from '../components/dashboard/useHistoricoDeXp';
 import { useNovidadesDoMercado } from '../components/dashboard/useNovidadesDoMercado';
 import { usePendenciasDaMesa } from '../components/dashboard/usePendenciasDaMesa';
-import { useProgressoArcano } from '../components/dashboard/useProgressoArcano';
 import { useResumoDaMesa } from '../components/dashboard/useResumoDaMesa';
 import { useSessaoForm } from '../components/dashboard/useSessaoForm';
 import { useAsyncData } from '../hooks/useAsyncData';
@@ -47,12 +45,6 @@ export const DashboardPage: React.FC = () => {
     partesSeladas,
   } = useGovernancaDaMesa(tenantId, papelMestre, userId);
   const catalogoQuery = useCatalogoDoReino(tenantId, role);
-  const { arcanoQuery, progressoPorFicha, nomesPorEscola } = useProgressoArcano(
-    tenantId,
-    papelMestre,
-    userId,
-    fichasVisiveis
-  );
   const { sessaoQuery, presencasQuery, historicoSessoesQuery } = useAgendaDaSessao(tenantId);
   const novidadesQuery = useNovidadesDoMercado();
   const cronicasQuery = useCronicasRecentes(tenantId);
@@ -112,6 +104,18 @@ export const DashboardPage: React.FC = () => {
             <p className="font-serif text-xs capitalize italic text-[#8f795e]">{hoje}</p>
           </section>
 
+          <MetricasDoReinoPanel
+            papelMestre={papelMestre}
+            fichasVisiveis={fichasVisiveis}
+            jogadores={jogadores}
+            partesSeladas={partesSeladas}
+            resumoQuery={resumoQuery}
+            limitesQuery={limitesQuery}
+            catalogoQuery={catalogoQuery}
+            limiteQuery={limiteQuery}
+            bloqueiosQuery={bloqueiosQuery}
+          />
+
           <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
             <div className="space-y-4">
               <ProximaSessaoPanel
@@ -137,15 +141,6 @@ export const DashboardPage: React.FC = () => {
                 nomesPorJogador={nomesPorJogador}
                 resumoQuery={resumoQuery}
               />
-              <ProgressoArcanoPanel
-                papelMestre={papelMestre}
-                fichasVisiveis={fichasVisiveis}
-                progressoPorFicha={progressoPorFicha}
-                nomesPorEscola={nomesPorEscola}
-                arcanoQuery={arcanoQuery}
-                resumoQuery={resumoQuery}
-                catalogoQuery={catalogoQuery}
-              />
               <NovidadesMercadoPanel novidadesQuery={novidadesQuery} />
               <CronicasPanel papelMestre={papelMestre} cronicasQuery={cronicasQuery} />
             </div>
@@ -170,18 +165,6 @@ export const DashboardPage: React.FC = () => {
               <AtalhosPanel isMestre={isMestre} />
             </div>
           </div>
-
-          <MetricasDoReinoPanel
-            papelMestre={papelMestre}
-            fichasVisiveis={fichasVisiveis}
-            jogadores={jogadores}
-            partesSeladas={partesSeladas}
-            resumoQuery={resumoQuery}
-            limitesQuery={limitesQuery}
-            catalogoQuery={catalogoQuery}
-            limiteQuery={limiteQuery}
-            bloqueiosQuery={bloqueiosQuery}
-          />
         </div>
       </PageShell>
 

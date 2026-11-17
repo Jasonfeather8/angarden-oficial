@@ -5,7 +5,7 @@ import { mercadoService } from '../../services/mercadoService';
 /** As últimas mercadorias publicadas no catálogo global. */
 export function useNovidadesDoMercado() {
   return useAsyncData(
-    () => mercadoService.listarNovidades(6),
+    () => mercadoService.listarNovidades(3),
     [],
     { cacheKey: cacheKeys.mercadoNovidades() }
   );
