@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Gift, HandCoins, Package } from 'lucide-react';
+import { Gift, HandCoins, Package, Star } from 'lucide-react';
 import { cronicaService } from '@/services/cronicaService';
 import { fichaService } from '@/services/fichaService';
 import { useAuthorization } from '@/hooks/useAuthorization';
@@ -97,6 +97,20 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
     }
   };
 
+  const destacar = async (recompensa: RecompensaDaCronica) => {
+    setErro('');
+    if (!recompensa.destaque && recompensas.filter((item) => item.destaque).length >= 3) {
+      setErro('Você já tem três destaques nesta crônica. Remova um para marcar outro.');
+      return;
+    }
+    try {
+      await cronicaService.destacarRecompensa(recompensa.id, !recompensa.destaque);
+      recarregar();
+    } catch (cause) {
+      setErro(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
   const resgatar = async (recompensa: RecompensaDaCronica, characterId: string) => {
     setErro('');
     try {
@@ -153,6 +167,16 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
             </div>
             {podeGerir && (
               <div className="flex flex-wrap gap-2">
+                {recompensa.tipo === 'item' && (
+                  <ToolbarButton
+                    icon={<Star className={recompensa.destaque ? 'h-3.5 w-3.5 fill-[#f0d99b] text-[#f0d99b]' : 'h-3.5 w-3.5'} />}
+                    aria-pressed={recompensa.destaque}
+                    title={recompensa.destaque ? 'Remover destaque' : 'Destacar'}
+                    onClick={() => void destacar(recompensa)}
+                  >
+                    <span className="sr-only">{recompensa.destaque ? 'Remover destaque' : 'Destacar'}</span>
+                  </ToolbarButton>
+                )}
                 <ToolbarButton
                   onClick={() => {
                     setEditando(recompensa);
@@ -192,6 +216,7 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
   };
 
   const mercadorias = recompensas.filter((recompensa) => recompensa.tipo === 'item');
+  const quantidadeDestaques = recompensas.filter((recompensa) => recompensa.destaque).length;
   const premios = recompensas.filter((recompensa) => recompensa.tipo !== 'item');
   const grupos = new Map<string, RecompensaDaCronica[]>();
   premios.forEach((recompensa) => {
@@ -243,12 +268,17 @@ export const RecompensasDaCronicaPanel: React.FC<RecompensasDaCronicaPanelProps>
                   Mercadorias vinculadas
                 </h3>
                 {podeGerir && (
-                  <ToolbarButton
-                    icon={<Package className="h-3.5 w-3.5" />}
-                    onClick={() => setSelecionandoLoot(true)}
-                  >
-                    Vincular mercadoria
-                  </ToolbarButton>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-cinzel text-[10px] uppercase tracking-[0.16em] text-[#a88d61]">
+                      Destaques: {quantidadeDestaques} de 3
+                    </span>
+                    <ToolbarButton
+                      icon={<Package className="h-3.5 w-3.5" />}
+                      onClick={() => setSelecionandoLoot(true)}
+                    >
+                      Vincular mercadoria
+                    </ToolbarButton>
+                  </div>
                 )}
               </div>
               {mercadorias.length === 0 ? (

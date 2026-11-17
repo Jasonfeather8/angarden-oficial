@@ -1,0 +1,1 @@
+create trigger chronicle_rewards_destaque_limit before insert or update of destaque on public.chronicle_rewards for each row execute function public.prevent_destaque_limit();

@@ -1,0 +1,1 @@
+alter table public.chronicle_rewards add column destaque boolean not null default false;

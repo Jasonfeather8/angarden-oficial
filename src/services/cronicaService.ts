@@ -33,7 +33,7 @@ type CronicaRow = {
 type CategoriaRow = { id: string; nome: string; ordem: number };
 type ObjetivoRow = { id: string; titulo: string; detalhes: string | null; imagem_url: string | null; concluido: boolean; ordem: number };
 type NotaRow = { id: string; titulo: string; conteudo: string; visivel_jogadores: boolean; created_at: string; autor_id: string | null };
-type RecompensaRow = { id: string; objective_id: string | null; tipo: RecompensaDaCronica['tipo']; descricao: string; valor: number | string; quantidade: number | string; item_id: string | null; spell_id: string | null };
+type RecompensaRow = { id: string; objective_id: string | null; tipo: RecompensaDaCronica['tipo']; descricao: string; valor: number | string; quantidade: number | string; item_id: string | null; spell_id: string | null; destaque: boolean };
 type ParticipanteRow = { id: string; user_id: string; character_id: string; nome_personagem: string; nome_jogador: string; status: SituacaoParticipante };
 type InvitePreviewRow = { chronicle_id: string; titulo: string; data_aventura: string; local: string; relato: string; cliente: string; mestre: string; ja_participa: boolean };
 
@@ -337,7 +337,7 @@ export const cronicaService = {
 
   listarRecompensas: async (cronicaId: string): Promise<RecompensaDaCronica[]> => {
     const { data, error } = await withTimeout(Promise.resolve(supabase.from('chronicle_rewards')
-      .select('id, objective_id, tipo, descricao, valor, quantidade, item_id, spell_id').eq('chronicle_id', cronicaId)));
+      .select('id, objective_id, tipo, descricao, valor, quantidade, item_id, spell_id, destaque').eq('chronicle_id', cronicaId)));
     if (error) throw erro('carregar as recompensas', error.message);
     const rows = (data ?? []) as RecompensaRow[];
     if (rows.length === 0) return [];
@@ -365,7 +365,8 @@ export const cronicaService = {
         spellNome: row.spell_id ? magiasPorId.get(row.spell_id)?.name : undefined,
         spellImagemUrl: row.spell_id ? magiasPorId.get(row.spell_id)?.image : undefined,
         spellVisual: row.spell_id ? magiasPorId.get(row.spell_id)?.visual : undefined,
-        entreguesA: grants.filter((grant) => grant.reward_id === row.id).map((grant) => grant.character_id) };
+        entreguesA: grants.filter((grant) => grant.reward_id === row.id).map((grant) => grant.character_id),
+        destaque: row.destaque };
     });
   },
 
@@ -389,6 +390,14 @@ export const cronicaService = {
       quantidade: dados.quantidade, item_id: dados.itemId ?? null, spell_id: dados.spellId ?? null,
     }).eq('id', id).eq('tenant_id', clienteId)));
     if (error) throw erro('atualizar a recompensa', error.message);
+    invalidarCache();
+  },
+
+  destacarRecompensa: async (id: string, destaque: boolean): Promise<void> => {
+    let clienteId: string;
+    try { clienteId = tenantId(); } catch (cause) { throw erro('destacar a recompensa', String(cause)); }
+    const { error } = await withTimeout(Promise.resolve(supabase.from('chronicle_rewards').update({ destaque }).eq('id', id).eq('tenant_id', clienteId)));
+    if (error) throw erro('destacar a recompensa', error.message);
     invalidarCache();
   },
 
