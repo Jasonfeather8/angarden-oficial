@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import { clsx } from 'clsx';
+import { MolduraCircular } from '@/components/MolduraCircular';
 
 export interface RetratoDePresencaProps {
   /** Nome do personagem: vira a legenda e a inicial quando não há imagem. */
@@ -13,8 +14,8 @@ export interface RetratoDePresencaProps {
 }
 
 const TAMANHOS = {
-  sm: { figura: 'w-[68px]', moldura: 'size-12', inicial: 'text-base', legenda: 'text-[9px]', selo: 'size-4', icone: 'h-2.5 w-2.5' },
-  md: { figura: 'w-[80px]', moldura: 'size-16', inicial: 'text-xl', legenda: 'text-[10px]', selo: 'size-5', icone: 'h-3 w-3' },
+  sm: { figura: 'w-[68px]', inicial: 'text-base', legenda: 'text-[9px]', selo: 'size-4', icone: 'h-2.5 w-2.5' },
+  md: { figura: 'w-[80px]', inicial: 'text-xl', legenda: 'text-[10px]', selo: 'size-5', icone: 'h-3 w-3' },
 } as const;
 
 /**
@@ -36,39 +37,9 @@ export const RetratoDePresenca: React.FC<RetratoDePresencaProps> = ({
 
   return (
     <figure title={nome} className={clsx('flex min-w-0 flex-col items-center gap-1.5', medida.figura, className)}>
-      <span className="relative flex shrink-0 items-center justify-center">
-        <span aria-hidden="true" className="pointer-events-none absolute -inset-2 rounded-full bg-[radial-gradient(circle,rgba(209,168,90,0.18),transparent_70%)]" />
-        <span aria-hidden="true" className="pointer-events-none absolute -inset-[5px] rounded-full border border-dashed border-[#8c6b41]/35" />
-        <span aria-hidden="true" className="pointer-events-none absolute -inset-1 rounded-full border border-[#6b4f2d]/80" />
-        <span aria-hidden="true" className="pointer-events-none absolute -top-[7px] left-1/2 size-1.5 -translate-x-1/2 rotate-45 border border-[#8c6b41] bg-[#d1a85a]/70" />
-        <span aria-hidden="true" className="pointer-events-none absolute -bottom-[7px] left-1/2 size-1.5 -translate-x-1/2 rotate-45 border border-[#8c6b41] bg-[#d1a85a]/70" />
-        <span
-          className={clsx(
-            'relative flex overflow-hidden rounded-full border-2 border-[#a88242]/60 bg-[#0d0906] shadow-[0_0_16px_rgba(0,0,0,0.6),inset_0_0_18px_rgba(0,0,0,0.85)]',
-            medida.moldura,
-          )}
-        >
-          {mostrarImagem ? (
-            <img
-              src={imagemUrl}
-              alt={`Retrato de ${nome}`}
-              loading="lazy"
-              onError={() => setImagemQuebrada(imagemUrl ?? null)}
-              className="h-full w-full object-cover object-top"
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className={clsx(
-                'flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,#2a1d12_0%,#100a06_72%)] font-cinzel font-bold text-[#c6a35e]',
-                medida.inicial,
-              )}
-            >
-              {inicial}
-            </span>
-          )}
-        </span>
-        {confirmado && (
+      <MolduraCircular
+        tamanho={tamanho}
+        selo={confirmado && (
           <span
             aria-hidden="true"
             className={clsx(
@@ -79,7 +50,27 @@ export const RetratoDePresenca: React.FC<RetratoDePresencaProps> = ({
             <Check className={clsx('stroke-[3]', medida.icone)} />
           </span>
         )}
-      </span>
+      >
+        {mostrarImagem ? (
+          <img
+            src={imagemUrl}
+            alt={`Retrato de ${nome}`}
+            loading="lazy"
+            onError={() => setImagemQuebrada(imagemUrl ?? null)}
+            className="h-full w-full object-cover object-top"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className={clsx(
+              'flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,#2a1d12_0%,#100a06_72%)] font-cinzel font-bold text-[#c6a35e]',
+              medida.inicial,
+            )}
+          >
+            {inicial}
+          </span>
+        )}
+      </MolduraCircular>
       <figcaption className={clsx('w-full text-center font-cinzel uppercase leading-tight tracking-wider text-[#d6c4ae]', medida.legenda)}>
         {nome}
       </figcaption>

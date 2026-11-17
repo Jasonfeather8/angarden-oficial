@@ -5,6 +5,7 @@ import { PageShell } from '@/components/PageShell';
 import { CapaDaSessaoPanel } from '@/components/cronicas/CapaDaSessaoPanel';
 import { CompartilharCronicaModal } from '@/components/cronicas/CompartilharCronicaModal';
 import { CronicaAcoesBar } from '@/components/cronicas/CronicaAcoesBar';
+import { DestaquesDaCronicaPanel } from '@/components/cronicas/DestaquesDaCronicaPanel';
 import { ExcluirCronicaModal } from '@/components/cronicas/ExcluirCronicaModal';
 import { NotasDaCronicaPanel } from '@/components/cronicas/NotasDaCronicaPanel';
 import { NovaCronicaModal } from '@/components/cronicas/NovaCronicaModal';
@@ -92,7 +93,10 @@ export const CronicaDetalhePage: React.FC = () => {
             >
               <NotasDaCronicaPanel cronica={cronica} podeGerir={podeGerir} onCronicaAlterada={reload} />
             </RegistroSelecionadoPanel>
-            <CapaDaSessaoPanel cronica={cronica} />
+            <div className="min-w-0 space-y-4">
+              <CapaDaSessaoPanel cronica={cronica} />
+              <DestaquesDaCronicaPanel cronicaId={cronica.id} />
+            </div>
           </div>
         )}
       </PageShell>
