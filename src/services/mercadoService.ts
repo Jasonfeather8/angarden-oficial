@@ -131,51 +131,15 @@ function valorPostgrest(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
-function clausulasSubcategoria(categoria: CategoriaMercado, valor: string): string[] {
-  const clausulas = [
+/**
+ * A subcategoria é gravada em `dados` item a item, então o filtro compara o rótulo exato.
+ * Não use heurísticas por ícone ou nome: elas trazem itens de outras subcategorias.
+ */
+function clausulasSubcategoria(valor: string): string[] {
+  return [
     `dados->>subcategoria.eq.${valorPostgrest(valor)}`,
     `dados->>tipo.eq.${valorPostgrest(valor)}`,
   ];
-  const armas: Record<string, string[]> = {
-    'Armas Combate Curto (Cc)': ['icone_tipo.eq.dagger', 'nome.ilike."%adaga%"', 'nome.ilike."%faca%"'],
-    'Armas Curtas': ['icone_tipo.eq.axe', 'icone_tipo.eq.mace', 'nome.ilike."%machado%"', 'nome.ilike."%maça%"'],
-    'Armas Longas': ['icone_tipo.eq.sword', 'nome.ilike."%espada%"', 'nome.ilike."%sabre%"'],
-    'Arma de Haste (AH)': ['icone_tipo.eq.spear', 'nome.ilike."%lança%"', 'nome.ilike."%haste%"'],
-    'Viper (V)': ['nome.ilike."%viper%"', 'nome.ilike."%florete%"', 'nome.ilike."%estocada%"'],
-    'Destroyer (D)': ['nome.ilike."%destroyer%"', 'nome.ilike."%montante%"', 'nome.ilike."%martelo%"'],
-    'Armas Kobudo (K)': ['nome.ilike."%kobudo%"', 'nome.ilike."%marcial%"', 'nome.ilike."%nunchaku%"'],
-  };
-  const armaduras: Record<string, string[]> = {
-    'Armaduras Leves': ['icone_tipo.eq.armor_leather', 'peso.lt.6'],
-    'Armaduras Médias': ['icone_tipo.eq.armor_mail', 'icone_tipo.eq.armor_breastplate'],
-    'Armaduras Pesadas': ['icone_tipo.eq.armor_plate', 'peso.gt.10'],
-  };
-  const longaDistancia: Record<string, string[]> = {
-    Arcos: ['icone_tipo.eq.bow', 'nome.ilike."%arco%"', 'dados->>subcategoria.ilike."%arco%"', 'dados->>tipo.ilike."%arco%"'],
-    Bestas: ['icone_tipo.eq.crossbow', 'nome.ilike."%besta%"', 'dados->>subcategoria.ilike."%besta%"', 'dados->>tipo.ilike."%besta%"'],
-    Funda: ['nome.ilike."%funda%"', 'dados->>subcategoria.ilike."%funda%"', 'dados->>tipo.ilike."%funda%"'],
-    Bumerangue: ['nome.ilike."%bumerangue%"', 'dados->>subcategoria.ilike."%bumerangue%"', 'dados->>tipo.ilike."%bumerangue%"'],
-    Zarabatana: ['nome.ilike."%zarabatana%"', 'dados->>subcategoria.ilike."%zarabatana%"', 'dados->>tipo.ilike."%zarabatana%"'],
-    Estilingue: ['nome.ilike."%estilingue%"', 'dados->>subcategoria.ilike."%estilingue%"', 'dados->>tipo.ilike."%estilingue%"'],
-  };
-  const projeteis: Record<string, string[]> = {
-    Flechas: ['nome.ilike."%flecha%"'],
-    Virotes: ['nome.ilike."%virote%"'],
-  };
-
-  if (categoria === 'mercado_armas') clausulas.push(...(armas[valor] ?? []));
-  if (categoria === 'mercado_armaduras') clausulas.push(...(armaduras[valor] ?? []));
-  if (categoria === 'mercado_ld') clausulas.push(...(longaDistancia[valor] ?? []));
-  if (categoria === 'mercado_progeteis') clausulas.push(...(projeteis[valor] ?? []));
-  if (categoria === 'mercado_acessorios') {
-    const termo = valor.toLowerCase();
-    clausulas.push(
-      `nome.ilike.${valorPostgrest(`%${termo}%`)}`,
-      `dados->>subcategoria.ilike.${valorPostgrest(`%${termo}%`)}`,
-      `dados->>tipo.ilike.${valorPostgrest(`%${termo}%`)}`,
-    );
-  }
-  return clausulas;
 }
 
 function aplicarCategoria<T extends { eq: (column: string, value: string) => T; or: (filters: string) => T }>(query: T, categoria: CategoriaMercado): T {
@@ -194,7 +158,7 @@ export async function listarItens(filtros: MercadoFiltros): Promise<MercadoPagin
   query = aplicarCategoria(query, filtros.categoria);
 
   if (filtros.subcategoria && filtros.subcategoria !== 'todas') {
-    query = query.or(clausulasSubcategoria(filtros.categoria, filtros.subcategoria).join(','));
+    query = query.or(clausulasSubcategoria(filtros.subcategoria).join(','));
   }
   const termoBusca = normalizarBusca(filtros.busca ?? '');
   if (termoBusca.length >= TAMANHO_MINIMO_BUSCA) {
