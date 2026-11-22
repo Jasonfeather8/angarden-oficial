@@ -2,6 +2,7 @@ import React from 'react';
 import { Lock, Coins } from 'lucide-react';
 import { GothicButton } from '../GothicButton';
 import { MolduraDeItem } from '../MolduraDeItem';
+import { LOTE_PROJETEIS } from '../../services/mercadoService';
 import type { MercadoItem } from '../../types';
 
 interface LinhaDeItemDoMercadoProps {
@@ -27,6 +28,7 @@ export const LinhaDeItemDoMercado: React.FC<LinhaDeItemDoMercadoProps> = ({
   onPreloadDetalhes,
 }) => {
   const bloqueadoEpico = item.is_epico && !temPermissaoEpica;
+  const ehProjetil = item.categoria === 'mercado_progeteis';
   const bloqueadoArcano = item.categoria?.startsWith('arcano_') && !temPermissaoArcano;
   const bloqueado = bloqueadoEpico || bloqueadoArcano;
   const rotuloBloqueio = bloqueadoEpico ? 'Arsenal Épico Restrito' : 'Mercado Arcano Restrito';
@@ -140,9 +142,13 @@ export const LinhaDeItemDoMercado: React.FC<LinhaDeItemDoMercadoProps> = ({
             {/* Preço */}
             <div className="shrink-0 sm:col-span-3 md:col-span-2 border-l border-[#8c6b41]/40 pl-2 pr-1 sm:px-1 flex items-center justify-end sm:justify-center gap-1 sm:gap-1.5">
               <Coins size={12} className="text-[#f59e0b] drop-shadow-[0_0_2px_rgba(245,158,11,0.6)] shrink-0" />
-              <span className="font-mono text-xs sm:text-sm font-bold text-[#fde68a] tracking-wider whitespace-nowrap">
+              <span
+                className="font-mono text-xs sm:text-sm font-bold text-[#fde68a] tracking-wider whitespace-nowrap"
+                title={ehProjetil ? `${item.preco} Moedas por ${LOTE_PROJETEIS} unidades` : undefined}
+              >
                 {item.preco.toLocaleString('pt-BR')}
               </span>
+              {ehProjetil && <span className="font-cinzel text-[9px] text-[#a88d61] whitespace-nowrap">/dúzia</span>}
             </div>
 
             {/* Propriedades (MD+) */}

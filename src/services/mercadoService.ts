@@ -7,6 +7,18 @@ import { invalidateAsyncDataCache } from '../hooks/useAsyncData';
 import { cacheKeyPrefixes } from './cacheKeys';
 import { withTimeout } from '../utils/withTimeout';
 
+export const LOTE_PROJETEIS = 12;
+export const MAX_UNIDADES_PROJETEIS = 48;
+
+export function loteDeCompra(item: MercadoItem): number {
+  return item.categoria === 'mercado_progeteis' ? LOTE_PROJETEIS : 1;
+}
+
+// O preço de projéteis é o da dúzia, por isso a divisão pelo lote.
+export function custoDaCompra(item: MercadoItem, quantidade: number): number {
+  return item.preco * (quantidade / loteDeCompra(item));
+}
+
 const COLUNAS_TIPADAS = ['nome', 'categoria', 'material', 'peso', 'dano', 'rd_base', 'preco', 'is_epico', 'efeito', 'descricao', 'icone_tipo', 'imagem_url'] as const;
 const CAMPOS_EXTRA = ['tipo', 'subcategoria', 'ponta', 'resist', 'pecas', 'rd_por_peca', 'tensao', 'prec', 'alcance', 'duracao', 'consequencia', 'ativacao', 'gasto', 'carga', 'lr', 'poder', 'recarga', 'rm', 'dependencia', 'uso', 'efeito_resumo', 'efeito_completo', 'citacao', 'requisitos', 'is_raro', 'informacoes'] as const satisfies readonly (keyof MercadoItem)[];
 
@@ -295,7 +307,7 @@ export const mercadoService = {
       throw new Error('Ficha do personagem não encontrada.');
     }
 
-    const custoTotal = item.preco * quantidade;
+    const custoTotal = custoDaCompra(item, quantidade);
     const saldoAtual = ficha.recursos?.dinheiro || 0;
 
     if (saldoAtual < custoTotal) {

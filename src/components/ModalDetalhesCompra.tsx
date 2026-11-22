@@ -5,6 +5,7 @@ import { GothicButton } from './GothicButton';
 import { ItemIconVisual } from './ItemIconVisual';
 import { GradeRdPecasArmadura, calcularRdPorPeca } from './GradeRdPecasArmadura';
 import { determinarSlotsEquipamento } from '../services/inventarioService';
+import { loteDeCompra, custoDaCompra, LOTE_PROJETEIS, MAX_UNIDADES_PROJETEIS } from '../services/mercadoService';
 import { Coins, Weight, Shield, Swords, Sparkles, AlertCircle, CheckCircle2, Lock, Edit3, Trash2, Crosshair, Package } from 'lucide-react';
 
 export interface ModalDetalhesCompraProps {
@@ -81,11 +82,14 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
     setConfirmandoExclusao(false);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setQuantidade(item && loteDeCompra(item) > 1 ? LOTE_PROJETEIS : 1);
   }, [item, isOpen]);
 
   if (!item) return null;
 
-  const custoTotal = item.preco * quantidade;
+  const lote = loteDeCompra(item);
+  const ehProjetil = lote > 1;
+  const custoTotal = custoDaCompra(item, quantidade);
   const pesoTotalAcrescentado = Number(((item.peso || 0) * quantidade).toFixed(2));
   const saldoSuficiente = saldoAtual >= custoTotal;
   const bloqueadoPorEpico = item.is_epico && !temPermissaoEpica;
@@ -191,12 +195,12 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
     : [];
 
   const handleIncrement = () => {
-    setQuantidade((prev) => prev + 1);
+    setQuantidade((prev) => (ehProjetil ? Math.min(MAX_UNIDADES_PROJETEIS, prev + LOTE_PROJETEIS) : prev + 1));
     setErrorMsg(null);
   };
 
   const handleDecrement = () => {
-    setQuantidade((prev) => (prev > 1 ? prev - 1 : 1));
+    setQuantidade((prev) => (ehProjetil ? Math.max(LOTE_PROJETEIS, prev - LOTE_PROJETEIS) : prev > 1 ? prev - 1 : 1));
     setErrorMsg(null);
   };
 
@@ -208,11 +212,13 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
 
     try {
       await onConfirmarCompra(item, quantidade);
-      setSuccessMsg(`Adquirido: ${quantidade}x ${item.nome}!`);
+      setSuccessMsg(ehProjetil
+        ? `Adquirido: ${quantidade} ${item.subcategoria?.toLowerCase() || 'unidades'} (${quantidade / lote} ${quantidade / lote === 1 ? 'dúzia' : 'dúzias'}) de ${item.nome}!`
+        : `Adquirido: ${quantidade}x ${item.nome}!`);
       setTimeout(() => {
         setSuccessMsg(null);
         onClose();
-        setQuantidade(1);
+        setQuantidade(loteDeCompra(item) > 1 ? LOTE_PROJETEIS : 1);
       }, 900);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Falha ao processar compra.');
@@ -494,6 +500,7 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
               <div className="flex items-center gap-1.5 bg-[#1f1610] px-3 py-1 rounded border border-[#5a3f25] text-[#e6ddc5] font-mono font-bold text-sm">
                 <Coins size={15} className="text-[#c5a059]" />
                 <span>{item.preco} Moedas</span>
+                {ehProjetil && <span className="text-[10px] text-[#a88d61] font-normal">/ {LOTE_PROJETEIS} un.</span>}
               </div>
             </div>
 
@@ -664,7 +671,7 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
               {/* 5. Preço */}
               <div className="bg-[#120d09]/90 border border-[#3d2a1c] p-2.5 rounded flex flex-col justify-center min-h-[58px]">
                 <span className="text-[#a88d61] block text-[10.5px] uppercase font-cinzel tracking-wider font-semibold">
-                  Preço
+                  {ehProjetil ? 'Preço (dúzia)' : 'Preço'}
                 </span>
                 <span className="text-[#e6ddc5] font-mono font-bold text-sm">
                   {item.preco} Moedas
@@ -744,12 +751,12 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
               
               {/* Seletor de Quantidade */}
               <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-3">
-                <span className="text-xs uppercase tracking-wider text-[#a88d61] font-cinzel font-semibold">Quantidade:</span>
+                <span className="text-xs uppercase tracking-wider text-[#a88d61] font-cinzel font-semibold">{ehProjetil ? `Quantidade (${item.subcategoria?.toLowerCase() || 'unidades'}):` : 'Quantidade:'}</span>
                 <div className="flex items-center bg-[#0a0705] border border-[#4a3322] rounded overflow-hidden">
                   <button
                     type="button"
                     onClick={handleDecrement}
-                    disabled={quantidade <= 1}
+                    disabled={ehProjetil ? quantidade <= LOTE_PROJETEIS : quantidade <= 1}
                     className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] disabled:opacity-30 disabled:hover:bg-transparent font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
                   >
                     -
@@ -760,11 +767,13 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                   <button
                     type="button"
                     onClick={handleIncrement}
-                    className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                    disabled={ehProjetil && quantidade >= MAX_UNIDADES_PROJETEIS}
+                    className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] disabled:opacity-30 disabled:hover:bg-transparent font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
                   >
                     +
                   </button>
                 </div>
+                {ehProjetil && <span className="text-[#a88d61] font-cinzel text-[10px] uppercase whitespace-nowrap">{quantidade / lote} {quantidade / lote === 1 ? 'dúzia' : 'dúzias'}</span>}
               </div>
 
               {/* Resumo Financeiro: Saldo Atual vs. Custo Total */}
@@ -800,7 +809,9 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 Peso do item: <strong className="text-[#e6ddc5] font-mono">{pesoTotalAcrescentado} kg</strong>
               </span>
               <span className="pl-5 sm:pl-0 text-stone-400 text-[11px]">
-                Item vai para o inventário (só afeta a carga se for equipado)
+                {ehProjetil
+                  ? `Venda em lotes de ${LOTE_PROJETEIS} unidades — máximo de ${MAX_UNIDADES_PROJETEIS} por compra.`
+                  : 'Item vai para o inventário (só afeta a carga se for equipado)'}
               </span>
             </div>
           </div>
