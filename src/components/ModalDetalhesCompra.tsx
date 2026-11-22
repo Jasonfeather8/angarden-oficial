@@ -751,8 +751,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
               
               {/* Seletor de Quantidade */}
               <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-3">
-                <span className="text-xs uppercase tracking-wider text-[#a88d61] font-cinzel font-semibold">{ehProjetil ? `Quantidade (${item.subcategoria?.toLowerCase() || 'unidades'}):` : 'Quantidade:'}</span>
-                <div className="flex items-center bg-[#0a0705] border border-[#4a3322] rounded overflow-hidden">
+                <span className="text-xs uppercase tracking-wider text-[#a88d61] font-cinzel font-semibold">Quantidade:</span>
+                <div className="flex items-center bg-[#0a0705] border border-[#4a3322] rounded overflow-hidden shrink-0">
                   <button
                     type="button"
                     onClick={handleDecrement}
@@ -773,7 +773,7 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                     +
                   </button>
                 </div>
-                {ehProjetil && <span className="text-[#a88d61] font-cinzel text-[10px] uppercase whitespace-nowrap">{quantidade / lote} {quantidade / lote === 1 ? 'dúzia' : 'dúzias'}</span>}
+                {ehProjetil && <span className="text-[#a88d61] font-cinzel text-[10px] uppercase whitespace-nowrap shrink-0">{quantidade / lote} {quantidade / lote === 1 ? 'dúzia' : 'dúzias'}</span>}
               </div>
 
               {/* Resumo Financeiro: Saldo Atual vs. Custo Total */}
