@@ -43,6 +43,11 @@ export const SUBCATEGORIAS_ARMAS = [
   { id: 'Armas Kobudo (K)', label: 'Armas Kobudo (K)', desc: 'Armas exóticas marciais de treino e combate' },
 ] as const;
 
+export const SUBCATEGORIAS_PROJETEIS = [
+  { id: 'Flechas', label: 'Flechas', desc: 'Flechas para arcos' },
+  { id: 'Virotes', label: 'Virotes', desc: 'Virotes para bestas' },
+] as const;
+
 // Subcategorias oficiais de Longa Distância (LD)
 export const SUBCATEGORIAS_LD = [
   { id: 'Arcos', label: 'Arcos', desc: 'Arcos curtos, longos, recurvos e compostos', icone: 'bow' },
@@ -116,6 +121,12 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
   
   // Subcategoria de armas
   const [subcategoriaArma, setSubcategoriaArma] = useState<string>(SUBCATEGORIAS_ARMAS[0].id);
+
+  // Subcategoria e campos específicos de projéteis
+  const [subcategoriaProjetil, setSubcategoriaProjetil] = useState<string>('Flechas');
+  const [tipoProjetil, setTipoProjetil] = useState('Perfurante');
+  const [ponta, setPonta] = useState('');
+  const [danoProjetil, setDanoProjetil] = useState('');
 
   // Subcategoria de longa distância (LD)
   const [subcategoriaLD, setSubcategoriaLD] = useState<string>(SUBCATEGORIAS_LD[0].id);
@@ -215,6 +226,14 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         setPecas(PECAS_POR_CATEGORIA_ARMADURA['Armaduras Leves'] || '4');
       }
 
+      // Projéteis
+      if (itemParaEdicao.categoria === 'mercado_progeteis') {
+        setSubcategoriaProjetil(itemParaEdicao.subcategoria || 'Flechas');
+        setTipoProjetil(itemParaEdicao.tipo || 'Perfurante');
+        setPonta(itemParaEdicao.ponta || '');
+        setDanoProjetil(String(itemParaEdicao.dano ?? ''));
+      }
+
       // Longa Distância
       if (itemParaEdicao.categoria === 'mercado_ld') {
         setTensao(itemParaEdicao.tensao !== undefined ? String(itemParaEdicao.tensao) : '12');
@@ -260,6 +279,10 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
       setPreco('250');
       setMaterial('Aço Forjado & Empunhadura de Couro');
       setDano('40');
+      setSubcategoriaProjetil('Flechas');
+      setTipoProjetil('Perfurante');
+      setPonta('');
+      setDanoProjetil('');
       setResistencia('16');
       setRdBase('8');
       setPecas(PECAS_POR_CATEGORIA_ARMADURA['Armaduras Leves'] || '4');
@@ -337,8 +360,9 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
       return;
     }
 
+    const isProjetil = categoriaSelecionada === 'mercado_progeteis';
     const pesoNum = Number(peso);
-    if (isNaN(pesoNum) || pesoNum < 0) {
+    if (!isProjetil && (isNaN(pesoNum) || pesoNum < 0)) {
       setFormError('Informe um peso numérico válido.');
       return;
     }
@@ -357,7 +381,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         setFormError('Informe um valor de RD válido.');
         return;
       }
-    } else if (!isArcano) {
+    } else if (!isArcano && !isProjetil) {
       resistNum = Number(resistencia);
       if (isNaN(resistNum) || resistNum < 0) {
         setFormError('Informe uma resistência válida.');
@@ -369,7 +393,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
 
     try {
       // Cria ou atualiza o item da mercadoria formatado
-      const idNovo = itemParaEdicao?.id || `merc-${isArcano ? 'arcano' : isArmadura ? 'armad' : isLD ? 'ld' : isEscudo ? 'escudo' : 'arma'}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const idNovo = itemParaEdicao?.id || `merc-${isProjetil ? 'proj' : isArcano ? 'arcano' : isArmadura ? 'armad' : isLD ? 'ld' : isEscudo ? 'escudo' : 'arma'}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
       const efeitoFormatado = efeito.trim();
       const efeitoResumo = efeitoFormatado.length > 28 ? `${efeitoFormatado.slice(0, 25)}...` : efeitoFormatado;
       const tipoItem = isArmadura ? subcategoriaArmadura : isLD ? subcategoriaLD : isEscudo ? subcategoriaEscudo : subcategoriaArma;
@@ -443,6 +467,24 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
                 : categoriaSelecionada === 'arcano_colares'
                 ? { dependencia: dependencia.trim() || undefined }
                 : { uso: uso.trim() || undefined }),
+            }
+          : isProjetil
+          ? {
+              categoria: 'mercado_progeteis',
+              subcategoria: subcategoriaProjetil,
+              tipo: tipoProjetil.trim(),
+              ponta: ponta.trim() || undefined,
+              dano: danoProjetil.trim() || undefined,
+              material: material.trim(),
+              efeito: efeitoFormatado,
+              efeito_resumo: efeitoResumo,
+              preco: precoNum,
+              peso: 0,
+              is_epico: isEpico,
+              icone_tipo: 'arrows',
+              imagem_url: imagemUrl || undefined,
+              informacoes: informacoes.trim() || undefined,
+              descricao: informacoes.trim() || undefined,
             }
           : {
               tipo: tipoItem,
@@ -753,7 +795,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         )}
 
         {/* MENSAGEM DE ESCOPO ATUAL (SE OUTRA CATEGORIA SELECIONADA) */}
-        {categoriaSelecionada !== 'mercado_armas' && categoriaSelecionada !== 'mercado_ld' && categoriaSelecionada !== 'mercado_armaduras' && categoriaSelecionada !== 'mercado_acessorios' && !categoriaSelecionada.startsWith('arcano_') && (
+        {categoriaSelecionada !== 'mercado_armas' && categoriaSelecionada !== 'mercado_ld' && categoriaSelecionada !== 'mercado_progeteis' && categoriaSelecionada !== 'mercado_armaduras' && categoriaSelecionada !== 'mercado_acessorios' && !categoriaSelecionada.startsWith('arcano_') && (
           <div className="p-2.5 rounded bg-[#18120b] border border-[#543b23] text-[#c5a059] text-[11px]">
             <p className="italic">
               * O fluxo detalhado de cadastro está ativado para as categorias <strong>Armas</strong>, <strong>Armaduras</strong>, <strong>Longa Distância (LD)</strong> e <strong>Escudos</strong> com suas subcategorias e especificações técnicas.
@@ -856,6 +898,112 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
                   {renderCampoArcano('Efeitos', efeito, setEfeito, true)}
                 </>
               )}
+            </div>
+          ) : categoriaSelecionada === 'mercado_progeteis' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-1 sm:col-span-2 space-y-1.5 bg-[#120e0a] border border-[#422c1b] p-3 rounded">
+                <label className="text-[11px] font-cinzel uppercase tracking-wider text-[#c5a059] font-semibold block">
+                  Subcategoria de Projéteis
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SUBCATEGORIAS_PROJETEIS.map((sub) => {
+                    const isSelected = subcategoriaProjetil === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setSubcategoriaProjetil(sub.id)}
+                        className={`px-2 py-1.5 rounded border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#2e1d0f] border-[#c5a059] text-[#fceecb] shadow-xs'
+                            : 'bg-[#18110b] border-[#302013] text-stone-400 hover:text-stone-200 hover:border-[#4d3320]'
+                        }`}
+                      >
+                        <div className="font-cinzel text-[11px] font-bold truncate">{sub.label}</div>
+                        <div className="text-[9px] text-stone-500 truncate font-sans">{sub.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Nome</label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Ex: Flecha Bodkin"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Dano</label>
+                <input
+                  type="text"
+                  value={danoProjetil}
+                  onChange={(e) => setDanoProjetil(e.target.value)}
+                  placeholder="Ex: Gdp+15"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Tipo</label>
+                <input
+                  type="text"
+                  value={tipoProjetil}
+                  onChange={(e) => setTipoProjetil(e.target.value)}
+                  placeholder="Ex: Perfurante ou Impacto"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Ponta</label>
+                <input
+                  type="text"
+                  value={ponta}
+                  onChange={(e) => setPonta(e.target.value)}
+                  placeholder="Ex: Leaf, Bodkin, Swallowtail"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Material</label>
+                <input
+                  type="text"
+                  value={material}
+                  onChange={(e) => setMaterial(e.target.value)}
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="col-span-1 sm:col-span-2 space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Efeito</label>
+                <input
+                  type="text"
+                  value={efeito}
+                  onChange={(e) => setEfeito(e.target.value)}
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Preço</label>
+                <input
+                  type="number"
+                  value={preco}
+                  onChange={(e) => setPreco(e.target.value)}
+                  placeholder="Ex: 25"
+                  min="1"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono font-bold outline-none transition-colors"
+                  required
+                />
+              </div>
             </div>
           ) : categoriaSelecionada === 'mercado_acessorios' ? (
             /* CAMPOS ESPECÍFICOS DE ESCUDOS: Nome | Tipo | Peso | RD | Material | Efeito | Preço */

@@ -627,13 +627,15 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 </span>
               </div>
 
-              {/* 2. Precisão (para Longa Distância) / Resistência (para armas/armaduras) */}
+              {/* 2. Precisão (para Longa Distância) / Ponta (para projéteis) / Resistência (para armas/armaduras) */}
               <div className="bg-[#120d09]/90 border border-[#3d2a1c] p-2.5 rounded flex flex-col justify-center min-h-[58px]">
                 <span className="text-[#a88d61] block text-[10.5px] uppercase font-cinzel tracking-wider font-semibold">
-                  {item.categoria === 'mercado_ld' || item.prec !== undefined ? 'Precisão' : 'Resistencia'}
+                  {item.categoria === 'mercado_progeteis' ? 'Ponta' : item.categoria === 'mercado_ld' || item.prec !== undefined ? 'Precisão' : 'Resistencia'}
                 </span>
                 <span className="text-[#e6ddc5] font-mono font-bold text-sm">
-                  {item.categoria === 'mercado_ld' || item.prec !== undefined
+                  {item.categoria === 'mercado_progeteis'
+                    ? (item.ponta?.trim() || '—')
+                    : item.categoria === 'mercado_ld' || item.prec !== undefined
                     ? (item.prec !== undefined ? `${item.prec}` : '—')
                     : (item.resist !== undefined ? item.resist : '—')}
                 </span>

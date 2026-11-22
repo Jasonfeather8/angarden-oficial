@@ -250,6 +250,7 @@ export interface MercadoItem {
   peso: number;
   material?: string;
   dano?: string | number;
+  ponta?: string;
   rd_base?: number;
   tensao?: string | number;
   prec?: string | number;
