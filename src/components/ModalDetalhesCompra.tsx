@@ -335,22 +335,22 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
 
         {/* BARRA DE CONTROLE EXCLUSIVA DO ADMINISTRADOR - Apenas no Mercado */}
         {canManageCatalog && origem === 'mercado' && (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3 py-2.5 rounded bg-[#160f0a] border border-[#5c3719] shadow-inner">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-2.5 px-3 py-2.5 rounded bg-[#160f0a] border border-[#5c3719] shadow-inner">
             <div className="flex items-center justify-between sm:justify-start">
               <span className="px-2.5 py-1 text-[9.5px] font-cinzel font-bold uppercase tracking-widest rounded bg-[#3b190a] border border-[#8a3916] text-amber-200 shrink-0 shadow-sm">
                 Painel do Administrador
               </span>
             </div>
 
-            <div className="flex items-center justify-end gap-2 shrink-0">
+            <div className="flex items-center justify-end gap-2 shrink-0 ml-auto">
               <GothicButton
                 id="btn-mestre-editar-item"
                 onClick={() => onEditar && onEditar(item)}
                 variant="primary"
                 size="sm"
                 height={34}
-                width="auto"
-                className="flex-1 sm:flex-initial sm:w-[105px]"
+                width={136}
+                className="flex-1 sm:flex-initial"
                 icon={<Edit3 size={12} className="stroke-[2.2]" />}
                 textClassName="text-[10px] tracking-wider"
                 title="Editar todos os campos desta mercadoria"
@@ -364,8 +364,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 variant="danger"
                 size="sm"
                 height={34}
-                width="auto"
-                className="flex-1 sm:flex-initial sm:w-[105px]"
+                width={136}
+                className="flex-1 sm:flex-initial"
                 icon={<Trash2 size={12} className="stroke-[2.2]" />}
                 textClassName="text-[10px] tracking-wider"
                 title="Excluir mercadoria permanentemente"
@@ -388,13 +388,13 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               <GothicButton
                 variant="secondary"
                 size="xs"
                 height={32}
-                width="auto"
-                className="flex-1 sm:flex-initial sm:w-[95px]"
+                width={104}
+                className="flex-1 sm:flex-initial"
                 onClick={() => setConfirmandoExclusao(false)}
                 disabled={excluindo}
               >
@@ -404,8 +404,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 variant="danger"
                 size="xs"
                 height={32}
-                width="auto"
-                className="flex-1 sm:flex-initial sm:w-[150px]"
+                width={190}
+                className="sm:flex-initial"
                 onClick={handleConfirmarExclusao}
                 disabled={excluindo}
                 icon={<Trash2 size={12} />}
@@ -428,13 +428,13 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               <GothicButton
                 variant="secondary"
                 size="xs"
                 height={32}
-                width="auto"
-                className="flex-1 sm:flex-initial sm:w-[95px]"
+                width={104}
+                className="flex-1 sm:flex-initial"
                 onClick={() => setConfirmandoDescarte(false)}
                 disabled={loading}
               >
@@ -445,8 +445,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 variant="danger"
                 size="xs"
                 height={32}
-                width="auto"
-                className="flex-1 sm:flex-initial sm:w-[160px]"
+                width={190}
+                className="sm:flex-initial"
                 onClick={handleExecutarDescarte}
                 disabled={loading}
                 icon={<Trash2 size={12} />}
