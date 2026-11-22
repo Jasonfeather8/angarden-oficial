@@ -746,69 +746,66 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
           </div>
         ) : (
           /* Seletor de Quantidade e Resumo Financeiro (Mercado) */
-          <div className="p-3.5 sm:p-4 rounded bg-[#100d0a] border border-[#3d2a1c] space-y-3.5 sm:space-y-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 sm:gap-4">
-              
-              {/* Seletor de Quantidade */}
-              <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-3">
-                <span className="text-xs uppercase tracking-wider text-[#a88d61] font-cinzel font-semibold">Quantidade:</span>
-                <div className="flex items-center bg-[#0a0705] border border-[#4a3322] rounded overflow-hidden shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleDecrement}
-                    disabled={ehProjetil ? quantidade <= LOTE_PROJETEIS : quantidade <= 1}
-                    className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] disabled:opacity-30 disabled:hover:bg-transparent font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <span className="px-4 py-1 font-mono font-bold text-[#e6ddc5] text-sm min-w-[40px] text-center">
-                    {quantidade}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleIncrement}
-                    disabled={ehProjetil && quantidade >= MAX_UNIDADES_PROJETEIS}
-                    className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] disabled:opacity-30 disabled:hover:bg-transparent font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-                {ehProjetil && <span className="text-[#a88d61] font-cinzel text-[10px] uppercase whitespace-nowrap shrink-0">{quantidade / lote} {quantidade / lote === 1 ? 'dúzia' : 'dúzias'}</span>}
+          <div className="p-3.5 sm:p-4 rounded bg-[#100d0a] border border-[#3d2a1c] space-y-3">
+            {/* Seletor de Quantidade */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs uppercase tracking-wider text-[#a88d61] font-cinzel font-semibold">Quantidade:</span>
+              <div className="flex items-center bg-[#0a0705] border border-[#4a3322] rounded overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={handleDecrement}
+                  disabled={ehProjetil ? quantidade <= LOTE_PROJETEIS : quantidade <= 1}
+                  className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] disabled:opacity-30 disabled:hover:bg-transparent font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                >
+                  -
+                </button>
+                <span className="px-4 py-1 font-mono font-bold text-[#e6ddc5] text-sm min-w-[40px] text-center">
+                  {quantidade}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleIncrement}
+                  disabled={ehProjetil && quantidade >= MAX_UNIDADES_PROJETEIS}
+                  className="px-3.5 py-1.5 sm:px-3 sm:py-1.5 text-[#c5a059] hover:bg-[#21150d] hover:text-[#f3ebd3] disabled:opacity-30 disabled:hover:bg-transparent font-bold text-base transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
+              {ehProjetil && <span className="text-[#a88d61] font-cinzel text-[10px] uppercase whitespace-nowrap shrink-0">{quantidade / lote} {quantidade / lote === 1 ? 'dúzia' : 'dúzias'}</span>}
+            </div>
+
+            {/* Resumo Financeiro: Saldo Atual vs. Custo Total */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 border-t border-[#26170e] text-xs">
+              <div className="min-w-0">
+                <span className="text-[#a88d61] block text-[10px] uppercase font-cinzel tracking-wider truncate">
+                  {nomePersonagemComprador ? `Bolsa (${nomePersonagemComprador})` : 'Saldo Atual'}
+                </span>
+                <span className="text-[#e6ddc5] font-mono font-bold text-sm flex items-center gap-1.5">
+                  <Coins size={14} className="text-[#c5a059] shrink-0" />
+                  {saldoAtual}
+                </span>
               </div>
 
-              {/* Resumo Financeiro: Saldo Atual vs. Custo Total */}
-              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 sm:gap-6 text-xs pt-2 sm:pt-0 border-t border-[#26170e] sm:border-t-0">
-                <div className="text-left sm:text-right">
-                  <span className="text-[#a88d61] block text-[10px] uppercase font-cinzel tracking-wider">
-                    {nomePersonagemComprador ? `Bolsa (${nomePersonagemComprador})` : 'Saldo Atual'}
-                  </span>
-                  <span className="text-[#e6ddc5] font-mono font-bold text-sm flex items-center justify-start sm:justify-end gap-1.5">
-                    <Coins size={14} className="text-[#c5a059]" />
-                    {saldoAtual}
-                  </span>
-                </div>
-
-                <div className="h-8 w-px bg-[#2d1e13]" />
-
-                <div className="text-right">
-                  <span className="text-[#a88d61] block text-[10px] uppercase font-cinzel tracking-wider">Custo Total</span>
-                  <span className={`font-mono font-bold text-base flex items-center justify-end gap-1.5 ${
-                    saldoSuficiente ? 'text-[#e6ddc5]' : 'text-rose-400'
-                  }`}>
-                    <Coins size={15} className={saldoSuficiente ? 'text-[#c5a059]' : 'text-rose-400'} />
-                    {custoTotal} Moedas
-                  </span>
-                </div>
+              <div className="ml-auto text-right">
+                <span className="text-[#a88d61] block text-[10px] uppercase font-cinzel tracking-wider whitespace-nowrap">
+                  Custo Total
+                </span>
+                <span className={`font-mono font-bold text-base flex items-center justify-end gap-1.5 whitespace-nowrap ${
+                  saldoSuficiente ? 'text-[#e6ddc5]' : 'text-rose-400'
+                }`}>
+                  <Coins size={15} className={`shrink-0 ${saldoSuficiente ? 'text-[#c5a059]' : 'text-rose-400'}`} />
+                  {custoTotal} Moedas
+                </span>
               </div>
             </div>
 
             {/* Informação sobre Destino e Peso */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-xs pt-2.5 border-t border-[#26170e] text-[#a88d61] font-serif">
-              <span className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-3 border-t border-[#26170e] text-xs text-[#a88d61] font-serif">
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
                 <Weight size={14} className="text-[#a88d61] shrink-0" />
                 Peso do item: <strong className="text-[#e6ddc5] font-mono">{pesoTotalAcrescentado} kg</strong>
               </span>
-              <span className="pl-5 sm:pl-0 text-stone-400 text-[11px]">
+              <span className="text-stone-400 text-[11px]">
                 {ehProjetil
                   ? `Venda em lotes de ${LOTE_PROJETEIS} unidades — máximo de ${MAX_UNIDADES_PROJETEIS} por compra.`
                   : 'Item vai para o inventário (só afeta a carga se for equipado)'}
