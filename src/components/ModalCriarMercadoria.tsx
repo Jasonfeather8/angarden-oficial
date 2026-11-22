@@ -46,6 +46,7 @@ export const SUBCATEGORIAS_ARMAS = [
 export const SUBCATEGORIAS_PROJETEIS = [
   { id: 'Flechas', label: 'Flechas', desc: 'Flechas para arcos' },
   { id: 'Virotes', label: 'Virotes', desc: 'Virotes para bestas' },
+  { id: 'Projétil', label: 'Projétil', desc: 'Projéteis arremessados: pedras, bronze e madeira' },
 ] as const;
 
 // Subcategorias oficiais de Longa Distância (LD)
@@ -361,8 +362,9 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
     }
 
     const isProjetil = categoriaSelecionada === 'mercado_progeteis';
+    const projetilComPeso = isProjetil && subcategoriaProjetil === 'Projétil';
     const pesoNum = Number(peso);
-    if (!isProjetil && (isNaN(pesoNum) || pesoNum < 0)) {
+    if ((!isProjetil || projetilComPeso) && (isNaN(pesoNum) || pesoNum < 0)) {
       setFormError('Informe um peso numérico válido.');
       return;
     }
@@ -479,7 +481,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
               efeito: efeitoFormatado,
               efeito_resumo: efeitoResumo,
               preco: precoNum,
-              peso: 0,
+              peso: subcategoriaProjetil === 'Projétil' ? pesoNum : 0,
               is_epico: isEpico,
               icone_tipo: 'arrows',
               imagem_url: imagemUrl || undefined,
@@ -507,13 +509,13 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
                 : isArmadura
                 ? `${tipoItem}.${pecas.trim() ? ` Peças: ${pecas.trim()}.` : ''}${material ? ` Material: ${material.trim()}.` : ''} RD: +${rdNum}.${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
                 : isLD
-                ? `${tipoItem}. Tensão: ${tensao.trim()}. Prec: ${prec.trim()}.${material ? ` Material: ${material.trim()}.` : ''}${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
+                ? `${tipoItem}. ${subcategoriaLD === 'Bumerangue' ? `Dano: ${dano.trim()}` : `Tensão: ${tensao.trim()}`}. Prec: ${prec.trim()}.${material ? ` Material: ${material.trim()}.` : ''}${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
                 : isEscudo
                 ? `${tipoItem}.${material ? ` Material: ${material.trim()}.` : ''} RD: +${rdNum}.${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
                 : `${tipoItem}.${material ? ` Material: ${material.trim()}.` : ''}${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim(),
               ...(isLD
                 ? {
-                    tensao: tensao.trim(),
+                    tensao: subcategoriaLD === 'Bumerangue' ? undefined : tensao.trim(),
                     prec: prec.trim(),
                     dano: subcategoriaLD === 'Bumerangue' ? (dano.trim() || '20') : tensao.trim(),
                   }
@@ -939,6 +941,24 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
                 />
               </div>
 
+              {subcategoriaProjetil === 'Projétil' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block flex items-center gap-1">
+                    <Weight size={11} className="text-[#a88d61]" /> Peso (kg) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={peso}
+                    onChange={(e) => setPeso(e.target.value)}
+                    placeholder="Ex: 3.5"
+                    min="0"
+                    className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono outline-none transition-colors"
+                    required
+                  />
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Dano</label>
                 <input
@@ -1306,19 +1326,21 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
               </div>
 
               {/* Tensão */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">
-                  Tensão *
-                </label>
-                <input
-                  type="text"
-                  value={tensao}
-                  onChange={(e) => setTensao(e.target.value)}
-                  placeholder="Ex: 12 ou 16"
-                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono font-bold outline-none transition-colors"
-                  required
-                />
-              </div>
+              {subcategoriaLD !== 'Bumerangue' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">
+                    Tensão *
+                  </label>
+                  <input
+                    type="text"
+                    value={tensao}
+                    onChange={(e) => setTensao(e.target.value)}
+                    placeholder="Ex: 12 ou 16"
+                    className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono font-bold outline-none transition-colors"
+                    required
+                  />
+                </div>
+              )}
 
               {/* Dano (Exclusivo para Bumerangue em Longa Distância) */}
               {subcategoriaLD === 'Bumerangue' && (

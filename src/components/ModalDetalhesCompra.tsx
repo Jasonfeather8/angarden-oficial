@@ -619,6 +619,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 <span className="text-[#a88d61] block text-[10.5px] uppercase font-cinzel tracking-wider font-semibold">
                   {isArmadura
                     ? 'RD'
+                    : item.categoria === 'mercado_ld' && !item.tensao
+                    ? 'Dano'
                     : item.categoria === 'mercado_ld' || item.tensao !== undefined
                     ? 'Tensão'
                     : 'Dano'}

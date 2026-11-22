@@ -156,9 +156,9 @@ export const LinhaDeItemDoMercado: React.FC<LinhaDeItemDoMercadoProps> = ({
               {item.categoria === 'mercado_ld' || item.tensao !== undefined ? (
                 <div className="text-[11px] truncate font-mono">
                   <span className="text-[#fde68a] font-semibold">
-                    Tensão {item.tensao !== undefined ? item.tensao : item.dano}
+                    {item.categoria === 'mercado_ld' && !item.tensao ? 'Dano' : 'Tensão'} {item.tensao !== undefined ? item.tensao : item.dano}
                   </span>
-                  {item.dano && item.dano !== item.tensao && (
+                  {item.tensao !== undefined && item.dano && item.dano !== item.tensao && (
                     <span className="text-red-300 font-semibold ml-1">
                       ({item.dano})
                     </span>
