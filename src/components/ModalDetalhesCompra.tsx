@@ -121,6 +121,7 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
         )
     );
   const isArcano = item.categoria.startsWith('arcano_');
+  const ehBumerangue = item.categoria === 'mercado_ld' && (item.subcategoria === 'Bumerangue' || item.tipo === 'Bumerangue');
 
   const getNumeroPecas = (): number | string => {
     if (item.pecas) {
@@ -619,7 +620,7 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 <span className="text-[#a88d61] block text-[10.5px] uppercase font-cinzel tracking-wider font-semibold">
                   {isArmadura
                     ? 'RD'
-                    : item.categoria === 'mercado_ld' && !item.tensao
+                    : ehBumerangue
                     ? 'Dano'
                     : item.categoria === 'mercado_ld' || item.tensao !== undefined
                     ? 'Tensão'
@@ -628,6 +629,8 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 <span className="font-mono font-bold text-sm text-[#e6ddc5]">
                   {isArmadura
                     ? (item.rd_base !== undefined ? (item.rd_base > 0 ? `+${item.rd_base}` : `${item.rd_base}`) : '—')
+                    : ehBumerangue
+                    ? (item.dano || '—')
                     : item.categoria === 'mercado_ld' || item.tensao !== undefined
                     ? (item.tensao !== undefined && item.tensao !== '' ? `${item.tensao}` : item.dano || '—')
                     : (item.dano !== undefined && item.dano !== ''
@@ -636,15 +639,15 @@ export const ModalDetalhesCompra: React.FC<ModalDetalhesCompraProps> = ({
                 </span>
               </div>
 
-              {/* 2. Precisão (para itens com Prec) / Ponta (para projéteis) / Resistência (para armas/armaduras) */}
+              {/* 2. Precisão (exceto para bumerangues) / Ponta (para projéteis) / Resistência */}
               <div className="bg-[#120d09]/90 border border-[#3d2a1c] p-2.5 rounded flex flex-col justify-center min-h-[58px]">
                 <span className="text-[#a88d61] block text-[10.5px] uppercase font-cinzel tracking-wider font-semibold">
-                  {item.categoria === 'mercado_progeteis' ? 'Ponta' : item.prec !== undefined ? 'Precisão' : 'Resistencia'}
+                  {item.categoria === 'mercado_progeteis' ? 'Ponta' : item.prec !== undefined && !ehBumerangue ? 'Precisão' : 'Resistencia'}
                 </span>
                 <span className="text-[#e6ddc5] font-mono font-bold text-sm">
                   {item.categoria === 'mercado_progeteis'
                     ? (item.ponta?.trim() || '—')
-                    : item.prec !== undefined
+                    : item.prec !== undefined && !ehBumerangue
                     ? `${item.prec}`
                     : (item.resist !== undefined ? item.resist : '—')}
                 </span>

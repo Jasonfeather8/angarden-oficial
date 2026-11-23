@@ -29,6 +29,7 @@ export const LinhaDeItemDoMercado: React.FC<LinhaDeItemDoMercadoProps> = ({
 }) => {
   const bloqueadoEpico = item.is_epico && !temPermissaoEpica;
   const ehProjetil = item.categoria === 'mercado_progeteis';
+  const ehBumerangue = item.categoria === 'mercado_ld' && (item.subcategoria === 'Bumerangue' || item.tipo === 'Bumerangue');
   const bloqueadoArcano = item.categoria?.startsWith('arcano_') && !temPermissaoArcano;
   const bloqueado = bloqueadoEpico || bloqueadoArcano;
   const rotuloBloqueio = bloqueadoEpico ? 'Arsenal Épico Restrito' : 'Mercado Arcano Restrito';
@@ -156,9 +157,9 @@ export const LinhaDeItemDoMercado: React.FC<LinhaDeItemDoMercadoProps> = ({
               {item.categoria === 'mercado_ld' || item.tensao !== undefined ? (
                 <div className="text-[11px] truncate font-mono">
                   <span className="text-[#fde68a] font-semibold">
-                    {item.categoria === 'mercado_ld' && !item.tensao ? 'Dano' : 'Tensão'} {item.tensao !== undefined ? item.tensao : item.dano}
+                    {ehBumerangue ? 'Dano' : 'Tensão'} {ehBumerangue ? item.dano : item.tensao !== undefined ? item.tensao : item.dano}
                   </span>
-                  {item.tensao !== undefined && item.dano && item.dano !== item.tensao && (
+                  {!ehBumerangue && item.tensao !== undefined && item.dano && item.dano !== item.tensao && (
                     <span className="text-red-300 font-semibold ml-1">
                       ({item.dano})
                     </span>
