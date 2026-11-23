@@ -509,14 +509,14 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
                 : isArmadura
                 ? `${tipoItem}.${pecas.trim() ? ` Peças: ${pecas.trim()}.` : ''}${material ? ` Material: ${material.trim()}.` : ''} RD: +${rdNum}.${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
                 : isLD
-                ? `${tipoItem}. ${subcategoriaLD === 'Bumerangue' ? `Dano: ${dano.trim()}` : `Tensão: ${tensao.trim()}`}. Prec: ${prec.trim()}.${material ? ` Material: ${material.trim()}.` : ''}${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
+                ? `${tipoItem}. ${subcategoriaLD === 'Bumerangue' ? `Dano: ${dano.trim()}` : `Tensão: ${tensao.trim()}`}.${subcategoriaLD === 'Bumerangue' ? '' : ` Prec: ${prec.trim()}.`}${material ? ` Material: ${material.trim()}.` : ''}${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
                 : isEscudo
                 ? `${tipoItem}.${material ? ` Material: ${material.trim()}.` : ''} RD: +${rdNum}.${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim()
                 : `${tipoItem}.${material ? ` Material: ${material.trim()}.` : ''}${efeitoFormatado ? ` Efeito: ${efeitoFormatado}` : ''}`.trim(),
               ...(isLD
                 ? {
                     tensao: subcategoriaLD === 'Bumerangue' ? undefined : tensao.trim(),
-                    prec: prec.trim(),
+                    prec: subcategoriaLD === 'Bumerangue' ? undefined : prec.trim(),
                     dano: subcategoriaLD === 'Bumerangue' ? (dano.trim() || '20') : tensao.trim(),
                   }
                 : isArmadura || isEscudo
@@ -1360,19 +1360,21 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
               )}
 
               {/* Prec (Precisão) */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">
-                  Prec (Precisão) *
-                </label>
-                <input
-                  type="text"
-                  value={prec}
-                  onChange={(e) => setPrec(e.target.value)}
-                  placeholder="Ex: +2 ou 3"
-                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono font-bold outline-none transition-colors"
-                  required
-                />
-              </div>
+              {subcategoriaLD !== 'Bumerangue' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">
+                    Prec (Precisão) *
+                  </label>
+                  <input
+                    type="text"
+                    value={prec}
+                    onChange={(e) => setPrec(e.target.value)}
+                    placeholder="Ex: +2 ou 3"
+                    className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono font-bold outline-none transition-colors"
+                    required
+                  />
+                </div>
+              )}
 
               {/* Resist (Resistência) */}
               <div className="space-y-1">
