@@ -1,8 +1,9 @@
 import React from 'react';
+import { Package } from 'lucide-react';
 import type { CategoriaMercado } from '../../types';
 
 /** Seção principal do mercado exibida nas grandes abas. */
-export type SecaoMercado = 'comum' | 'epico' | 'arcano';
+export type SecaoMercado = 'arsenal' | 'comum' | 'epico' | 'arcano';
 
 /** Estética aplicada à tela conforme a seção/categoria ativa. */
 export type ThemeModeMercado = 'default' | 'epico' | 'arcano';
@@ -24,9 +25,10 @@ export interface TabMercado {
 
 /** Categoria inicial de cada seção ao trocar de aba. */
 export const CATEGORIA_INICIAL_POR_SECAO: Record<SecaoMercado, CategoriaMercado> = {
-  comum: 'mercado_armas',
-  epico: 'epico_armas',
+  arsenal: 'mercado_armas',
+  comum: 'mercado_comum',
   arcano: 'arcano_consumiveis',
+  epico: 'epico_armas',
 };
 
 // Mapeamento oficial de subcategorias por categoria principal
@@ -75,6 +77,9 @@ export const SUBCATEGORIAS_POR_CATEGORIA: Partial<Record<CategoriaMercado, Subca
     { id: 'Pavise', label: 'Pavise', desc: 'Escudo grande fincado ao solo com suporte' },
     { id: 'Golem', label: 'Golem', desc: 'Escudo maciço esculpido em pedra rúnica' },
     { id: 'Dragão', label: 'Dragão', desc: 'Escudo forjado em escamas e ligas draconianas' },
+  ],
+  mercado_comum: [
+    { id: 'todas', label: 'Todos os Itens', desc: 'Provisões, utensílios e ferramentas de viagem' },
   ],
   mercado_geral: [
     { id: 'todas', label: 'Todas as Poções' },
@@ -156,7 +161,7 @@ export const SUBCATEGORIAS_POR_CATEGORIA: Partial<Record<CategoriaMercado, Subca
 
 // Mapeamento de abas por Seção Principal do Mercado
 export const TABS_POR_SECAO: Record<SecaoMercado, TabMercado[]> = {
-  comum: [
+  arsenal: [
     {
       id: 'mercado_armas',
       label: 'Armas',
@@ -206,6 +211,14 @@ export const TABS_POR_SECAO: Record<SecaoMercado, TabMercado[]> = {
           <path d="M 12 10 L 36 10 L 36 26 C 36 36 24 42 24 42 C 24 42 12 36 12 26 Z M 24 16 L 30 26 L 24 34 L 18 26 Z" />
         </svg>
       ),
+    },
+  ],
+  comum: [
+    {
+      id: 'mercado_comum',
+      label: 'Provisões',
+      descricao: 'Provisões, utensílios e ferramentas de viagem.',
+      icon: <Package className="w-6 h-6" />,
     },
     {
       id: 'mercado_geral',
@@ -355,6 +368,25 @@ export const TABS_POR_SECAO: Record<SecaoMercado, TabMercado[]> = {
       ),
     },
   ],
+};
+
+export const CABECALHO_POR_SECAO: Record<SecaoMercado, { titulo: string; subtitulo: string }> = {
+  arsenal: {
+    titulo: 'Arsenal & Equipamentos',
+    subtitulo: 'Armas, armaduras, escudos, projéteis e equipamentos marciais',
+  },
+  comum: {
+    titulo: 'Mercado Comum & Provisões',
+    subtitulo: 'Provisões de viagem, utensílios, ferramentas e poções de alquimia',
+  },
+  arcano: {
+    titulo: 'Mercado Arcano & Misticismo',
+    subtitulo: 'Consumíveis mágicos, talismãs celestes, poções etéreas e artefatos de poder arcano',
+  },
+  epico: {
+    titulo: 'Arsenal Épico & Relíquias',
+    subtitulo: 'Armamentos lendários, forja mitril e relíquias ancestrais de alto prestígio',
+  },
 };
 
 /** Estética derivada da seção ativa e da categoria selecionada. */

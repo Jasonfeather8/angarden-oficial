@@ -21,8 +21,8 @@ import {
  * e a consulta paginada do catálogo global (com pré-carregamento da próxima página).
  */
 export function useCatalogoDoMercado() {
-  // Seção Geral do Mercado ('comum' | 'epico' | 'arcano')
-  const [secaoMercado, setSecaoMercado] = useState<SecaoMercado>('comum');
+  // Seção Geral do Mercado ('arsenal' | 'comum' | 'epico' | 'arcano')
+  const [secaoMercado, setSecaoMercado] = useState<SecaoMercado>('arsenal');
 
   // Categoria ativa no seletor
   const [activeCategory, setActiveCategory] = useState<CategoriaMercado>(CATEGORIA_INICIAL_DO_MERCADO);
@@ -113,7 +113,7 @@ export function useCatalogoDoMercado() {
 
   // As tabs exibidas dependem da seção selecionada no mercado
   const tabsConfig = useMemo(() => {
-    return TABS_POR_SECAO[secaoMercado] || TABS_POR_SECAO.comum;
+    return TABS_POR_SECAO[secaoMercado] || TABS_POR_SECAO.arsenal;
   }, [secaoMercado]);
 
   const categoriaAtivaInfo = tabsConfig.find((t) => t.id === activeCategory);

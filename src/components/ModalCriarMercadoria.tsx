@@ -19,6 +19,7 @@ import {
   Layers,
   Coins,
   Weight,
+  Package,
   Hammer,
   ScrollText,
   Edit3
@@ -99,6 +100,7 @@ export const CATEGORIAS_MERCADO: { id: CategoriaMercado; label: string; icon: Re
   { id: 'mercado_progeteis', label: 'Projéteis', icon: <Crosshair size={16} /> },
   { id: 'mercado_acessorios', label: 'Escudos', icon: <Shield size={16} /> },
   { id: 'mercado_geral', label: 'Poções', icon: <FlaskConical size={16} /> },
+  { id: 'mercado_comum', label: 'Provisões', icon: <Package size={16} /> },
   { id: 'arsenal_epico', label: 'Arsenal Épico', icon: <Sparkles size={16} /> },
   { id: 'arcano_consumiveis', label: 'Variados/Consumíveis', icon: <FlaskConical size={16} /> },
   { id: 'arcano_pocoes', label: 'Poções', icon: <FlaskConical size={16} /> },
@@ -372,6 +374,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
     const isArmadura = categoriaSelecionada === 'mercado_armaduras';
     const isLD = categoriaSelecionada === 'mercado_ld';
     const isEscudo = categoriaSelecionada === 'mercado_acessorios';
+    const isComum = categoriaSelecionada === 'mercado_comum';
     const isArcano = categoriaSelecionada.startsWith('arcano_');
 
     let rdNum = 0;
@@ -383,7 +386,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         setFormError('Informe um valor de RD válido.');
         return;
       }
-    } else if (!isArcano && !isProjetil) {
+    } else if (!isArcano && !isProjetil && !isComum) {
       resistNum = Number(resistencia);
       if (isNaN(resistNum) || resistNum < 0) {
         setFormError('Informe uma resistência válida.');
@@ -395,7 +398,10 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
 
     try {
       // Cria ou atualiza o item da mercadoria formatado
-      const idNovo = itemParaEdicao?.id || `merc-${isProjetil ? 'proj' : isArcano ? 'arcano' : isArmadura ? 'armad' : isLD ? 'ld' : isEscudo ? 'escudo' : 'arma'}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const sufixo = Math.random().toString(36).substring(2, 6);
+      const idNovo = itemParaEdicao?.id || (isComum
+        ? `merc-comum-${Date.now()}-${sufixo}`
+        : `merc-${isProjetil ? 'proj' : isArcano ? 'arcano' : isArmadura ? 'armad' : isLD ? 'ld' : isEscudo ? 'escudo' : 'arma'}-${Date.now()}-${sufixo}`);
       const efeitoFormatado = efeito.trim();
       const efeitoResumo = efeitoFormatado.length > 28 ? `${efeitoFormatado.slice(0, 25)}...` : efeitoFormatado;
       const tipoItem = isArmadura ? subcategoriaArmadura : isLD ? subcategoriaLD : isEscudo ? subcategoriaEscudo : subcategoriaArma;
@@ -429,7 +435,20 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         id: idNovo,
         nome: nome.trim(),
         categoria: categoriaSelecionada,
-        ...(isArcano
+        ...(isComum
+          ? {
+              peso: pesoNum,
+              material: material.trim() || undefined,
+              efeito: efeitoFormatado || undefined,
+              efeito_resumo: efeitoResumo || undefined,
+              preco: precoNum,
+              is_epico: false,
+              icone_tipo: iconeTipo || 'backpack',
+              imagem_url: imagemUrl || undefined,
+              informacoes: informacoes.trim() || undefined,
+              descricao: informacoes.trim() || undefined,
+            }
+          : isArcano
           ? {
               peso: pesoNum,
               efeito: efeitoFormatado,
@@ -797,7 +816,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         )}
 
         {/* MENSAGEM DE ESCOPO ATUAL (SE OUTRA CATEGORIA SELECIONADA) */}
-        {categoriaSelecionada !== 'mercado_armas' && categoriaSelecionada !== 'mercado_ld' && categoriaSelecionada !== 'mercado_progeteis' && categoriaSelecionada !== 'mercado_armaduras' && categoriaSelecionada !== 'mercado_acessorios' && !categoriaSelecionada.startsWith('arcano_') && (
+        {categoriaSelecionada !== 'mercado_armas' && categoriaSelecionada !== 'mercado_ld' && categoriaSelecionada !== 'mercado_progeteis' && categoriaSelecionada !== 'mercado_armaduras' && categoriaSelecionada !== 'mercado_acessorios' && categoriaSelecionada !== 'mercado_comum' && !categoriaSelecionada.startsWith('arcano_') && (
           <div className="p-2.5 rounded bg-[#18120b] border border-[#543b23] text-[#c5a059] text-[11px]">
             <p className="italic">
               * O fluxo detalhado de cadastro está ativado para as categorias <strong>Armas</strong>, <strong>Armaduras</strong>, <strong>Longa Distância (LD)</strong> e <strong>Escudos</strong> com suas subcategorias e especificações técnicas.
@@ -808,11 +827,65 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         {/* CAMPOS DA MERCADORIA */}
         <div className="space-y-3 pt-1">
           <h4 className="text-[11px] font-cinzel uppercase tracking-wider text-[#a88d61] font-semibold flex items-center gap-1.5">
-            {categoriaSelecionada === 'mercado_armaduras' || categoriaSelecionada === 'mercado_acessorios' ? <Shield size={13} /> : categoriaSelecionada === 'mercado_ld' ? <Crosshair size={13} /> : <Swords size={13} />}
-            2. Atributos da Mercadoria {categoriaSelecionada === 'mercado_armaduras' ? '(Armadura)' : categoriaSelecionada === 'mercado_ld' ? '(Longa Distância)' : categoriaSelecionada === 'mercado_acessorios' ? '(Escudo)' : ''}
+            {categoriaSelecionada === 'mercado_comum' ? <Package size={13} /> : categoriaSelecionada === 'mercado_armaduras' || categoriaSelecionada === 'mercado_acessorios' ? <Shield size={13} /> : categoriaSelecionada === 'mercado_ld' ? <Crosshair size={13} /> : <Swords size={13} />}
+            2. Atributos da Mercadoria {categoriaSelecionada === 'mercado_comum' ? '(Provisão)' : categoriaSelecionada === 'mercado_armaduras' ? '(Armadura)' : categoriaSelecionada === 'mercado_ld' ? '(Longa Distância)' : categoriaSelecionada === 'mercado_acessorios' ? '(Escudo)' : ''}
           </h4>
 
-          {categoriaSelecionada.startsWith('arcano_') ? (
+          {categoriaSelecionada === 'mercado_comum' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Nome *</label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block flex items-center gap-1"><Weight size={11} /> Peso (kg) *</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={peso}
+                  onChange={(e) => setPeso(e.target.value)}
+                  min="0"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono outline-none transition-colors"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block flex items-center gap-1"><Coins size={11} /> Preço (Moedas) *</label>
+                <input
+                  type="number"
+                  value={preco}
+                  onChange={(e) => setPreco(e.target.value)}
+                  min="1"
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 font-mono font-bold outline-none transition-colors"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Material</label>
+                <input
+                  type="text"
+                  value={material}
+                  onChange={(e) => setMaterial(e.target.value)}
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors"
+                />
+              </div>
+              <div className="col-span-1 sm:col-span-2 space-y-1">
+                <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Efeito</label>
+                <textarea
+                  value={efeito}
+                  onChange={(e) => setEfeito(e.target.value)}
+                  rows={2}
+                  className="w-full bg-[#120d09] border border-[#3d2a1c] focus:border-[#c5a059] rounded px-2.5 py-1.5 text-xs text-[#e6ddc5] placeholder:text-stone-600 outline-none transition-colors resize-none"
+                />
+              </div>
+            </div>
+          ) : categoriaSelecionada.startsWith('arcano_') ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {renderCampoArcano('Nome da Mercadoria *', nome, setNome)}
               <div className="space-y-1">
@@ -1698,19 +1771,21 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         </div>
 
         {/* MARCADOR ITEM ÉPICO */}
-        <div className="flex items-center gap-2 px-1">
-          <input
-            type="checkbox"
-            id="checkbox-item-epico"
-            checked={isEpico}
-            onChange={(e) => setIsEpico(e.target.checked)}
-            className="rounded border-[#5a4225] bg-[#1a120b] text-amber-500 focus:ring-0 cursor-pointer w-4 h-4"
-          />
-          <label htmlFor="checkbox-item-epico" className="text-[11px] text-[#f3ebd3] font-cinzel cursor-pointer flex items-center gap-1.5">
-            <Sparkles size={12} className={isEpico ? 'text-amber-400' : 'text-stone-500'} />
-            Classificar como Mercadoria do Arsenal Épico
-          </label>
-        </div>
+        {categoriaSelecionada !== 'mercado_comum' && (
+          <div className="flex items-center gap-2 px-1">
+            <input
+              type="checkbox"
+              id="checkbox-item-epico"
+              checked={isEpico}
+              onChange={(e) => setIsEpico(e.target.checked)}
+              className="rounded border-[#5a4225] bg-[#1a120b] text-amber-500 focus:ring-0 cursor-pointer w-4 h-4"
+            />
+            <label htmlFor="checkbox-item-epico" className="text-[11px] text-[#f3ebd3] font-cinzel cursor-pointer flex items-center gap-1.5">
+              <Sparkles size={12} className={isEpico ? 'text-amber-400' : 'text-stone-500'} />
+              Classificar como Mercadoria do Arsenal Épico
+            </label>
+          </div>
+        )}
 
         {/* FEEDBACK DE ERRO */}
         {formError && (

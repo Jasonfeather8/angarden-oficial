@@ -226,6 +226,7 @@ export type CategoriaMercado =
   | 'mercado_arremesso'
   | 'mercado_acessorios'
   | 'mercado_geral'
+  | 'mercado_comum'
   | 'arsenal_epico'
   // Categorias específicas do Arsenal Épico
   | 'epico_armas'

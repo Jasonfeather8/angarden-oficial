@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { ShoppingBag, Crown, Wand2 } from 'lucide-react';
+import { ShoppingBag, Package, Crown, Wand2 } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
 import { InfiniteCategoryScroll } from '../components/InfiniteCategoryScroll';
 import { ModalCriarMercadoria } from '../components/ModalCriarMercadoria';
@@ -16,6 +16,7 @@ import { ModalDetalhesCompraLazy, preloadModalDetalhesCompra } from '../componen
 import { useCatalogoDoMercado } from '../components/mercado/useCatalogoDoMercado';
 import { useCompradorDoMercado } from '../components/mercado/useCompradorDoMercado';
 import { useModaisDoMercado } from '../components/mercado/useModaisDoMercado';
+import { CABECALHO_POR_SECAO } from '../components/mercado/catalogoMercado';
 
 export const MercadoPage: React.FC = () => {
   // O catálogo global é gerido exclusivamente pelo Administrador.
@@ -25,6 +26,7 @@ export const MercadoPage: React.FC = () => {
   const comprador = useCompradorDoMercado();
   const catalogo = useCatalogoDoMercado();
   const modais = useModaisDoMercado({ onCatalogoAlterado: catalogo.invalidarCatalogo });
+  const cabecalho = CABECALHO_POR_SECAO[catalogo.secaoMercado];
 
   useEffect(() => agendarEmOciosidade(preloadModalDetalhesCompra), []);
 
@@ -33,29 +35,19 @@ export const MercadoPage: React.FC = () => {
       <PageShell id="page-mercado" variant="padrao" className="select-none"
         title={
           <h2 className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            {catalogo.themeMode === 'epico' ? (
+            {catalogo.secaoMercado === 'epico' ? (
               <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-[#fbbf24] shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-            ) : catalogo.themeMode === 'arcano' ? (
+            ) : catalogo.secaoMercado === 'arcano' ? (
               <Wand2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#c084fc] shrink-0 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
+            ) : catalogo.secaoMercado === 'comum' ? (
+              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-[#c5a059] shrink-0" />
             ) : (
               <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-[#c5a059] shrink-0" />
             )}
-            <span className="truncate">
-              {catalogo.secaoMercado === 'epico' 
-                ? 'Arsenal Épico & Relíquias' 
-                : catalogo.secaoMercado === 'arcano' 
-                ? 'Mercado Arcano & Misticismo' 
-                : 'Mercado Global & Provisões'}
-            </span>
+            <span className="truncate">{cabecalho.titulo}</span>
           </h2>
         }
-        subtitle={
-          catalogo.secaoMercado === 'epico'
-            ? 'Armamentos lendários, forja mitril e relíquias ancestrais de alto prestígio'
-            : catalogo.secaoMercado === 'arcano'
-            ? 'Consumíveis mágicos, talismãs celestes, poções etéreas e artefatos de poder arcano'
-            : 'Arsenal, provisões e equipamentos marciais'
-        }
+        subtitle={cabecalho.subtitulo}
         headerRight={
           <CabecalhoDoMercado
             tenantId={tenantId}
@@ -83,7 +75,7 @@ export const MercadoPage: React.FC = () => {
           )}
 
           {/* ========================================================================= */}
-          {/* SELETORES DAS GRANDES ABAS DO MERCADO (MERCADO COMUM, ARSENAL ÉPICO, MERCADO ARCANO) */}
+          {/* SELETORES DAS GRANDES ABAS DO MERCADO (ARSENAL, MERCADO COMUM, MERCADO ARCANO, ARSENAL ÉPICO) */}
           {/* ========================================================================= */}
           <AbasDeSecao secaoAtiva={catalogo.secaoMercado} onTrocarSecao={catalogo.trocarSecao} />
 
