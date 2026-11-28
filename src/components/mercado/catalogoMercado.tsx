@@ -1,5 +1,23 @@
 import React from 'react';
-import { Package } from 'lucide-react';
+import {
+  Beaker,
+  Bomb,
+  Boxes,
+  Dna,
+  FlaskConical,
+  Footprints,
+  Gem,
+  GlassWater,
+  Layers,
+  Leaf,
+  Pickaxe,
+  Pill,
+  Scissors,
+  Shirt,
+  TestTube,
+  TreePine,
+  Utensils,
+} from 'lucide-react';
 import type { CategoriaMercado } from '../../types';
 
 /** Seção principal do mercado exibida nas grandes abas. */
@@ -26,7 +44,7 @@ export interface TabMercado {
 /** Categoria inicial de cada seção ao trocar de aba. */
 export const CATEGORIA_INICIAL_POR_SECAO: Record<SecaoMercado, CategoriaMercado> = {
   arsenal: 'mercado_armas',
-  comum: 'mercado_comum',
+  comum: 'mercado_pocoes',
   arcano: 'arcano_consumiveis',
   epico: 'epico_armas',
 };
@@ -78,15 +96,81 @@ export const SUBCATEGORIAS_POR_CATEGORIA: Partial<Record<CategoriaMercado, Subca
     { id: 'Golem', label: 'Golem', desc: 'Escudo maciço esculpido em pedra rúnica' },
     { id: 'Dragão', label: 'Dragão', desc: 'Escudo forjado em escamas e ligas draconianas' },
   ],
-  mercado_comum: [
-    { id: 'todas', label: 'Todos os Itens', desc: 'Provisões, utensílios e ferramentas de viagem' },
+  mercado_pocoes: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Ervas', label: 'Ervas' },
+    { id: 'Alquímicas', label: 'Alquímicas' },
   ],
-  mercado_geral: [
-    { id: 'todas', label: 'Todas as Poções' },
-    { id: 'Cura', label: 'Cura & Vitalidade', desc: 'Regeneração de vigor e ferimentos' },
-    { id: 'Elixires', label: 'Elixires de Batalha', desc: 'Bônus de combate' },
-    { id: 'Óleos', label: 'Óleos & Venenos', desc: 'Unguentos para lâminas' },
+  mercado_minerios: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Avançados', label: 'Avançados' },
+    { id: 'Raros', label: 'Raros' },
   ],
+  mercado_lingotes: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Avançados', label: 'Avançados' },
+    { id: 'Raros', label: 'Raros' },
+  ],
+  mercado_couro: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Avançados', label: 'Avançados' },
+    { id: 'Raros', label: 'Raros' },
+  ],
+  mercado_madeira: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Avançados', label: 'Avançados' },
+    { id: 'Raros', label: 'Raros' },
+  ],
+  mercado_tecido: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Avançados', label: 'Avançados' },
+    { id: 'Raros', label: 'Raros' },
+  ],
+  mercado_pedras_preciosas: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Avançadas', label: 'Avançadas' },
+    { id: 'Raras', label: 'Raras' },
+  ],
+  mercado_ervas: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Comuns', label: 'Comuns' },
+    { id: 'Raras', label: 'Raras' },
+    { id: 'Magistrais', label: 'Magistrais' },
+  ],
+  mercado_medicamentos: [{ id: 'todas', label: 'Todos os Itens' }],
+  mercado_elixires: [{ id: 'todas', label: 'Todos os Itens' }],
+  mercado_bombas: [{ id: 'todas', label: 'Todos os Itens' }],
+  mercado_compostos_quimicos: [{ id: 'todas', label: 'Todos os Itens' }],
+  mercado_mutagenicos: [{ id: 'todas', label: 'Todos os Itens' }],
+  mercado_comida: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Carnes', label: 'Carnes' },
+    { id: 'Legumes', label: 'Legumes' },
+    { id: 'Vegetais', label: 'Vegetais' },
+    { id: 'Frutos do Mar', label: 'Frutos do Mar' },
+    { id: 'Frutas', label: 'Frutas' },
+    { id: 'Cardápios', label: 'Cardápios' },
+  ],
+  mercado_bebidas: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Alcoólicas', label: 'Alcoólicas' },
+    { id: 'Sucos', label: 'Sucos' },
+    { id: 'Outros', label: 'Outros' },
+  ],
+  mercado_montarias: [
+    { id: 'todas', label: 'Todos os Itens' },
+    { id: 'Cavalos', label: 'Cavalos' },
+    { id: 'Javalis', label: 'Javalis' },
+    { id: 'Alces', label: 'Alces' },
+    { id: 'Aves', label: 'Aves' },
+  ],
+  mercado_geral: [{ id: 'todas', label: 'Todos os Itens' }],
   arsenal_epico: [
     { id: 'todas', label: 'Todo o Arsenal Épico' },
     { id: 'Armas Épicas', label: 'Armas Lendárias', desc: 'Lâminas forjadas em mitril' },
@@ -214,24 +298,23 @@ export const TABS_POR_SECAO: Record<SecaoMercado, TabMercado[]> = {
     },
   ],
   comum: [
-    {
-      id: 'mercado_comum',
-      label: 'Provisões',
-      descricao: 'Provisões, utensílios e ferramentas de viagem.',
-      icon: <Package className="w-6 h-6" />,
-    },
-    {
-      id: 'mercado_geral',
-      label: 'Poções',
-      descricao: 'Poções de cura, elixires alquímicos de combate e óleos de lâmina.',
-      icon: (
-        <svg viewBox="0 0 48 48" className="w-6 h-6 fill-current">
-          <rect x="20" y="6" width="8" height="6" rx="1" />
-          <circle cx="24" cy="28" r="14" />
-          <circle cx="20" cy="24" r="3" fill="#ffffff" opacity="0.6" />
-        </svg>
-      ),
-    },
+    { id: 'mercado_pocoes', label: 'Poções', descricao: 'Ervas e preparados alquímicos para cura e jornadas.', icon: <FlaskConical className="w-6 h-6" /> },
+    { id: 'mercado_minerios', label: 'Minérios', descricao: 'Minérios comuns, avançados e raros para a forja.', icon: <Pickaxe className="w-6 h-6" /> },
+    { id: 'mercado_lingotes', label: 'Lingotes', descricao: 'Metais refinados em diferentes graus de qualidade.', icon: <Layers className="w-6 h-6" /> },
+    { id: 'mercado_couro', label: 'Couro', descricao: 'Couros para vestes, armaduras e trabalhos artesanais.', icon: <Shirt className="w-6 h-6" /> },
+    { id: 'mercado_madeira', label: 'Madeira', descricao: 'Madeiras de diferentes qualidades para construção e ofício.', icon: <TreePine className="w-6 h-6" /> },
+    { id: 'mercado_tecido', label: 'Tecido', descricao: 'Tecidos comuns, avançados e raros para vestimentas.', icon: <Scissors className="w-6 h-6" /> },
+    { id: 'mercado_pedras_preciosas', label: 'Pedras Preciosas', descricao: 'Gemas de valor para ornamentos e encantamentos.', icon: <Gem className="w-6 h-6" /> },
+    { id: 'mercado_ervas', label: 'Ervas', descricao: 'Ervas comuns, raras e magistrais para os alquimistas.', icon: <Leaf className="w-6 h-6" /> },
+    { id: 'mercado_medicamentos', label: 'Medicamentos', descricao: 'Preparados medicinais para cuidar dos viajantes.', icon: <Pill className="w-6 h-6" /> },
+    { id: 'mercado_elixires', label: 'Elixires', descricao: 'Elixires preparados para efeitos diversos.', icon: <Beaker className="w-6 h-6" /> },
+    { id: 'mercado_bombas', label: 'Bombas', descricao: 'Artefatos explosivos para situações de perigo.', icon: <Bomb className="w-6 h-6" /> },
+    { id: 'mercado_compostos_quimicos', label: 'Compostos Químicos', descricao: 'Compostos e reagentes para usos alquímicos.', icon: <TestTube className="w-6 h-6" /> },
+    { id: 'mercado_mutagenicos', label: 'Mutagênicos', descricao: 'Preparados de transformação e mutação alquímica.', icon: <Dna className="w-6 h-6" /> },
+    { id: 'mercado_comida', label: 'Comida', descricao: 'Carnes, vegetais, frutas e cardápios para a viagem.', icon: <Utensils className="w-6 h-6" /> },
+    { id: 'mercado_bebidas', label: 'Bebidas', descricao: 'Bebidas alcoólicas, sucos e outras infusões.', icon: <GlassWater className="w-6 h-6" /> },
+    { id: 'mercado_montarias', label: 'Montarias', descricao: 'Cavalos, javalis, alces e aves para longas jornadas.', icon: <Footprints className="w-6 h-6" /> },
+    { id: 'mercado_geral', label: 'Geral', descricao: 'Itens variados sem subdivisão específica.', icon: <Boxes className="w-6 h-6" /> },
   ],
   epico: [
     {
@@ -370,6 +453,8 @@ export const TABS_POR_SECAO: Record<SecaoMercado, TabMercado[]> = {
   ],
 };
 
+export const CATEGORIAS_MERCADO_COMUM: CategoriaMercado[] = TABS_POR_SECAO.comum.map((t) => t.id);
+
 export const CABECALHO_POR_SECAO: Record<SecaoMercado, { titulo: string; subtitulo: string }> = {
   arsenal: {
     titulo: 'Arsenal & Equipamentos',
@@ -377,7 +462,7 @@ export const CABECALHO_POR_SECAO: Record<SecaoMercado, { titulo: string; subtitu
   },
   comum: {
     titulo: 'Mercado Comum & Provisões',
-    subtitulo: 'Provisões de viagem, utensílios, ferramentas e poções de alquimia',
+    subtitulo: 'Provisões, alquimia, recursos naturais, comida, bebidas e montarias',
   },
   arcano: {
     titulo: 'Mercado Arcano & Misticismo',

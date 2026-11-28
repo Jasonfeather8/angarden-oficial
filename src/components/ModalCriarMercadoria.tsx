@@ -22,8 +22,24 @@ import {
   Package,
   Hammer,
   ScrollText,
-  Edit3
+  Edit3,
+  Pickaxe,
+  Shirt,
+  TreePine,
+  Scissors,
+  Gem,
+  Leaf,
+  Pill,
+  Beaker,
+  Bomb,
+  TestTube,
+  Dna,
+  Utensils,
+  GlassWater,
+  Footprints,
+  Boxes
 } from 'lucide-react';
+import { CATEGORIAS_MERCADO_COMUM, SUBCATEGORIAS_POR_CATEGORIA } from './mercado/catalogoMercado';
 
 export interface ModalCriarMercadoriaProps {
   isOpen: boolean;
@@ -92,25 +108,63 @@ export const PECAS_POR_CATEGORIA_ARMADURA: Record<string, string> = {
   'Pesada': '8',
 };
 
-// Categorias gerais do Mercado
-export const CATEGORIAS_MERCADO: { id: CategoriaMercado; label: string; icon: React.ReactNode }[] = [
-  { id: 'mercado_armas', label: 'Armas', icon: <Swords size={16} /> },
-  { id: 'mercado_armaduras', label: 'Armaduras', icon: <Shield size={16} /> },
-  { id: 'mercado_ld', label: 'Longa Distância', icon: <Crosshair size={16} /> },
-  { id: 'mercado_progeteis', label: 'Projéteis', icon: <Crosshair size={16} /> },
-  { id: 'mercado_acessorios', label: 'Escudos', icon: <Shield size={16} /> },
-  { id: 'mercado_geral', label: 'Poções', icon: <FlaskConical size={16} /> },
-  { id: 'mercado_comum', label: 'Provisões', icon: <Package size={16} /> },
-  { id: 'arsenal_epico', label: 'Arsenal Épico', icon: <Sparkles size={16} /> },
-  { id: 'arcano_consumiveis', label: 'Variados/Consumíveis', icon: <FlaskConical size={16} /> },
-  { id: 'arcano_pocoes', label: 'Poções', icon: <FlaskConical size={16} /> },
-  { id: 'arcano_chapeus', label: 'Chapéus Mágicos', icon: <Sparkles size={16} /> },
-  { id: 'arcano_aneis', label: 'Anéis', icon: <Sparkles size={16} /> },
-  { id: 'arcano_cajados', label: 'Cajados', icon: <Sparkles size={16} /> },
-  { id: 'arcano_vestimentas', label: 'Vestimentas', icon: <Sparkles size={16} /> },
-  { id: 'arcano_colares', label: 'Colares', icon: <Sparkles size={16} /> },
-  { id: 'arcano_talismas', label: 'Talismãs', icon: <Sparkles size={16} /> },
+// Categorias organizadas pelas seções principais do Mercado.
+export const GRUPOS_CATEGORIAS_MERCADO: {
+  secao: string;
+  categorias: { id: CategoriaMercado; label: string; icon: React.ReactNode }[];
+}[] = [
+  {
+    secao: 'Arsenal',
+    categorias: [
+      { id: 'mercado_armas', label: 'Armas', icon: <Swords size={16} /> },
+      { id: 'mercado_armaduras', label: 'Armaduras', icon: <Shield size={16} /> },
+      { id: 'mercado_ld', label: 'Longa Distância', icon: <Crosshair size={16} /> },
+      { id: 'mercado_progeteis', label: 'Projéteis', icon: <Crosshair size={16} /> },
+      { id: 'mercado_acessorios', label: 'Escudos', icon: <Shield size={16} /> },
+    ],
+  },
+  {
+    secao: 'Mercado Comum',
+    categorias: [
+      { id: 'mercado_pocoes', label: 'Poções', icon: <FlaskConical size={16} /> },
+      { id: 'mercado_minerios', label: 'Minérios', icon: <Pickaxe size={16} /> },
+      { id: 'mercado_lingotes', label: 'Lingotes', icon: <Layers size={16} /> },
+      { id: 'mercado_couro', label: 'Couro', icon: <Shirt size={16} /> },
+      { id: 'mercado_madeira', label: 'Madeira', icon: <TreePine size={16} /> },
+      { id: 'mercado_tecido', label: 'Tecido', icon: <Scissors size={16} /> },
+      { id: 'mercado_pedras_preciosas', label: 'Pedras Preciosas', icon: <Gem size={16} /> },
+      { id: 'mercado_ervas', label: 'Ervas', icon: <Leaf size={16} /> },
+      { id: 'mercado_medicamentos', label: 'Medicamentos', icon: <Pill size={16} /> },
+      { id: 'mercado_elixires', label: 'Elixires', icon: <Beaker size={16} /> },
+      { id: 'mercado_bombas', label: 'Bombas', icon: <Bomb size={16} /> },
+      { id: 'mercado_compostos_quimicos', label: 'Compostos Químicos', icon: <TestTube size={16} /> },
+      { id: 'mercado_mutagenicos', label: 'Mutagênicos', icon: <Dna size={16} /> },
+      { id: 'mercado_comida', label: 'Comida', icon: <Utensils size={16} /> },
+      { id: 'mercado_bebidas', label: 'Bebidas', icon: <GlassWater size={16} /> },
+      { id: 'mercado_montarias', label: 'Montarias', icon: <Footprints size={16} /> },
+      { id: 'mercado_geral', label: 'Geral', icon: <Boxes size={16} /> },
+    ],
+  },
+  {
+    secao: 'Mercado Arcano',
+    categorias: [
+      { id: 'arcano_consumiveis', label: 'Variados/Consumíveis', icon: <FlaskConical size={16} /> },
+      { id: 'arcano_pocoes', label: 'Poções', icon: <FlaskConical size={16} /> },
+      { id: 'arcano_chapeus', label: 'Chapéus Mágicos', icon: <Sparkles size={16} /> },
+      { id: 'arcano_aneis', label: 'Anéis', icon: <Sparkles size={16} /> },
+      { id: 'arcano_cajados', label: 'Cajados', icon: <Sparkles size={16} /> },
+      { id: 'arcano_vestimentas', label: 'Vestimentas', icon: <Sparkles size={16} /> },
+      { id: 'arcano_colares', label: 'Colares', icon: <Sparkles size={16} /> },
+      { id: 'arcano_talismas', label: 'Talismãs', icon: <Sparkles size={16} /> },
+    ],
+  },
+  {
+    secao: 'Arsenal Épico',
+    categorias: [{ id: 'arsenal_epico', label: 'Arsenal Épico', icon: <Sparkles size={16} /> }],
+  },
 ];
+
+export const CATEGORIAS_MERCADO = GRUPOS_CATEGORIAS_MERCADO.flatMap((grupo) => grupo.categorias);
 
 export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
   isOpen,
@@ -124,6 +178,9 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
   
   // Subcategoria de armas
   const [subcategoriaArma, setSubcategoriaArma] = useState<string>(SUBCATEGORIAS_ARMAS[0].id);
+
+  // Subcategoria das categorias do Mercado Comum
+  const [subcategoriaMercadoComum, setSubcategoriaMercadoComum] = useState<string>('todas');
 
   // Subcategoria e campos específicos de projéteis
   const [subcategoriaProjetil, setSubcategoriaProjetil] = useState<string>('Flechas');
@@ -190,6 +247,16 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
 
     if (itemParaEdicao) {
       setCategoriaSelecionada(itemParaEdicao.categoria || 'mercado_armas');
+      const subcategoriaComum = itemParaEdicao.subcategoria || itemParaEdicao.tipo;
+      const subcategoriasDaCategoria = SUBCATEGORIAS_POR_CATEGORIA[itemParaEdicao.categoria] || [];
+      setSubcategoriaMercadoComum(
+        CATEGORIAS_MERCADO_COMUM.includes(itemParaEdicao.categoria) &&
+          subcategoriaComum &&
+          subcategoriaComum !== 'todas' &&
+          subcategoriasDaCategoria.some((sub) => sub.id === subcategoriaComum)
+          ? subcategoriaComum
+          : 'todas',
+      );
       setNome(itemParaEdicao.nome || '');
       setPeso(itemParaEdicao.peso !== undefined ? String(itemParaEdicao.peso) : '2.5');
       setPreco(itemParaEdicao.preco !== undefined ? String(itemParaEdicao.preco) : '250');
@@ -274,6 +341,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
       }
     } else {
       // Criação de nova mercadoria: valores padrão limpos
+      setSubcategoriaMercadoComum('todas');
       setNome('');
       setEfeito('');
       setInformacoes('');
@@ -374,7 +442,10 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
     const isArmadura = categoriaSelecionada === 'mercado_armaduras';
     const isLD = categoriaSelecionada === 'mercado_ld';
     const isEscudo = categoriaSelecionada === 'mercado_acessorios';
-    const isComum = categoriaSelecionada === 'mercado_comum';
+    const isMercadoComum = CATEGORIAS_MERCADO_COMUM.includes(categoriaSelecionada);
+    const isSubcategoriaMercadoComumValida =
+      subcategoriaMercadoComum !== 'todas' &&
+      SUBCATEGORIAS_POR_CATEGORIA[categoriaSelecionada]?.some((sub) => sub.id === subcategoriaMercadoComum);
     const isArcano = categoriaSelecionada.startsWith('arcano_');
 
     let rdNum = 0;
@@ -386,7 +457,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         setFormError('Informe um valor de RD válido.');
         return;
       }
-    } else if (!isArcano && !isProjetil && !isComum) {
+    } else if (!isArcano && !isProjetil && !isMercadoComum) {
       resistNum = Number(resistencia);
       if (isNaN(resistNum) || resistNum < 0) {
         setFormError('Informe uma resistência válida.');
@@ -399,7 +470,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
     try {
       // Cria ou atualiza o item da mercadoria formatado
       const sufixo = Math.random().toString(36).substring(2, 6);
-      const idNovo = itemParaEdicao?.id || (isComum
+      const idNovo = itemParaEdicao?.id || (isMercadoComum
         ? `merc-comum-${Date.now()}-${sufixo}`
         : `merc-${isProjetil ? 'proj' : isArcano ? 'arcano' : isArmadura ? 'armad' : isLD ? 'ld' : isEscudo ? 'escudo' : 'arma'}-${Date.now()}-${sufixo}`);
       const efeitoFormatado = efeito.trim();
@@ -435,8 +506,11 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         id: idNovo,
         nome: nome.trim(),
         categoria: categoriaSelecionada,
-        ...(isComum
+        ...(isMercadoComum
           ? {
+              ...(isSubcategoriaMercadoComumValida
+                ? { tipo: subcategoriaMercadoComum, subcategoria: subcategoriaMercadoComum }
+                : {}),
               peso: pesoNum,
               material: material.trim() || undefined,
               efeito: efeitoFormatado || undefined,
@@ -618,32 +692,42 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
           <label className="block text-[11px] font-cinzel uppercase tracking-wider text-[#a88d61] font-semibold">
             1. Categoria do Mercado
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            {CATEGORIAS_MERCADO.map((cat) => {
-              const isSelected = categoriaSelecionada === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    setCategoriaSelecionada(cat.id);
-                    if (cat.id === 'mercado_armaduras') {
-                      setPecas(PECAS_POR_CATEGORIA_ARMADURA[subcategoriaArmadura] || PECAS_POR_CATEGORIA_ARMADURA['Armaduras Leves']);
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border transition-all text-left font-cinzel text-[10px] cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#3d2714] border-[#d4af37] text-[#f5ebd2] shadow-[0_0_8px_rgba(212,175,55,0.25)] font-bold'
-                      : 'bg-[#120d09] border-[#382618] text-stone-400 hover:text-stone-200 hover:border-[#5a402a]'
-                  }`}
-                >
-                  <span className={isSelected ? 'text-[#d4af37]' : 'text-stone-500'}>
-                    {cat.icon}
-                  </span>
-                  <span className="truncate">{cat.label}</span>
-                </button>
-              );
-            })}
+          <div className="space-y-3">
+            {GRUPOS_CATEGORIAS_MERCADO.map((grupo) => (
+              <div key={grupo.secao} className="space-y-1.5">
+                <h5 className="text-[11px] font-cinzel uppercase tracking-wider text-[#a88d61] font-semibold">
+                  {grupo.secao}
+                </h5>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {grupo.categorias.map((cat) => {
+                    const isSelected = categoriaSelecionada === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setCategoriaSelecionada(cat.id);
+                          setSubcategoriaMercadoComum('todas');
+                          if (cat.id === 'mercado_armaduras') {
+                            setPecas(PECAS_POR_CATEGORIA_ARMADURA[subcategoriaArmadura] || PECAS_POR_CATEGORIA_ARMADURA['Armaduras Leves']);
+                          }
+                        }}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border transition-all text-left font-cinzel text-[10px] cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#3d2714] border-[#d4af37] text-[#f5ebd2] shadow-[0_0_8px_rgba(212,175,55,0.25)] font-bold'
+                            : 'bg-[#120d09] border-[#382618] text-stone-400 hover:text-stone-200 hover:border-[#5a402a]'
+                        }`}
+                      >
+                        <span className={isSelected ? 'text-[#d4af37]' : 'text-stone-500'}>
+                          {cat.icon}
+                        </span>
+                        <span className="truncate">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -816,10 +900,10 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         )}
 
         {/* MENSAGEM DE ESCOPO ATUAL (SE OUTRA CATEGORIA SELECIONADA) */}
-        {categoriaSelecionada !== 'mercado_armas' && categoriaSelecionada !== 'mercado_ld' && categoriaSelecionada !== 'mercado_progeteis' && categoriaSelecionada !== 'mercado_armaduras' && categoriaSelecionada !== 'mercado_acessorios' && categoriaSelecionada !== 'mercado_comum' && !categoriaSelecionada.startsWith('arcano_') && (
+        {categoriaSelecionada !== 'mercado_armas' && categoriaSelecionada !== 'mercado_ld' && categoriaSelecionada !== 'mercado_progeteis' && categoriaSelecionada !== 'mercado_armaduras' && categoriaSelecionada !== 'mercado_acessorios' && !CATEGORIAS_MERCADO_COMUM.includes(categoriaSelecionada) && !categoriaSelecionada.startsWith('arcano_') && (
           <div className="p-2.5 rounded bg-[#18120b] border border-[#543b23] text-[#c5a059] text-[11px]">
             <p className="italic">
-              * O fluxo detalhado de cadastro está ativado para as categorias <strong>Armas</strong>, <strong>Armaduras</strong>, <strong>Longa Distância (LD)</strong> e <strong>Escudos</strong> com suas subcategorias e especificações técnicas.
+              * O fluxo detalhado de cadastro está ativado para as categorias <strong>Armas</strong>, <strong>Armaduras</strong>, <strong>Longa Distância (LD)</strong>, <strong>Escudos</strong> e <strong>Mercado Comum</strong> com suas subcategorias e especificações.
             </p>
           </div>
         )}
@@ -827,12 +911,35 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         {/* CAMPOS DA MERCADORIA */}
         <div className="space-y-3 pt-1">
           <h4 className="text-[11px] font-cinzel uppercase tracking-wider text-[#a88d61] font-semibold flex items-center gap-1.5">
-            {categoriaSelecionada === 'mercado_comum' ? <Package size={13} /> : categoriaSelecionada === 'mercado_armaduras' || categoriaSelecionada === 'mercado_acessorios' ? <Shield size={13} /> : categoriaSelecionada === 'mercado_ld' ? <Crosshair size={13} /> : <Swords size={13} />}
-            2. Atributos da Mercadoria {categoriaSelecionada === 'mercado_comum' ? '(Provisão)' : categoriaSelecionada === 'mercado_armaduras' ? '(Armadura)' : categoriaSelecionada === 'mercado_ld' ? '(Longa Distância)' : categoriaSelecionada === 'mercado_acessorios' ? '(Escudo)' : ''}
+            {CATEGORIAS_MERCADO_COMUM.includes(categoriaSelecionada) ? <Package size={13} /> : categoriaSelecionada === 'mercado_armaduras' || categoriaSelecionada === 'mercado_acessorios' ? <Shield size={13} /> : categoriaSelecionada === 'mercado_ld' ? <Crosshair size={13} /> : <Swords size={13} />}
+            2. Atributos da Mercadoria {CATEGORIAS_MERCADO_COMUM.includes(categoriaSelecionada) ? '(Provisão)' : categoriaSelecionada === 'mercado_armaduras' ? '(Armadura)' : categoriaSelecionada === 'mercado_ld' ? '(Longa Distância)' : categoriaSelecionada === 'mercado_acessorios' ? '(Escudo)' : ''}
           </h4>
 
-          {categoriaSelecionada === 'mercado_comum' ? (
+          {CATEGORIAS_MERCADO_COMUM.includes(categoriaSelecionada) ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(SUBCATEGORIAS_POR_CATEGORIA[categoriaSelecionada] || []).length > 1 && (
+                <div className="col-span-1 sm:col-span-2 space-y-1.5">
+                  <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">
+                    Subcategoria
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(SUBCATEGORIAS_POR_CATEGORIA[categoriaSelecionada] || []).map((sub) => (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setSubcategoriaMercadoComum(sub.id)}
+                        className={`px-2.5 py-1 rounded border text-[10px] font-cinzel transition-all cursor-pointer ${
+                          subcategoriaMercadoComum === sub.id
+                            ? 'bg-[#2e1d0f] border-[#c5a059] text-[#fceecb] shadow-xs'
+                            : 'bg-[#18110b] border-[#302013] text-stone-400 hover:text-stone-200 hover:border-[#4d3320]'
+                        }`}
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="text-[10px] uppercase font-cinzel tracking-wider text-[#a88d61] font-semibold block">Nome *</label>
                 <input
@@ -1771,7 +1878,7 @@ export const ModalCriarMercadoria: React.FC<ModalCriarMercadoriaProps> = ({
         </div>
 
         {/* MARCADOR ITEM ÉPICO */}
-        {categoriaSelecionada !== 'mercado_comum' && (
+        {!CATEGORIAS_MERCADO_COMUM.includes(categoriaSelecionada) && (
           <div className="flex items-center gap-2 px-1">
             <input
               type="checkbox"
